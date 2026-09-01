@@ -1,0 +1,47 @@
+package cn.edu.tju.takeout.order;
+
+import cn.edu.tju.takeout.auth.UserPrincipal;
+import cn.edu.tju.takeout.common.ApiResponse;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import java.time.LocalDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/orders")
+public class OrderController {
+    private final OrderService orderService;
+
+    public OrderController(OrderService orderService) { this.orderService = orderService; }
+
+    @PostMapping
+    public ApiResponse<OrderView> create(@AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.success(orderService.create(principal.userId()));
+    }
+
+    @GetMapping
+    public ApiResponse<OrderPage> list(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size) {
+        return ApiResponse.success(orderService.list(
+                principal.userId(), new OrderQuery(status, startTime, endTime, page, size)));
+    }
+
+    @GetMapping("/{orderId}")
+    public ApiResponse<OrderView> getDetail(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
+        return ApiResponse.success(
+                orderService.getDetail(principal.userId(), principal.role(), orderId));
+    }
+}
