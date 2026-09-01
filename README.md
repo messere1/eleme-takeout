@@ -23,6 +23,7 @@ eleme-takeout/
 
 - [前端说明](frontend/README.md)
 - [后端说明](backend/README.md)
+- [API 接口文档 V1](docs/api-contract-v1.md)
 
 `docs/` 计划集中存放数据库设计、API 文档、架构设计、TDD 测试报告、需求迭代记录、团队分工、开发日志和交叉验收材料。
 
