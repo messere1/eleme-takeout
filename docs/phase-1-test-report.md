@@ -24,22 +24,8 @@
 
 Maven 的失败详情生成在 `backend/target/surefire-reports/`。该目录是可重复生成的本地构建产物，不提交到 Git。
 
-## 3. 已移除的核心业务实现
 
-以下类只保留可编译契约，不包含业务判断、数据库操作或事务流程：
-
-- `AuthService`
-- `UserService`
-- `MerchantService`
-- `ShopService`
-- `CategoryService`
-- `ProductService`
-- `CartService`
-- `OrderService`
-
-Controller、DTO、Entity、Mapper、安全配置和统一响应仍保留，用于定义接口边界、构造测试数据并使测试工程能够编译。
-
-## 4. 功能开发人员接手规则
+## 3. 功能开发人员接手规则
 
 1. 每次只选择一个 FR 和一个失败场景。
 2. 先运行目标测试，确认其因“待功能开发”失败。
@@ -47,6 +33,6 @@ Controller、DTO、Entity、Mapper、安全配置和统一响应仍保留，用�
 4. 单独提交实现，禁止修改测试来规避需求。
 5. 运行同模块测试与全量回归，逐步把红灯变为绿灯。
 
-## 5. 第一阶段测试交付边界
+## 4. 第一阶段测试交付边界
 
 本阶段仅交付测试用例、接口契约、测试工程、需求追踪矩阵、回归清单和红灯证据。核心业务实现及尚未开发的前端业务页面由对应功能负责人完成。
