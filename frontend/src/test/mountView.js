@@ -1,0 +1,38 @@
+// 页面测试通用挂载助手：给组件安装 Element Plus 与一个内存路由，
+// 使页面里 useRouter().push(...) 的跳转可被断言（router.currentRoute.value.path）。
+import { mount } from '@vue/test-utils'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import ElementPlus from 'element-plus'
+
+function createTestRouter() {
+  // 成功跳转只关心路径，目标页用桩组件占位即可。
+  const Stub = { template: '<div class="route-stub">route stub</div>' }
+  return createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/', component: Stub },
+      { path: '/login', component: Stub },
+      { path: '/register', component: Stub },
+    ],
+  })
+}
+
+/**
+ * 挂载一个页面组件，返回 { wrapper, router }。
+ * @param {object} component 待挂载的 .vue 组件
+ * @param {{ path?: string, global?: object }} options
+ *   path —— 当前路由（默认 '/'）；global —— 附加的 mount 全局选项
+ */
+export async function mountView(component, { path = '/', global = {} } = {}) {
+  const router = createTestRouter()
+  await router.push(path)
+  await router.isReady()
+
+  const wrapper = mount(component, {
+    global: {
+      plugins: [router, ElementPlus],
+      ...global,
+    },
+  })
+  return { wrapper, router }
+}
