@@ -92,7 +92,6 @@ describe('FR-002 登录页', () => {
     await setField(wrapper, 'login-account', ACCOUNT)
     await setField(wrapper, 'login-password', PASSWORD)
     await clickSubmit(wrapper)
-    // 请求尚未返回，按钮应处于禁用状态
     expect(wrapper.get('[data-testid="login-submit"]').element.disabled).toBe(true)
     release(TOKEN)
     await flushPromises()
