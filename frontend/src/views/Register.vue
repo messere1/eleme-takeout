@@ -58,78 +58,143 @@ async function submit() {
 </script>
 
 <template>
-  <section class="auth-card">
-    <h2>用户注册</h2>
+  <div class="auth-page">
+    <section class="auth-card">
+      <header class="card-head">
+        <span class="card-emoji">🥡</span>
+        <h2>新用户注册</h2>
+        <p class="card-tip">注册一个账号，开始你的第一单</p>
+      </header>
 
-    <div class="field">
-      <el-input
-        v-model="form.username"
-        data-testid="register-username"
-        placeholder="用户名（3~30 个字符）"
-        @keyup.enter="submit"
-      />
-      <p v-if="fieldErrors.username" class="field-error">{{ fieldErrors.username }}</p>
-    </div>
+      <div class="field">
+        <label for="register-username">用户名</label>
+        <el-input
+          id="register-username"
+          v-model="form.username"
+          data-testid="register-username"
+          class="auth-input"
+          placeholder="3~30 个字符"
+          @keyup.enter="submit"
+        />
+        <p v-if="fieldErrors.username" class="field-error">{{ fieldErrors.username }}</p>
+      </div>
 
-    <div class="field">
-      <el-input
-        v-model="form.phone"
-        data-testid="register-phone"
-        placeholder="手机号"
-        maxlength="11"
-        @keyup.enter="submit"
-      />
-      <p v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</p>
-    </div>
+      <div class="field">
+        <label for="register-phone">手机号</label>
+        <el-input
+          id="register-phone"
+          v-model="form.phone"
+          data-testid="register-phone"
+          class="auth-input"
+          placeholder="中国大陆手机号"
+          maxlength="11"
+          @keyup.enter="submit"
+        />
+        <p v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</p>
+      </div>
 
-    <div class="field">
-      <el-input
-        v-model="form.password"
-        type="password"
-        data-testid="register-password"
-        placeholder="密码（6~64 位，含字母和数字）"
-        show-password
-        @keyup.enter="submit"
-      />
-      <p v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</p>
-    </div>
+      <div class="field">
+        <label for="register-password">密码</label>
+        <el-input
+          id="register-password"
+          v-model="form.password"
+          type="password"
+          data-testid="register-password"
+          class="auth-input"
+          placeholder="6~64 位，含字母和数字"
+          show-password
+          @keyup.enter="submit"
+        />
+        <p v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</p>
+      </div>
 
-    <p v-if="errorMessage" data-testid="register-error" role="alert" class="auth-error">
-      {{ errorMessage }}
-    </p>
+      <p v-if="errorMessage" data-testid="register-error" role="alert" class="form-error">
+        {{ errorMessage }}
+      </p>
 
-    <el-button
-      type="primary"
-      data-testid="register-submit"
-      class="auth-submit"
-      :disabled="submitting"
-      @click="submit"
-    >
-      {{ submitting ? '注册中…' : '注册' }}
-    </el-button>
-  </section>
+      <el-button
+        type="primary"
+        data-testid="register-submit"
+        class="submit-btn"
+        :disabled="submitting"
+        @click="submit"
+      >
+        {{ submitting ? '注册中…' : '注册' }}
+      </el-button>
+
+      <p class="switch-line">
+        已有账号？<RouterLink to="/login">去登录</RouterLink>
+      </p>
+    </section>
+  </div>
 </template>
 
 <style scoped>
+.auth-page {
+  max-width: 27rem;
+  margin: 1.5rem auto 2.5rem;
+}
 .auth-card {
-  max-width: 24rem;
-  margin: 2rem auto;
+  background: #fff;
+  border-radius: var(--card-radius);
+  border-top: 5px solid var(--el-color-primary);
+  padding: 2rem 1.9rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+.card-head {
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+.card-emoji {
+  display: block;
+  font-size: 2.3rem;
+}
+.card-head h2 {
+  margin: 0.25rem 0 0;
+  font-size: 1.45rem;
+}
+.card-tip {
+  margin: 0.25rem 0 0;
+  color: #b0b0b0;
+  font-size: 0.85rem;
 }
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
+}
+.field label {
+  font-size: 0.85rem;
+  color: #666;
+}
+.auth-input,
+.auth-input :deep(.el-input) {
+  width: 100%;
 }
 .field-error,
-.auth-error {
-  color: #f56c6c;
+.form-error {
   margin: 0;
-  font-size: 0.875rem;
+  color: #e34d1c;
+  font-size: 0.88rem;
 }
-.auth-submit {
+.submit-btn {
   width: 100%;
+  height: 42px;
+  font-size: 1rem;
+  margin-top: 0.25rem;
+}
+.switch-line {
+  text-align: center;
+  margin: 0.5rem 0 0;
+  color: #b0b0b0;
+  font-size: 0.9rem;
+}
+.switch-line a {
+  color: var(--el-color-primary);
+  text-decoration: none;
+  font-weight: 600;
 }
 </style>

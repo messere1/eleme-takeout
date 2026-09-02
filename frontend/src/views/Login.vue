@@ -32,55 +32,126 @@ async function submit() {
 </script>
 
 <template>
-  <section class="auth-card">
-    <h2>用户登录</h2>
+  <div class="auth-page">
+    <section class="auth-card">
+      <header class="card-head">
+        <span class="card-emoji">🍜</span>
+        <h2>欢迎回来</h2>
+        <p class="card-tip">登录后开始点单</p>
+      </header>
 
-    <el-input
-      v-model="form.account"
-      data-testid="login-account"
-      class="auth-field"
-      placeholder="账号（用户名或手机号）"
-      @keyup.enter="submit"
-    />
-    <el-input
-      v-model="form.password"
-      type="password"
-      data-testid="login-password"
-      class="auth-field"
-      placeholder="密码"
-      show-password
-      @keyup.enter="submit"
-    />
+      <div class="field">
+        <label for="login-account">账号</label>
+        <el-input
+          id="login-account"
+          v-model="form.account"
+          data-testid="login-account"
+          class="auth-input"
+          placeholder="手机号或用户名"
+          @keyup.enter="submit"
+        />
+      </div>
 
-    <p v-if="errorMessage" data-testid="login-error" role="alert" class="auth-error">
-      {{ errorMessage }}
-    </p>
+      <div class="field">
+        <label for="login-password">密码</label>
+        <el-input
+          id="login-password"
+          v-model="form.password"
+          type="password"
+          data-testid="login-password"
+          class="auth-input"
+          placeholder="请输入密码"
+          show-password
+          @keyup.enter="submit"
+        />
+      </div>
 
-    <el-button
-      type="primary"
-      data-testid="login-submit"
-      class="auth-submit"
-      :disabled="submitting"
-      @click="submit"
-    >
-      {{ submitting ? '登录中…' : '登录' }}
-    </el-button>
-  </section>
+      <p v-if="errorMessage" data-testid="login-error" role="alert" class="form-error">
+        {{ errorMessage }}
+      </p>
+
+      <el-button
+        type="primary"
+        data-testid="login-submit"
+        class="submit-btn"
+        :disabled="submitting"
+        @click="submit"
+      >
+        {{ submitting ? '登录中…' : '登录' }}
+      </el-button>
+
+      <p class="switch-line">
+        还没有账号？<RouterLink to="/register">去注册</RouterLink>
+      </p>
+    </section>
+  </div>
 </template>
 
 <style scoped>
+.auth-page {
+  max-width: 27rem;
+  margin: 1.5rem auto 2.5rem;
+}
 .auth-card {
-  max-width: 24rem;
-  margin: 2rem auto;
+  background: #fff;
+  border-radius: var(--card-radius);
+  border-top: 5px solid var(--el-color-primary);
+  padding: 2rem 1.9rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
 }
-.auth-error {
-  color: #f56c6c;
-  margin: 0;
+.card-head {
+  text-align: center;
+  margin-bottom: 0.25rem;
 }
-.auth-submit {
+.card-emoji {
+  display: block;
+  font-size: 2.3rem;
+}
+.card-head h2 {
+  margin: 0.25rem 0 0;
+  font-size: 1.45rem;
+}
+.card-tip {
+  margin: 0.25rem 0 0;
+  color: #b0b0b0;
+  font-size: 0.85rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.field label {
+  font-size: 0.85rem;
+  color: #666;
+}
+.auth-input,
+.auth-input :deep(.el-input) {
   width: 100%;
+}
+.form-error {
+  margin: 0;
+  color: #e34d1c;
+  font-size: 0.9rem;
+}
+.submit-btn {
+  width: 100%;
+  height: 42px;
+  font-size: 1rem;
+  margin-top: 0.25rem;
+}
+.switch-line {
+  text-align: center;
+  margin: 0.5rem 0 0;
+  color: #b0b0b0;
+  font-size: 0.9rem;
+}
+.switch-line a {
+  color: var(--el-color-primary);
+  text-decoration: none;
+  font-weight: 600;
 }
 </style>
