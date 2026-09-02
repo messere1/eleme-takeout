@@ -5,7 +5,6 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import ElementPlus from 'element-plus'
 
 function createTestRouter() {
-  // 成功跳转只关心路径，目标页用桩组件占位即可。
   const Stub = { template: '<div class="route-stub">route stub</div>' }
   return createRouter({
     history: createMemoryHistory(),
