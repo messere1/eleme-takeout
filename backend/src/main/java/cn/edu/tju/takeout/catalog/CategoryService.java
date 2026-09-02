@@ -1,8 +1,6 @@
 package cn.edu.tju.takeout.catalog;
 
-import cn.edu.tju.takeout.auth.AuthController;
 import cn.edu.tju.takeout.common.BusinessException;
-import cn.edu.tju.takeout.product.ProductController;
 import cn.edu.tju.takeout.product.ProductMapper;
 import cn.edu.tju.takeout.shop.Shop;
 import cn.edu.tju.takeout.shop.ShopMapper;
