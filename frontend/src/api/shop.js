@@ -15,18 +15,18 @@ export function listProducts(shopId, categoryId) {
 }
 
 // —— 商家后台写操作（需 MERCHANT token，仅能操作本人店铺；契约 §5/§6）——
-export function updateShop(_shopId, _payload) {
-  throw new Error('待功能开发：店铺资料修改尚未实现')
+export function updateShop(shopId, payload) {
+  return http.patch(`/shops/${shopId}`, payload)
 }
 
-export function changeStatus(_shopId, _status) {
-  throw new Error('待功能开发：营业状态修改尚未实现')
+export function changeStatus(shopId, status) {
+  return http.patch(`/shops/${shopId}/status`, { status })
 }
 
-export function createCategory(_shopId, _payload) {
-  throw new Error('待功能开发：分类新增尚未实现')
+export function createCategory(shopId, payload) {
+  return http.post(`/shops/${shopId}/categories`, payload)
 }
 
-export function deleteCategory(_categoryId) {
-  throw new Error('待功能开发：分类删除尚未实现')
+export function deleteCategory(categoryId) {
+  return http.delete(`/categories/${categoryId}`)
 }

@@ -13,6 +13,7 @@
         <RouterLink to="/cart">购物车</RouterLink>
         <RouterLink to="/orders">订单</RouterLink>
         <RouterLink to="/profile">我的</RouterLink>
+        <RouterLink to="/merchant/register">开店</RouterLink>
         <RouterLink to="/login">登录</RouterLink>
         <RouterLink to="/register">注册</RouterLink>
       </nav>

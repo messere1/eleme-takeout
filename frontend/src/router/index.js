@@ -8,6 +8,8 @@ import Cart from '@/views/Cart.vue'
 import Orders from '@/views/Orders.vue'
 import OrderDetail from '@/views/OrderDetail.vue'
 import Profile from '@/views/Profile.vue'
+import MerchantRegister from '@/views/MerchantRegister.vue'
+import MerchantConsole from '@/views/MerchantConsole.vue'
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -18,6 +20,8 @@ const routes = [
   { path: '/orders', name: 'orders', component: Orders },
   { path: '/orders/:id', name: 'order-detail', component: OrderDetail },
   { path: '/profile', name: 'profile', component: Profile },
+  { path: '/merchant/register', name: 'merchant-register', component: MerchantRegister },
+  { path: '/merchant', name: 'merchant-console', component: MerchantConsole },
 ]
 
 const router = createRouter({

@@ -30,8 +30,9 @@ async function setField(wrapper, testid, value) {
 }
 
 async function fillAndSubmit(wrapper, values) {
+  const FIELD = { merchantName: 'name', businessScope: 'scope' }
   for (const [key, value] of Object.entries(values)) {
-    await setField(wrapper, `mr-${key}`, value)
+    await setField(wrapper, `mr-${FIELD[key] || key}`, value)
   }
   await wrapper.get('[data-testid="mr-submit"]').trigger('click')
   await flushPromises()
