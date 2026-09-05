@@ -7,6 +7,7 @@ import Shop from '@/views/Shop.vue'
 import Cart from '@/views/Cart.vue'
 import Orders from '@/views/Orders.vue'
 import OrderDetail from '@/views/OrderDetail.vue'
+import Profile from '@/views/Profile.vue'
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -16,6 +17,7 @@ const routes = [
   { path: '/cart', name: 'cart', component: Cart },
   { path: '/orders', name: 'orders', component: Orders },
   { path: '/orders/:id', name: 'order-detail', component: OrderDetail },
+  { path: '/profile', name: 'profile', component: Profile },
 ]
 
 const router = createRouter({

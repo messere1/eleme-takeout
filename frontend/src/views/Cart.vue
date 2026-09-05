@@ -46,6 +46,11 @@ async function minus(item) {
   item.quantity -= 1
 }
 
+async function remove(item) {
+  await removeItem(item.id)
+  items.value = items.value.filter((entry) => entry.id !== item.id)
+}
+
 async function clearAll() {
   await clearCart()
   items.value = []
@@ -103,6 +108,12 @@ onMounted(load)
               :disabled="busy"
               @click="plus(item)"
             >+</button>
+            <button
+              class="remove-btn"
+              :data-testid="`cart-remove-${item.id}`"
+              :disabled="busy"
+              @click="remove(item)"
+            >删除</button>
           </div>
         </li>
       </ul>
@@ -207,6 +218,18 @@ onMounted(load)
 .qty-num {
   min-width: 1.2rem;
   text-align: center;
+}
+.remove-btn {
+  border: none;
+  background: transparent;
+  color: #e34d1c;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.4rem;
+}
+.remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .cart-footer {
   display: flex;

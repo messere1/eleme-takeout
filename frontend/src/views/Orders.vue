@@ -8,6 +8,7 @@ const router = useRouter()
 const orders = ref([])
 const currentPage = ref(1)
 const totalPages = ref(1)
+const selectedStatus = ref('')
 const loadError = ref('')
 
 function fmt(value) {
@@ -20,13 +21,19 @@ function fmtTime(value) {
 
 async function load(page) {
   try {
-    const data = await listOrders({ page, size: 10 })
+    const params = { page, size: 10 }
+    if (selectedStatus.value) params.status = selectedStatus.value
+    const data = await listOrders(params)
     orders.value = data?.items ?? []
     currentPage.value = data?.page ?? page
     totalPages.value = data?.totalPages ?? 1
   } catch {
     loadError.value = '未连接后端，无法加载订单（仅静态预览）'
   }
+}
+
+function onStatusChange() {
+  load(1)
 }
 
 function go(page) {
@@ -45,6 +52,20 @@ onMounted(() => load(1))
   <section class="orders-page">
     <h2>我的订单</h2>
     <p v-if="loadError" class="page-note">{{ loadError }}</p>
+
+    <div class="orders-toolbar">
+      <label for="orders-status">状态</label>
+      <select
+        id="orders-status"
+        v-model="selectedStatus"
+        data-testid="orders-status"
+        class="status-select"
+        @change="onStatusChange"
+      >
+        <option value="">全部</option>
+        <option value="PENDING">待处理</option>
+      </select>
+    </div>
 
     <template v-if="orders.length">
       <ul class="order-list">
@@ -182,5 +203,22 @@ onMounted(() => load(1))
   margin: 0 0 0.75rem;
   color: #e34d1c;
   font-size: 0.9rem;
+}
+.orders-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.orders-toolbar label {
+  color: #666;
+  font-size: 0.9rem;
+}
+.status-select {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  background: #fff;
+  color: #444;
 }
 </style>
