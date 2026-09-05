@@ -3,7 +3,8 @@
     <section class="hero">
       <div class="hero-text">
         <h2>你点的，正在路上～</h2>
-        <p>店铺与美食即将上线，先逛逛看</p>
+        <p>进店逛逛，把好吃的加入购物车</p>
+        <RouterLink class="hero-cta" to="/shops/1">进入示例店铺 →</RouterLink>
       </div>
       <div class="hero-emoji">🍔🍜🥡🍤</div>
     </section>
@@ -59,6 +60,16 @@
 .hero-emoji {
   font-size: 2.3rem;
   letter-spacing: 0.35rem;
+}
+.hero-cta {
+  display: inline-block;
+  margin-top: 0.8rem;
+  background: #2b1d00;
+  color: #ffd98a;
+  padding: 0.45rem 1.2rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
 }
 
 .coming h3 {

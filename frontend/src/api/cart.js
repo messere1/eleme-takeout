@@ -1,21 +1,22 @@
-// 购物车接口（桩）。方法签名见 docs/api-contract-v1.md §7，
-// 页面测试通过 vi.mock('@/api/cart') 在 api 层伪造响应。
+// 购物车接口。契约：docs/api-contract-v1.md §7（需 CUSTOMER 登录，身份取自 token）。
+import { http } from './http'
+
 export function getCart() {
-  throw new Error('待功能开发：购物车接口尚未实现')
+  return http.get('/cart')
 }
 
-export function addToCart(_payload) {
-  throw new Error('待功能开发：购物车接口尚未实现')
+export function addToCart(payload) {
+  return http.post('/cart', payload)
 }
 
-export function updateItem(_itemId, _quantity) {
-  throw new Error('待功能开发：购物车接口尚未实现')
+export function updateItem(itemId, quantity) {
+  return http.put(`/cart/items/${itemId}`, { quantity })
 }
 
-export function removeItem(_itemId) {
-  throw new Error('待功能开发：购物车接口尚未实现')
+export function removeItem(itemId) {
+  return http.delete(`/cart/items/${itemId}`)
 }
 
 export function clearCart() {
-  throw new Error('待功能开发：购物车接口尚未实现')
+  return http.delete('/cart')
 }

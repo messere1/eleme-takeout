@@ -10,6 +10,7 @@
       </div>
       <nav class="brand-nav">
         <RouterLink to="/">首页</RouterLink>
+        <RouterLink to="/cart">购物车</RouterLink>
         <RouterLink to="/login">登录</RouterLink>
         <RouterLink to="/register">注册</RouterLink>
       </nav>
