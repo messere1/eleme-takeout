@@ -16,6 +16,9 @@ function createTestRouter() {
       { path: '/cart', component: Stub },
       { path: '/orders', component: Stub },
       { path: '/orders/:id', component: Stub },
+      { path: '/profile', component: Stub },
+      { path: '/merchant', component: Stub },
+      { path: '/merchant/register', component: Stub },
     ],
   })
 }
