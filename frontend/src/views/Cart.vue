@@ -9,6 +9,7 @@ const router = useRouter()
 const items = ref([])
 const busy = ref(false)
 const message = ref('')
+const loadError = ref('')
 
 const total = computed(() =>
   items.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -22,8 +23,12 @@ function fmt(value) {
 }
 
 async function load() {
-  const cart = await getCart()
-  items.value = cart?.items ?? []
+  try {
+    const cart = await getCart()
+    items.value = cart?.items ?? []
+  } catch {
+    loadError.value = '未连接后端，无法加载购物车（仅静态预览）'
+  }
 }
 
 async function plus(item) {
@@ -65,6 +70,7 @@ onMounted(load)
 <template>
   <section class="cart-page">
     <h2>我的购物车</h2>
+    <p v-if="loadError" class="cart-message">{{ loadError }}</p>
 
     <template v-if="!empty">
       <ul class="cart-list">

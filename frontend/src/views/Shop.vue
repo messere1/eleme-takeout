@@ -12,6 +12,7 @@ const categories = ref([])
 const products = ref([])
 const activeCategoryId = ref(null)
 const message = ref('')
+const loadError = ref('')
 
 const STATUS_TEXT = {
   OPEN: '营业中',
@@ -46,7 +47,13 @@ async function addProduct(product) {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  try {
+    await load()
+  } catch {
+    loadError.value = '未连接后端，无法加载店铺（仅静态预览）'
+  }
+})
 </script>
 
 <template>
@@ -105,7 +112,7 @@ onMounted(load)
         {{ message }}
       </p>
     </template>
-    <p v-else class="loading-tip">店铺加载中…</p>
+    <p v-else class="loading-tip">{{ loadError || '店铺加载中…' }}</p>
   </section>
 </template>
 
