@@ -99,4 +99,13 @@ describe('购物车页', () => {
     expect(createOrder).toHaveBeenCalled()
     expect(router.currentRoute.value.path).toBe('/orders/60')
   })
+
+  it('点击单条删除按钮调用 removeItem 并移除该行', async () => {
+    removeItem.mockResolvedValue(null)
+    const { wrapper } = await mountCart()
+    await wrapper.get('[data-testid="cart-remove-50"]').trigger('click')
+    await flushPromises()
+    expect(removeItem).toHaveBeenCalledWith(50)
+    expect(wrapper.find('[data-testid="cart-item-50"]').exists()).toBe(false)
+  })
 })

@@ -83,4 +83,11 @@ describe('订单列表页', () => {
     const { wrapper } = await mountOrders(EMPTY)
     expect(wrapper.get('[data-testid="orders-empty"]').text()).toContain('暂无订单')
   })
+
+  it('选择状态筛选后按状态重新拉取订单', async () => {
+    const { wrapper } = await mountOrders()
+    await wrapper.get('[data-testid="orders-status"]').setValue('PENDING')
+    await flushPromises()
+    expect(listOrders).toHaveBeenLastCalledWith({ page: 1, size: 10, status: 'PENDING' })
+  })
 })
