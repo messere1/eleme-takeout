@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
+
+vi.mock('@/api/shop', () => ({
+  listShops: vi.fn().mockResolvedValue([]),
+}))
 
 it('将应用挂载到约定的根节点', async () => {
   document.body.innerHTML = '<div id="app"></div>'
