@@ -47,7 +47,7 @@ async function submit() {
       shopId: data.shopId,
       merchantName: data.merchantName,
     })
-    router.push('/login')
+    router.push('/merchant/login')
   } catch (error) {
     errorMessage.value = error?.message || '注册失败，请稍后重试'
   } finally {
@@ -129,7 +129,7 @@ async function submit() {
       </el-button>
 
       <p class="switch-line">
-        已是商家？<RouterLink to="/login">去登录</RouterLink>
+        已有店铺？<RouterLink to="/merchant/login">去商家登录</RouterLink>
       </p>
     </section>
   </div>

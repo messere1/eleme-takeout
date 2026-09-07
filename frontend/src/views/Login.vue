@@ -6,7 +6,7 @@ import { session } from '@/utils/session'
 
 const router = useRouter()
 
-const form = reactive({ account: '', password: '', role: 'CUSTOMER' })
+const form = reactive({ account: '', password: '' })
 const errorMessage = ref('')
 const submitting = ref(false)
 
@@ -20,14 +20,9 @@ async function submit() {
 
   submitting.value = true
   try {
-    const data = await login({
-      account,
-      password: form.password,
-      role: form.role,
-    })
-    const role = data.role || form.role
-    session.save({ token: data.token, role })
-    router.push(role === 'MERCHANT' ? '/merchant' : '/')
+    const data = await login({ account, password: form.password, role: 'CUSTOMER' })
+    session.save({ token: data.token, role: data.role || 'CUSTOMER' })
+    router.push('/')
   } catch (error) {
     errorMessage.value = error?.message || '登录失败，请稍后重试'
   } finally {
@@ -69,20 +64,6 @@ async function submit() {
           show-password
           @keyup.enter="submit"
         />
-      </div>
-
-      <div class="field">
-        <label for="login-role">角色</label>
-        <select
-          id="login-role"
-          v-model="form.role"
-          data-testid="login-role"
-          class="role-select"
-          style="width:100%;border:1px solid #dcdfe6;border-radius:8px;padding:0.55rem 0.75rem;background:#fff;color:#2b2b2b;font-size:0.95rem;"
-        >
-          <option value="CUSTOMER">顾客</option>
-          <option value="MERCHANT">商家</option>
-        </select>
       </div>
 
       <p v-if="errorMessage" data-testid="login-error" role="alert" class="form-error">

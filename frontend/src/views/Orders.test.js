@@ -4,9 +4,14 @@
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/api/order', () => ({ listOrders: vi.fn(), getOrder: vi.fn(), createOrder: vi.fn() }))
+vi.mock('@/api/order', () => ({
+  listOrders: vi.fn(),
+  getOrder: vi.fn(),
+  createOrder: vi.fn(),
+  cancelOrder: vi.fn(),
+}))
 
-import { listOrders } from '@/api/order'
+import { cancelOrder, listOrders } from '@/api/order'
 import { mountView } from '@/test/mountView'
 import Orders from './Orders.vue'
 
@@ -89,5 +94,15 @@ describe('订单列表页', () => {
     await wrapper.get('[data-testid="orders-status"]').setValue('PENDING')
     await flushPromises()
     expect(listOrders).toHaveBeenLastCalledWith({ page: 1, size: 10, status: 'PENDING' })
+  })
+
+  it('待处理订单显示取消按钮，点击调用 cancelOrder 并标记已取消', async () => {
+    cancelOrder.mockResolvedValue({ ...ORDER_A, status: 'CANCELLED' })
+    const { wrapper } = await mountOrders()
+    expect(wrapper.get('[data-testid="order-cancel-11"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="order-cancel-11"]').trigger('click')
+    await flushPromises()
+    expect(cancelOrder).toHaveBeenCalledWith(11)
+    expect(wrapper.get('[data-testid="order-row-11"]').text()).toContain('已取消')
   })
 })
