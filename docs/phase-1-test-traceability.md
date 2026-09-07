@@ -5,19 +5,19 @@
 | 需求 | 验收重点 | 自动化测试 | 当前状态 |
 | --- | --- | --- | --- |
 | FR-001 | 用户注册、重复账号、参数约束 | `UserRegistrationServiceTest`、`UserRegistrationControllerTest`、`Register.test.js` | 通过 |
-| FR-002 | 用户登录、JWT、鉴权和失败提示 | `UserLoginServiceTest`、`MerchantLoginServiceTest`、`UserLoginControllerTest`、`JwtServiceRobustnessTest`、`SecurityIntegrationTest`、`Login.test.js` | 回归失败：凭证错误文案与契约不一致 |
+| FR-002 | 用户登录、JWT、鉴权和失败提示 | `UserLoginServiceTest`、`MerchantLoginServiceTest`、`UserLoginControllerTest`、`JwtServiceRobustnessTest`、`SecurityIntegrationTest`、`Login.test.js` | 通过 |
 | FR-003 | 用户资料查询、修改和身份隔离 | `UserProfileServiceTest`、`UserProfileControllerTest`、`Profile.test.js` | 通过 |
-| FR-004 | 商家注册、重复约束和默认店铺 | `MerchantRegistrationServiceTest`、`MerchantRegistrationControllerTest`、`MerchantRegister.test.js` | 回归失败：成功后的跳转目标不一致 |
-| FR-005 | 商家独立登录 | `MerchantLoginServiceTest`、`MerchantLogin.test.js` | 回归失败：商家登录页尚无有效内容 |
+| FR-004 | 商家注册、重复约束和默认店铺 | `MerchantRegistrationServiceTest`、`MerchantRegistrationControllerTest`、`MerchantRegister.test.js` | 通过 |
+| FR-005 | 商家独立登录 | `MerchantLoginServiceTest`、`MerchantLogin.test.js` | 通过 |
 | FR-006 | 商家修改所属店铺营业状态 | `ShopStatusServiceTest`、`ShopStatusControllerTest`、`MerchantConsole.test.js` | 通过 |
 | FR-007 | 店铺查询、修改、资源不存在和所属权 | `ShopManagementServiceTest`、`ShopControllerContractTest`、`MerchantConsole.test.js` | 通过 |
 | FR-008 | 分类增删改查、重复名称、资源归属和非空删除 | `CategoryServiceTest`、`CategoryBoundaryServiceTest`、`CategoryControllerContractTest`、`MerchantConsole.test.js` | 通过 |
-| FR-009 | 商品增删改查、上下架、资源归属 | `ProductServiceTest`、`ProductBoundaryServiceTest`、`ProductControllerContractTest` | 部分覆盖：商家商品管理页面缺失 |
+| FR-009 | 商品增删改查、上下架、资源归属 | `ProductServiceTest`、`ProductBoundaryServiceTest`、`ProductControllerContractTest`、`MerchantProducts.test.js` | 回归失败：商家商品管理页面仍为空桩 |
 | FR-010 | 商品价格为正数且最多两位小数 | `ProductPriceValidationTest`、`RequestDtoBoundaryTest` | 通过 |
 | FR-011 | 库存非负、商品与店铺校验 | `ProductStockServiceTest`、`ProductBoundaryServiceTest`、`ProductControllerContractTest` | 回归失败：库存操作返回资源不存在或抛错 |
-| FR-012 | 添加购物车、数量合并、下架与商品不存在 | `CartAddServiceTest`、`CartBoundaryServiceTest`、`CartControllerContractTest`、`Shop.test.js` | 回归失败：下架错误码、停业店铺仍可加购 |
+| FR-012 | 添加购物车、数量合并、下架与商品不存在 | `CartAddServiceTest`、`CartBoundaryServiceTest`、`CartControllerContractTest`、`Shop.test.js` | 回归失败：停业店铺仍可加购；后端相关测试已通过 |
 | FR-013 | 购物车金额、商品可用性和库存提示 | `CartQueryServiceTest`、`CartControllerContractTest`、`Cart.test.js` | 通过 |
-| FR-014 | 修改数量、零值边界、库存和越权 | `CartUpdateServiceTest`、`CartControllerContractTest`、`Cart.test.js` | 回归失败：库存错误码及前端异常处理 |
+| FR-014 | 修改数量、零值边界、库存和越权 | `CartUpdateServiceTest`、`CartControllerContractTest`、`Cart.test.js` | 回归失败：前端未处理更新失败；后端相关测试已通过 |
 | FR-015 | 删除单项、清空购物车和越权 | `CartDeleteServiceTest`、`CartControllerContractTest`、`Cart.test.js` | 通过 |
 | FR-016 | 事务下单、空/跨店/下架、库存和响应明细 | `OrderCreationServiceTest`、`OrderBoundaryServiceTest`、`OrderControllerContractTest` | 回归失败：错误码和成功响应明细不符合断言 |
 | FR-017 | 订单列表、筛选及分页边界 | `OrderListServiceTest`、`OrderBoundaryServiceTest`、`OrderControllerContractTest`、`Orders.test.js` | 回归失败：`size=101` 未拒绝 |
