@@ -97,4 +97,21 @@ describe('FR-002 登录页', () => {
     await flushPromises()
   })
 
+  it('渲染登录角色选择控件（默认顾客）', async () => {
+    const { wrapper } = await mountLogin()
+    expect(wrapper.get('[data-testid="login-role"]').element.value).toBe('CUSTOMER')
+  })
+
+  it('选择商家角色登录后进入商家后台', async () => {
+    login.mockResolvedValue({ token: 'mt-1', role: 'MERCHANT', expiresIn: 7200 })
+    const { wrapper, router } = await mountLogin()
+    await wrapper.get('[data-testid="login-role"]').setValue('MERCHANT')
+    await setField(wrapper, 'login-account', ACCOUNT)
+    await setField(wrapper, 'login-password', PASSWORD)
+    await clickSubmit(wrapper)
+    await flushPromises()
+    expect(login).toHaveBeenCalledWith({ account: ACCOUNT, password: PASSWORD, role: 'MERCHANT' })
+    expect(session.load()?.role).toBe('MERCHANT')
+    expect(router.currentRoute.value.path).toBe('/merchant')
+  })
 })

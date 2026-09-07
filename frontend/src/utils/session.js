@@ -3,8 +3,13 @@
 export const SESSION_KEY = 'takeout-auth'
 export const SHOP_KEY = 'takeout-shop'
 
+function notify() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('auth-change'))
+}
+
 function save({ token, role }) {
   localStorage.setItem(SESSION_KEY, JSON.stringify({ token, role }))
+  notify()
 }
 
 function load() {
@@ -21,6 +26,7 @@ function load() {
 function clear() {
   localStorage.removeItem(SESSION_KEY)
   localStorage.removeItem(SHOP_KEY)
+  notify()
 }
 
 function saveShop(shop) {

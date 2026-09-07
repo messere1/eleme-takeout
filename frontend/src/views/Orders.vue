@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { listOrders } from '@/api/order'
+import { cancelOrder, listOrders } from '@/api/order'
 
 const router = useRouter()
 
@@ -17,6 +17,22 @@ function fmt(value) {
 
 function fmtTime(value) {
   return value ? String(value).replace('T', ' ').slice(0, 16) : ''
+}
+
+const STATUS_TEXT = { PENDING: '待处理', ACCEPTED: '已接单', COMPLETED: '已完成', CANCELLED: '已取消' }
+
+function statusText(status) {
+  return STATUS_TEXT[status] || status
+}
+
+async function cancelRow(order) {
+  loadError.value = ''
+  try {
+    const res = await cancelOrder(order.id)
+    order.status = res?.status || 'CANCELLED'
+  } catch (error) {
+    loadError.value = error?.message || '取消失败，请稍后重试'
+  }
 }
 
 async function load(page) {
@@ -78,11 +94,18 @@ onMounted(() => load(1))
         >
           <div class="order-main">
             <span class="order-no">{{ order.orderNo }}</span>
-            <span class="order-status">{{ order.status }}</span>
+            <span class="order-status">{{ statusText(order.status) }}</span>
           </div>
           <div class="order-sub">
             <span class="order-time">{{ fmtTime(order.createdAt) }}</span>
             <strong class="order-amount">¥{{ fmt(order.totalAmount) }}</strong>
+          </div>
+          <div v-if="order.status === 'PENDING'" class="order-cancel">
+            <button
+              class="cancel-btn"
+              :data-testid="`order-cancel-${order.id}`"
+              @click.stop="cancelRow(order)"
+            >取消订单</button>
           </div>
         </li>
       </ul>
@@ -198,6 +221,16 @@ onMounted(() => load(1))
   text-align: center;
   color: #999;
   padding: 2.5rem 0;
+}
+.cancel-btn {
+  border: 1px solid #ff6a00;
+  color: #ff6a00;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 .page-note {
   margin: 0 0 0.75rem;

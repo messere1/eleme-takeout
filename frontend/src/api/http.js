@@ -34,9 +34,15 @@ async function handleUnauthorized() {
   }
 }
 
+// 登录/注册等公开请求不携带令牌（避免残留的过期 token 在公开接口上触发 401）。
+const PUBLIC_POST = { '/auth/login': 1, '/users': 1, '/merchants': 1 }
+
 http.interceptors.request.use((config) => {
   const auth = session.load()
-  if (auth?.token) {
+  const url = (config.url || '').split('?')[0]
+  const method = (config.method || 'get').toLowerCase()
+  const isPublic = method === 'post' && PUBLIC_POST[url]
+  if (auth?.token && !isPublic) {
     config.headers = config.headers || {}
     config.headers.Authorization = `Bearer ${auth.token}`
   }

@@ -1,9 +1,4 @@
-// 订单接口。契约：docs/api-contract-v1.md §8。
-// 以下商家/状态动作为新增约定（后端实现中）：
-//   商家列表   GET    /merchant/orders      —— 返回本人店铺订单
-//   接单/完成  POST   /orders/{id}/accept | /orders/{id}/complete
-//   顾客取消   POST   /orders/{id}/cancel   —— 仅可取消待接单订单并回补库存
-// 订单状态按后端实际：PENDING(待接单)/ACCEPTED(已接单)/COMPLETED(已完成)/CANCELLED(已取消)。
+// 订单接口（顾客下单/列表/详情，商家接单/完成，顾客取消）。契约 §8 与商家扩展动作。
 import { http } from './http'
 
 export function createOrder() {

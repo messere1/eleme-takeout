@@ -20,10 +20,10 @@ const ORDERS = [
   { id: 61, orderNo: 'T20260902002', shopId: 7, totalAmount: 23.0, status: 'ACCEPTED', createdAt: '2026-09-02T10:00:00' },
 ]
 
-async function mountOrders() {
+async function mountOrders(data = ORDERS) {
   session.save({ token: 'mt-1', role: 'MERCHANT' })
   session.saveShop({ merchantId: 12, shopId: 7, shopName: '北洋餐厅' })
-  listMerchantOrders.mockResolvedValue(ORDERS)
+  listMerchantOrders.mockResolvedValue(data)
   const ctx = await mountView(MerchantOrders, { path: '/merchant/orders' })
   await flushPromises()
   return ctx
@@ -65,8 +65,7 @@ describe('商家订单管理', () => {
   })
 
   it('没有订单时展示空状态', async () => {
-    listMerchantOrders.mockResolvedValue([])
-    const { wrapper } = await mountOrders()
+    const { wrapper } = await mountOrders([])
     expect(wrapper.get('[data-testid="order-mgmt-empty"]').text()).toContain('暂无订单')
   })
 })

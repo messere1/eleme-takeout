@@ -1,4 +1,5 @@
 <script setup>
+
 import { onMounted, ref } from 'vue'
 import { changeStatus, createCategory, deleteCategory, getShop, listCategories, updateShop } from '@/api/shop'
 import { session } from '@/utils/session'
@@ -87,11 +88,18 @@ onMounted(load)
 
 <template>
   <section class="console">
-    <h2>商家后台</h2>
+    <div class="console-top">
+      <h2>商家后台</h2>
+      <nav class="console-nav">
+        <RouterLink to="/merchant">店铺</RouterLink>
+        <RouterLink to="/merchant/products">商品管理</RouterLink>
+        <RouterLink to="/merchant/orders">订单管理</RouterLink>
+      </nav>
+    </div>
 
     <p v-if="missingShop" class="console-missing">
-      未找到你的店铺，请先<RouterLink to="/merchant/register">注册开店</RouterLink>或
-      <RouterLink to="/login">用商家账号登录</RouterLink>。
+      还没有店铺？<RouterLink to="/register">去注册开店</RouterLink>，或
+      <RouterLink to="/login">用账号登录</RouterLink>。
     </p>
 
     <template v-else-if="shop">
@@ -193,6 +201,19 @@ onMounted(load)
 }
 .console h2 {
   margin: 0;
+}
+.console-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.console-nav a {
+  margin-left: 0.6rem;
+  color: var(--el-color-primary);
+  font-weight: 600;
+  text-decoration: none;
 }
 .panel {
   background: #fff;

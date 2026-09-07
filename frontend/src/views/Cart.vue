@@ -26,7 +26,11 @@ async function load() {
   try {
     const cart = await getCart()
     items.value = cart?.items ?? []
-  } catch {
+  } catch (error) {
+    if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
+      router.push('/login')
+      return
+    }
     loadError.value = '未连接后端，无法加载购物车（仅静态预览）'
   }
 }
@@ -63,6 +67,10 @@ async function checkout() {
     const order = await createOrder()
     router.push(`/orders/${order.id}`)
   } catch (error) {
+    if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
+      router.push('/login')
+      return
+    }
     message.value = error?.message || '下单失败，请稍后重试'
   } finally {
     busy.value = false

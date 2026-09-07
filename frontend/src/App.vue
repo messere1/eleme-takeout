@@ -1,3 +1,27 @@
+<script setup>
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { session } from '@/utils/session'
+
+const router = useRouter()
+const logged = ref(false)
+
+function refresh() {
+  logged.value = Boolean(session.load())
+}
+
+function logout() {
+  session.clear()
+  router.push('/')
+}
+
+onMounted(() => {
+  refresh()
+  window.addEventListener('auth-change', refresh)
+})
+onBeforeUnmount(() => window.removeEventListener('auth-change', refresh))
+</script>
+
 <template>
   <header class="brand-bar">
     <div class="brand-inner">
@@ -13,11 +37,15 @@
         <RouterLink to="/cart">购物车</RouterLink>
         <RouterLink to="/orders">订单</RouterLink>
         <RouterLink to="/profile">我的</RouterLink>
-        <span class="nav-divider">·</span>
-        <RouterLink to="/login">登录</RouterLink>
-        <RouterLink to="/register">注册</RouterLink>
-        <span class="nav-divider">·</span>
-        <RouterLink to="/merchant/login">商家入口</RouterLink>
+        <template v-if="logged">
+          <span class="nav-divider">·</span>
+          <button class="nav-link logout" @click="logout">退出</button>
+        </template>
+        <template v-else>
+          <span class="nav-divider">·</span>
+          <RouterLink to="/login">登录</RouterLink>
+          <RouterLink to="/register">注册</RouterLink>
+        </template>
       </nav>
     </div>
   </header>
@@ -85,6 +113,17 @@
 .nav-divider {
   margin-left: 0.5rem;
   color: rgba(255, 255, 255, 0.75);
+}
+.nav-link.logout {
+  margin-left: 0.5rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #b34700;
+  font-weight: 600;
+  font-size: 0.92rem;
+  border-radius: 999px;
+  padding: 0.4rem 1.1rem;
+  cursor: pointer;
 }
 .brand-nav a.router-link-exact-active {
   background: #2b1d00;

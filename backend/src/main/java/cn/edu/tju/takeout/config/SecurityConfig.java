@@ -45,6 +45,8 @@ public class SecurityConfig {
                                         response, objectMapper, 403,
                                         "FORBIDDEN", "无权访问该资源")))
                 .authorizeHttpRequests(auth -> auth
+                        // 错误页放行：否则后端内部错误/404 会经 /error 被拦成 401“请先登录”
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/login", "/api/v1/users", "/api/v1/merchants")
                         .permitAll()

@@ -1,10 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { getShop, listCategories, listProducts } from '@/api/shop'
 import { addToCart } from '@/api/cart'
 
 const route = useRoute()
+const router = useRouter()
 const shopId = Number(route.params.id)
 
 const shop = ref(null)
@@ -43,6 +44,10 @@ async function addProduct(product) {
     await addToCart({ productId: product.id, quantity: 1 })
     message.value = '已加入购物车'
   } catch (error) {
+    if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
+      router.push('/login')
+      return
+    }
     message.value = error?.message || '加购失败，请稍后重试'
   }
 }

@@ -8,9 +8,9 @@ import Cart from '@/views/Cart.vue'
 import Orders from '@/views/Orders.vue'
 import OrderDetail from '@/views/OrderDetail.vue'
 import Profile from '@/views/Profile.vue'
-import MerchantRegister from '@/views/MerchantRegister.vue'
-import MerchantLogin from '@/views/MerchantLogin.vue'
 import MerchantConsole from '@/views/MerchantConsole.vue'
+import MerchantProducts from '@/views/MerchantProducts.vue'
+import MerchantOrders from '@/views/MerchantOrders.vue'
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -21,9 +21,9 @@ const routes = [
   { path: '/orders', name: 'orders', component: Orders },
   { path: '/orders/:id', name: 'order-detail', component: OrderDetail },
   { path: '/profile', name: 'profile', component: Profile },
-  { path: '/merchant/register', name: 'merchant-register', component: MerchantRegister },
-  { path: '/merchant/login', name: 'merchant-login', component: MerchantLogin },
   { path: '/merchant', name: 'merchant-console', component: MerchantConsole },
+  { path: '/merchant/products', name: 'merchant-products', component: MerchantProducts },
+  { path: '/merchant/orders', name: 'merchant-orders', component: MerchantOrders },
 ]
 
 const router = createRouter({
