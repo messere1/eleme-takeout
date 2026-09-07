@@ -42,7 +42,7 @@ public class OrderService {
 
             throw new BusinessException(
                     HttpStatus.CONFLICT,
-                    "CART_EMPTY",
+                    "BUSINESS_CONFLICT",
                     "购物车为空"
             );
         }
@@ -62,15 +62,6 @@ public class OrderService {
                 );
             }
 
-            if (!"ON_SALE".equals(
-                    line.getStatus())) {
-
-                throw new BusinessException(
-                        HttpStatus.CONFLICT,
-                        "PRODUCT_OFF_SALE",
-                        "购物车中存在已下架商品"
-                );
-            }
         }
 
         Shop shop =
@@ -89,6 +80,16 @@ public class OrderService {
             );
         }
 
+        for (CartCheckoutLine line : lines) {
+            if (!"ON_SALE".equals(line.getStatus())) {
+                throw new BusinessException(
+                        HttpStatus.CONFLICT,
+                        "BUSINESS_CONFLICT",
+                        "购物车中存在已下架商品"
+                );
+            }
+        }
+
         BigDecimal totalAmount =
                 BigDecimal.ZERO;
 
@@ -104,6 +105,7 @@ public class OrderService {
             totalAmount =
                     totalAmount.add(subtotal);
         }
+        totalAmount = totalAmount.setScale(2, java.math.RoundingMode.HALF_UP);
 
         for (CartCheckoutLine line : lines) {
 
@@ -125,7 +127,7 @@ public class OrderService {
         }
 
         Order order =
-                Order.pending(
+                Order.created(
                         generateOrderNo(),
                         userId,
                         shopId,
@@ -164,10 +166,10 @@ public class OrderService {
 
         int size =
                 query.size() == null
-                        ? 10
+                        ? 20
                         : query.size();
 
-        if (page < 1 || size < 1) {
+        if (page < 1 || size < 1 || size > 100) {
 
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
@@ -188,8 +190,7 @@ public class OrderService {
             );
         }
 
-        int offset =
-                (page - 1) * size;
+        int offset = (page - 1) * size;
 
         List<Order> orders =
                 orderMapper.findPageByUserId(
@@ -229,6 +230,44 @@ public class OrderService {
                 total,
                 totalPages
         );
+    }
+
+    public OrderPage listForMerchant(Long merchantId, OrderQuery query) {
+        Shop shop = shopMapper.findByMerchantId(merchantId).orElseThrow(this::forbidden);
+        PageRequest pageRequest = validatePage(query);
+        List<Order> orders = orderMapper.findPageByShopId(
+                shop.getId(), query.status(), query.startTime(), query.endTime(),
+                pageRequest.size(), pageRequest.offset());
+        long total = orderMapper.countByShopId(
+                shop.getId(), query.status(), query.startTime(), query.endTime());
+        return pageOf(orders, pageRequest.page(), pageRequest.size(), total);
+    }
+
+    @Transactional
+    public OrderView cancel(Long userId, Long orderId) {
+        Order order = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+        if (!order.getUserId().equals(userId)) {
+            throw forbidden();
+        }
+        if ("CANCELLED".equals(order.getStatus())) {
+            throw alreadyCancelled();
+        }
+        if (!"CREATED".equals(order.getStatus())) {
+            throw businessConflict("订单当前状态不可取消");
+        }
+        if (orderMapper.markCancelledIfAllowed(orderId) == 0) {
+            Order current = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+            if ("CANCELLED".equals(current.getStatus())) {
+                throw alreadyCancelled();
+            }
+            throw businessConflict("订单当前状态不可取消");
+        }
+        List<OrderItem> items = orderMapper.findItemsByOrderId(orderId);
+        for (OrderItem item : items) {
+            productMapper.increaseStock(item.getProductId(), item.getQuantity());
+        }
+        order.changeStatus("CANCELLED");
+        return OrderView.from(order, items);
     }
 
     public OrderView getDetail(Long actorId, String role, Long orderId) {
@@ -307,4 +346,33 @@ public class OrderService {
                 "无权访问该订单"
         );
     }
+
+    private PageRequest validatePage(OrderQuery query) {
+        int page = query.page() == null ? 1 : query.page();
+        int size = query.size() == null ? 20 : query.size();
+        if (page < 1 || size < 1 || size > 100) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "分页参数不合法");
+        }
+        if (query.startTime() != null && query.endTime() != null
+                && query.startTime().isAfter(query.endTime())) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "开始时间不能晚于结束时间");
+        }
+        return new PageRequest(page, size, (page - 1) * size);
+    }
+
+    private OrderPage pageOf(List<Order> orders, int page, int size, long total) {
+        int totalPages = total == 0 ? 0 : (int) ((total + size - 1) / size);
+        return new OrderPage(orders.stream().map(OrderSummaryView::from).toList(),
+                page, size, total, totalPages);
+    }
+
+    private BusinessException alreadyCancelled() {
+        return new BusinessException(HttpStatus.CONFLICT, "ORDER_ALREADY_CANCELLED", "订单已取消");
+    }
+
+    private BusinessException businessConflict(String message) {
+        return new BusinessException(HttpStatus.CONFLICT, "BUSINESS_CONFLICT", message);
+    }
+
+    private record PageRequest(int page, int size, int offset) {}
 }

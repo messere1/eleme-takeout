@@ -12,14 +12,14 @@ public class Order {
     private String status;
     private LocalDateTime createdAt;
 
-    public static Order pending(
+    public static Order created(
             String orderNo, Long userId, Long shopId, BigDecimal totalAmount) {
         Order order = new Order();
         order.orderNo = orderNo;
         order.userId = userId;
         order.shopId = shopId;
         order.totalAmount = totalAmount;
-        order.status = "PENDING";
+        order.status = "CREATED";
         order.createdAt = LocalDateTime.now();
         return order;
     }

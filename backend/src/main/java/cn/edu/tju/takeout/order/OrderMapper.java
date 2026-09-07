@@ -51,6 +51,31 @@ public interface OrderMapper {
     long countByUserId(
             Long userId, String status, LocalDateTime startTime, LocalDateTime endTime);
 
+    @Select("""
+            <script>
+            SELECT * FROM orders WHERE shop_id = #{shopId}
+            <if test='status != null and status != ""'> AND status = #{status} </if>
+            <if test='startTime != null'> AND created_at &gt;= #{startTime} </if>
+            <if test='endTime != null'> AND created_at &lt;= #{endTime} </if>
+            ORDER BY created_at DESC, id DESC
+            LIMIT #{limit} OFFSET #{offset}
+            </script>
+            """)
+    List<Order> findPageByShopId(
+            Long shopId, String status, LocalDateTime startTime, LocalDateTime endTime,
+            Integer limit, Integer offset);
+
+    @Select("""
+            <script>
+            SELECT COUNT(*) FROM orders WHERE shop_id = #{shopId}
+            <if test='status != null and status != ""'> AND status = #{status} </if>
+            <if test='startTime != null'> AND created_at &gt;= #{startTime} </if>
+            <if test='endTime != null'> AND created_at &lt;= #{endTime} </if>
+            </script>
+            """)
+    long countByShopId(
+            Long shopId, String status, LocalDateTime startTime, LocalDateTime endTime);
+
     @Select("SELECT * FROM orders WHERE id = #{id}")
     Optional<Order> findById(Long id);
 
@@ -59,7 +84,7 @@ public interface OrderMapper {
 
     @Update("""
             UPDATE orders SET status = 'CANCELLED'
-            WHERE id = #{orderId} AND status IN ('PENDING', 'PAID')
+            WHERE id = #{orderId} AND status = 'CREATED'
             """)
     int markCancelledIfAllowed(Long orderId);
 }

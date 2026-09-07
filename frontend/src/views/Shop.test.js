@@ -88,4 +88,34 @@ describe('店铺页（顾客点单）', () => {
     expect(wrapper.get('[data-testid="add-40"]').element.disabled).toBe(true)
     expect(addToCart).not.toHaveBeenCalled()
   })
+
+  it('临时闭店状态时禁止加购', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, status: 'TEMP_CLOSED' })
+
+    expect(wrapper.get('[data-testid="shop-status"]').text()).toContain('临时')
+    expect(wrapper.get('[data-testid="add-40"]').element.disabled).toBe(true)
+  })
+
+  it.each(['无权限访问', '店铺不存在', '服务器异常'])(
+    '加载失败“%s”时展示错误状态且不白屏',
+    async (message) => {
+      getShop.mockRejectedValue(new Error(message))
+      const { wrapper } = await mountView(Shop, { path: '/shops/7' })
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('无法加载店铺')
+      expect(wrapper.text()).not.toContain('店铺加载中')
+    },
+  )
+
+  it('加购请求未完成时禁用当前商品按钮', async () => {
+    addToCart.mockReturnValue(new Promise(() => {}))
+    const { wrapper } = await mountShop()
+
+    await wrapper.get('[data-testid="add-40"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-testid="add-40"]').element.disabled).toBe(true)
+    expect(addToCart).toHaveBeenCalledTimes(1)
+  })
 })

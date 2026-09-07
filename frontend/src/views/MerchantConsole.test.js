@@ -105,4 +105,26 @@ describe('商家后台', () => {
     expect(wrapper.get('[data-testid="console-message"]').text()).toContain('分类下存在商品')
     expect(wrapper.find('[data-testid="category-item-30"]').exists()).toBe(true)
   })
+
+  it('店铺初始加载失败时展示用户可读错误状态', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
+    session.saveShop({ merchantId: 12, shopId: 7, shopName: '北洋餐厅' })
+    getShop.mockRejectedValue(new Error('服务器异常'))
+
+    const { wrapper } = await mountView(MerchantConsole, { path: '/merchant' })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="console-message"]').text()).toContain('服务器异常')
+  })
+
+  it('保存店铺请求未完成时禁用保存按钮', async () => {
+    updateShop.mockReturnValue(new Promise(() => {}))
+    const { wrapper } = await mountConsole()
+
+    await wrapper.get('[data-testid="console-save-shop"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-testid="console-save-shop"]').element.disabled).toBe(true)
+    expect(updateShop).toHaveBeenCalledTimes(1)
+  })
 })

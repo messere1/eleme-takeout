@@ -18,6 +18,7 @@ public class CartService {
         this.productMapper = productMapper;
     }
 
+    @Transactional
     public CartItemView add(Long userId, AddCartRequest request) {
         Product product = productMapper
                 .findById(request.productId())

@@ -89,7 +89,7 @@ describe('购物车页', () => {
     createOrder.mockResolvedValue({
       id: 60,
       orderNo: 'T20260901001',
-      status: 'PENDING',
+      status: 'CREATED',
       totalAmount: 17.0,
     })
     const { wrapper, router } = await mountCart(AVAILABLE_CART)
@@ -118,5 +118,28 @@ describe('购物车页', () => {
 
     expect(wrapper.get('[data-testid="cart-qty-50"]').text()).toContain('2')
     expect(wrapper.text()).toContain('库存不足')
+  })
+
+  it.each(['无权限访问', '购物车不存在', '服务器异常'])(
+    '加载失败“%s”时展示可测试错误状态',
+    async (message) => {
+      getCart.mockRejectedValue(new Error(message))
+      const { wrapper } = await mountView(Cart, { path: '/cart' })
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('无法加载购物车')
+      expect(wrapper.get('[data-testid="cart-empty"]').exists()).toBe(true)
+    },
+  )
+
+  it('下单请求未完成时禁用结算按钮', async () => {
+    createOrder.mockReturnValue(new Promise(() => {}))
+    const { wrapper } = await mountCart(AVAILABLE_CART)
+
+    await wrapper.get('[data-testid="cart-checkout"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-testid="cart-checkout"]').element.disabled).toBe(true)
+    expect(createOrder).toHaveBeenCalledTimes(1)
   })
 })

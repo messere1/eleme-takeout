@@ -19,6 +19,9 @@ public interface ShopMapper {
     @Select("SELECT * FROM shops WHERE id = #{id}")
     Optional<Shop> findById(Long id);
 
+    @Select("SELECT * FROM shops WHERE merchant_id = #{merchantId}")
+    Optional<Shop> findByMerchantId(Long merchantId);
+
     @Update("UPDATE shops SET status = #{status} WHERE id = #{id}")
     void updateStatus(Shop shop);
 

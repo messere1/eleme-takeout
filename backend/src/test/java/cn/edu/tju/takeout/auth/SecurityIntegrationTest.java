@@ -3,6 +3,7 @@ package cn.edu.tju.takeout.auth;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
@@ -23,14 +24,18 @@ class SecurityIntegrationTest {
     void protectedEndpointWithoutTokenReturnsUnifiedUnauthorizedResponse() throws Exception {
         mockMvc.perform(get("/api/v1/cart"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("AUTH_INVALID"));
+                .andExpect(jsonPath("$.code").value("AUTH_INVALID"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty())
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("Exception"))));
     }
 
     @Test
     void forgedTokenReturnsUnauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/cart").header("Authorization", "Bearer forged.token.value"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("AUTH_INVALID"));
+                .andExpect(jsonPath("$.code").value("AUTH_INVALID"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
     }
 
     @Test
@@ -40,14 +45,16 @@ class SecurityIntegrationTest {
 
         mockMvc.perform(get("/api/v1/cart").header("Authorization", "Bearer " + expired))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("AUTH_EXPIRED"));
+                .andExpect(jsonPath("$.code").value("AUTH_EXPIRED"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
     }
 
     @Test
     void merchantTokenCannotUseCustomerCart() throws Exception {
         mockMvc.perform(get("/api/v1/cart").header("Authorization", bearer(12L, "MERCHANT")))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
     }
 
     @Test
@@ -57,7 +64,8 @@ class SecurityIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"OPEN\"}"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
     }
 
     @Test

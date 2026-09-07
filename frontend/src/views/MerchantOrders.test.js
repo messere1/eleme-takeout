@@ -68,4 +68,17 @@ describe('商家订单管理', () => {
     const { wrapper } = await mountOrders([])
     expect(wrapper.get('[data-testid="order-mgmt-empty"]').text()).toContain('暂无订单')
   })
+
+  it.each(['无权限访问', '订单资源不存在', '服务器异常'])(
+    '列表加载失败“%s”时展示用户可读状态',
+    async (message) => {
+      listMerchantOrders.mockRejectedValue(new Error(message))
+      session.save({ token: 'mt-1', role: 'MERCHANT' })
+      const { wrapper } = await mountView(MerchantOrders, { path: '/merchant/orders' })
+      await flushPromises()
+
+      expect(wrapper.text()).toContain(message)
+      expect(wrapper.get('[data-testid="order-mgmt-empty"]').exists()).toBe(true)
+    },
+  )
 })

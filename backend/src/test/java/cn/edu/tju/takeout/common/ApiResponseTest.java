@@ -3,6 +3,7 @@ package cn.edu.tju.takeout.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
@@ -39,11 +40,55 @@ class ApiResponseTest {
                 .andExpect(jsonPath("$.traceId").isNotEmpty());
     }
 
+    @Test
+    void forbiddenNotFoundAndConflictResponsesKeepTraceIdWithoutInternalDetails() throws Exception {
+        MockMvc mvc = MockMvcBuilders
+                .standaloneSetup(new FailingController())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        for (String path : new String[] {"forbidden", "not-found", "conflict"}) {
+            mvc.perform(get("/test/" + path))
+                    .andExpect(jsonPath("$.traceId").isNotEmpty())
+                    .andExpect(content().string(org.hamcrest.Matchers.not(
+                            org.hamcrest.Matchers.containsString("java."))))
+                    .andExpect(content().string(org.hamcrest.Matchers.not(
+                            org.hamcrest.Matchers.containsString("SELECT "))));
+        }
+    }
+
+    @Test
+    void unexpectedExceptionHasUnifiedInternalErrorHandler() {
+        assertThat(java.util.Arrays.stream(GlobalExceptionHandler.class.getDeclaredMethods()))
+                .anySatisfy(method -> {
+                    org.springframework.web.bind.annotation.ExceptionHandler annotation =
+                            method.getAnnotation(
+                                    org.springframework.web.bind.annotation.ExceptionHandler.class);
+                    assertThat(annotation).isNotNull();
+                    assertThat(annotation.value()).contains(Exception.class);
+                });
+    }
+
     @RestController
     static class FailingController {
         @GetMapping("/test/failure")
         String fail() {
             throw new BusinessException(HttpStatus.CONFLICT, "BUSINESS_CONFLICT", "资源状态冲突");
+        }
+
+        @GetMapping("/test/forbidden")
+        String forbidden() {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "无权访问");
+        }
+
+        @GetMapping("/test/not-found")
+        String notFound() {
+            throw new BusinessException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "资源不存在");
+        }
+
+        @GetMapping("/test/conflict")
+        String conflict() {
+            throw new BusinessException(HttpStatus.CONFLICT, "BUSINESS_CONFLICT", "状态冲突");
         }
     }
 }

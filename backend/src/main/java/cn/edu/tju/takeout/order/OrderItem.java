@@ -19,7 +19,8 @@ public class OrderItem {
         item.productName = line.getProductName();
         item.unitPrice = line.getPrice();
         item.quantity = line.getQuantity();
-        item.subtotal = line.getPrice().multiply(BigDecimal.valueOf(line.getQuantity()));
+        item.subtotal = line.getPrice().multiply(BigDecimal.valueOf(line.getQuantity()))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
         return item;
     }
 

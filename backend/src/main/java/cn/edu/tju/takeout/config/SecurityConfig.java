@@ -58,6 +58,10 @@ public class SecurityConfig {
                         .hasAnyRole("CUSTOMER", "MERCHANT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders")
                         .hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/orders/*/cancel")
+                        .hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/merchant/orders")
+                        .hasRole("MERCHANT")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/shops/**")
                         .hasRole("MERCHANT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/shops/*/categories",

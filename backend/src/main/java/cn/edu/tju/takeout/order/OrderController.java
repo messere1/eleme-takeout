@@ -33,7 +33,7 @@ public class OrderController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(defaultValue = "20") Integer size) {
         return ApiResponse.success(orderService.list(
                 principal.userId(), new OrderQuery(status, startTime, endTime, page, size)));
     }
@@ -43,5 +43,11 @@ public class OrderController {
             @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
         return ApiResponse.success(
                 orderService.getDetail(principal.userId(), principal.role(), orderId));
+    }
+
+    @PostMapping("/{orderId}/cancel")
+    public ApiResponse<OrderView> cancel(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
+        return ApiResponse.success(orderService.cancel(principal.userId(), orderId));
     }
 }

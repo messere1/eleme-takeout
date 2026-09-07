@@ -102,4 +102,18 @@ describe('注册页（角色化）', () => {
     expect(register).not.toHaveBeenCalled()
     expect(wrapper.get('[data-testid="register-error"]').text()).toContain('手机号格式不正确')
   })
+
+  it('注册请求未完成时禁用提交按钮防止重复提交', async () => {
+    register.mockReturnValue(new Promise(() => {}))
+    const { wrapper } = await mountRegister()
+    for (const [key, value] of Object.entries(CUSTOMER)) {
+      await setField(wrapper, `register-${key}`, value)
+    }
+
+    await wrapper.get('[data-testid="register-submit"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-testid="register-submit"]').element.disabled).toBe(true)
+    expect(register).toHaveBeenCalledTimes(1)
+  })
 })
