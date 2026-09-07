@@ -15,7 +15,7 @@ const DETAIL = {
   orderNo: 'T20260901001',
   shopId: 7,
   totalAmount: 17.0,
-  status: 'PENDING',
+  status: 'CREATED',
   createdAt: '2026-09-01T12:30:00',
   items: [
     { productId: 40, productName: '煎饼果子', unitPrice: 8.5, quantity: 2, subtotal: 17.0 },
@@ -39,7 +39,7 @@ describe('订单详情页', () => {
     const { wrapper } = await mountDetail()
     expect(getOrder).toHaveBeenCalledWith(11)
     expect(wrapper.get('[data-testid="order-no"]').text()).toContain('T20260901001')
-    expect(wrapper.get('[data-testid="order-status"]').text()).toContain('PENDING')
+    expect(wrapper.get('[data-testid="order-status"]').text()).toContain('CREATED')
     expect(wrapper.get('[data-testid="order-total"]').text()).toContain('17.00')
   })
 

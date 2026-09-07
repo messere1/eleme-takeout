@@ -106,4 +106,31 @@ describe('商家商品管理', () => {
     })
     expect(wrapper.get('[data-testid="product-mgmt-item-45"]').text()).toContain('豆浆')
   })
+
+  it('商品初始加载失败时展示用户可读错误状态', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
+    session.saveShop({ merchantId: 12, shopId: 7, shopName: '北洋餐厅' })
+    listCategories.mockRejectedValue(new Error('服务器异常'))
+    listMerchantProducts.mockResolvedValue([])
+
+    const { wrapper } = await mountView(MerchantProducts, { path: '/merchant/products' })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="product-message"]').text()).toContain('服务器异常')
+  })
+
+  it('创建商品请求未完成时禁用创建按钮', async () => {
+    createProduct.mockReturnValue(new Promise(() => {}))
+    const { wrapper } = await mountProducts()
+    await wrapper.get('[data-testid="product-category"]').setValue('30')
+    await setField(wrapper, 'product-name', '豆浆')
+    await setField(wrapper, 'product-price', '3.5')
+    await setField(wrapper, 'product-stock', '10')
+
+    await wrapper.get('[data-testid="product-create-btn"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-testid="product-create-btn"]').element.disabled).toBe(true)
+    expect(createProduct).toHaveBeenCalledTimes(1)
+  })
 })

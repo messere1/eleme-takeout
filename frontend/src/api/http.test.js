@@ -71,6 +71,7 @@ describe('http 适配层', () => {
     expect(error).toBeInstanceOf(ApiError)
     expect(error.code).toBe('VALIDATION_ERROR')
     expect(error.data.fieldErrors.username).toBe('用户名已存在')
+    expect(error.traceId).toBe('x')
   })
 
   it('受保护接口 401/令牌过期时清理登录态并跳转登录页', async () => {

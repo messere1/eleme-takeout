@@ -66,4 +66,26 @@ describe('个人资料页', () => {
     await flushPromises()
     expect(wrapper.get('[data-testid="profile-message"]').text()).toContain('手机号格式不正确')
   })
+
+  it.each(['无权限访问', '用户资料不存在', '服务器异常'])(
+    '初始加载失败“%s”时展示用户可读状态',
+    async (message) => {
+      getProfile.mockRejectedValue(new Error(message))
+      const { wrapper } = await mountView(Profile, { path: '/profile' })
+      await flushPromises()
+
+      expect(wrapper.get('[data-testid="profile-message"]').text()).toContain(message)
+    },
+  )
+
+  it('保存请求未完成时禁用提交按钮', async () => {
+    updateProfile.mockReturnValue(new Promise(() => {}))
+    const { wrapper } = await mountProfile()
+
+    await wrapper.get('[data-testid="profile-save"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-testid="profile-save"]').element.disabled).toBe(true)
+    expect(updateProfile).toHaveBeenCalledTimes(1)
+  })
 })

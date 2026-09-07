@@ -2,7 +2,7 @@
 
 天津大学软件学院软件工程（系列）综合实践项目。本仓库采用 Monorepo 方式集中管理前端、后端、联调与项目文档。
 
-> 当前状态：项目初始化阶段，暂未开始业务代码开发。
+> 当前状态：第一阶段按 SRS V1.2 执行测试先行；测试红灯与接口差异已记录，核心业务修复由功能负责人后续分项完成。
 
 ## 课程信息
 
@@ -23,7 +23,8 @@ eleme-takeout/
 
 - [前端说明](frontend/README.md)
 - [后端说明](backend/README.md)
-- [API 接口文档 V1](docs/api-contract-v1.md)
+- [API 接口文档 V1.2](docs/api-contract-v1.md)
+- [第一阶段 P0（SRS V1.2）测试用例](docs/phase-1-p0-srs-v1.2-test-cases.md)
 - [第一阶段前端功能测试用例](docs/phase-1-frontend-functional-test-cases.md)
 - [第一阶段需求—测试追踪矩阵](docs/phase-1-test-traceability.md)
 - [第一阶段回归测试报告](docs/phase-1-test-report.md)

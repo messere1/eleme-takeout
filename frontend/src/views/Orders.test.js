@@ -20,7 +20,7 @@ const ORDER_A = {
   orderNo: 'T20260901001',
   shopId: 7,
   totalAmount: 17.0,
-  status: 'PENDING',
+  status: 'CREATED',
   createdAt: '2026-09-01T12:30:00',
 }
 const ORDER_B = {
@@ -28,18 +28,18 @@ const ORDER_B = {
   orderNo: 'T20260902002',
   shopId: 7,
   totalAmount: 6.0,
-  status: 'PENDING',
+  status: 'CREATED',
   createdAt: '2026-09-02T08:00:00',
 }
-const PAGE1 = { items: [ORDER_A, ORDER_B], page: 1, size: 10, total: 3, totalPages: 2 }
+const PAGE1 = { items: [ORDER_A, ORDER_B], page: 1, size: 20, total: 3, totalPages: 2 }
 const PAGE2 = {
-  items: [{ id: 13, orderNo: 'T20260903003', shopId: 7, totalAmount: 23.0, status: 'PENDING', createdAt: '2026-09-03T10:00:00' }],
+  items: [{ id: 13, orderNo: 'T20260903003', shopId: 7, totalAmount: 23.0, status: 'CREATED', createdAt: '2026-09-03T10:00:00' }],
   page: 2,
-  size: 10,
+  size: 20,
   total: 3,
   totalPages: 2,
 }
-const EMPTY = { items: [], page: 1, size: 10, total: 0, totalPages: 0 }
+const EMPTY = { items: [], page: 1, size: 20, total: 0, totalPages: 0 }
 
 async function mountOrders(pageData = PAGE1) {
   listOrders.mockImplementation(async (query = {}) =>
@@ -57,7 +57,7 @@ describe('订单列表页', () => {
 
   it('加载后按列表展示订单号与金额', async () => {
     const { wrapper } = await mountOrders()
-    expect(listOrders).toHaveBeenCalledWith({ page: 1, size: 10 })
+    expect(listOrders).toHaveBeenCalledWith({ page: 1, size: 20 })
     expect(wrapper.get('[data-testid="order-row-11"]').text()).toContain('T20260901001')
     expect(wrapper.get('[data-testid="order-row-11"]').text()).toContain('17.00')
     expect(wrapper.get('[data-testid="order-row-12"]').text()).toContain('T20260902002')
@@ -68,7 +68,7 @@ describe('订单列表页', () => {
     expect(wrapper.get('[data-testid="orders-next"]').element.disabled).toBe(false)
     await wrapper.get('[data-testid="orders-next"]').trigger('click')
     await flushPromises()
-    expect(listOrders).toHaveBeenCalledWith({ page: 2, size: 10 })
+    expect(listOrders).toHaveBeenCalledWith({ page: 2, size: 20 })
     expect(wrapper.get('[data-testid="order-row-13"]').text()).toContain('T20260903003')
   })
 
@@ -91,9 +91,9 @@ describe('订单列表页', () => {
 
   it('选择状态筛选后按状态重新拉取订单', async () => {
     const { wrapper } = await mountOrders()
-    await wrapper.get('[data-testid="orders-status"]').setValue('PENDING')
+    await wrapper.get('[data-testid="orders-status"]').setValue('CREATED')
     await flushPromises()
-    expect(listOrders).toHaveBeenLastCalledWith({ page: 1, size: 10, status: 'PENDING' })
+    expect(listOrders).toHaveBeenLastCalledWith({ page: 1, size: 20, status: 'CREATED' })
   })
 
   it('待处理订单显示取消按钮，点击调用 cancelOrder 并标记已取消', async () => {

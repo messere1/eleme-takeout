@@ -61,6 +61,16 @@ class CartUpdateServiceTest {
                 .isEqualTo("BUSINESS_CONFLICT");
     }
 
+    @Test
+    void customerCannotUpdateAnotherCustomersCartItem() {
+        when(cartMapper.findByIdAndUserId(50L, 8L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> cartService.update(8L, 50L, new UpdateCartRequest(2)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).code())
+                .isEqualTo("RESOURCE_NOT_FOUND");
+    }
+
     private static Product product(int stock) {
         return Product.of(
                 40L, 20L, 30L, "煎饼果子", "现做现卖",

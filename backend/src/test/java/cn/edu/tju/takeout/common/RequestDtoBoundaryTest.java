@@ -13,6 +13,7 @@ import cn.edu.tju.takeout.product.StockRequest;
 import cn.edu.tju.takeout.shop.ShopStatusRequest;
 import cn.edu.tju.takeout.shop.ShopUpdateRequest;
 import cn.edu.tju.takeout.user.UserProfileUpdateRequest;
+import cn.edu.tju.takeout.user.UserRegistrationRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -28,6 +29,32 @@ class RequestDtoBoundaryTest {
     void loginRejectsBlankCredentialsAndUnknownRole() {
         assertThat(invalidFields(new LoginRequest("", "", "ADMIN")))
                 .containsExactlyInAnyOrder("account", "password", "role");
+    }
+
+    @Test
+    void customerRegistrationEnforcesLengthPhoneAndPasswordComplexity() {
+        assertThat(invalidFields(new UserRegistrationRequest("ab", "123", "abcdef")))
+                .containsExactlyInAnyOrder("username", "phone", "password");
+        assertThat(invalidFields(new UserRegistrationRequest(
+                "u".repeat(31), "13800138000", "abc123")))
+                .containsExactly("username");
+        assertThat(invalidFields(new UserRegistrationRequest(
+                "valid_user", "13800138000", "123456")))
+                .containsExactly("password");
+    }
+
+    @Test
+    void profileRejectsMalformedPhoneAndOversizedFields() {
+        assertThat(invalidFields(new UserProfileUpdateRequest(
+                "n".repeat(31), "123", "a".repeat(256))))
+                .containsExactlyInAnyOrder("nickname", "phone", "address");
+    }
+
+    @Test
+    void merchantRegistrationRejectsOversizedText() {
+        assertThat(invalidFields(new MerchantRegistrationRequest(
+                "m".repeat(51), "13800138000", "abc123", "s".repeat(101))))
+                .containsExactlyInAnyOrder("merchantName", "businessScope");
     }
 
     @Test
