@@ -116,7 +116,7 @@ public class AuthService {
         return new BusinessException(
                 HttpStatus.UNAUTHORIZED,
                 "AUTH_INVALID",
-                "账号或密码错误"
+                "用户名或密码错误"
         );
     }
 }

@@ -29,7 +29,7 @@ public class CartService {
 
             throw new BusinessException(
                     HttpStatus.CONFLICT,
-                    "PRODUCT_OFF_SALE",
+                    "BUSINESS_CONFLICT",
                     "商品已下架"
             );
         }
@@ -51,7 +51,7 @@ public class CartService {
 
             throw new BusinessException(
                     HttpStatus.CONFLICT,
-                    "INSUFFICIENT_STOCK",
+                    "BUSINESS_CONFLICT",
                     "商品库存不足"
             );
         }
@@ -137,7 +137,7 @@ public class CartService {
 
             throw new BusinessException(
                     HttpStatus.CONFLICT,
-                    "PRODUCT_OFF_SALE",
+                    "BUSINESS_CONFLICT",
                     "商品已下架"
             );
         }
@@ -147,7 +147,7 @@ public class CartService {
 
             throw new BusinessException(
                     HttpStatus.CONFLICT,
-                    "INSUFFICIENT_STOCK",
+                    "BUSINESS_CONFLICT",
                     "商品库存不足"
             );
         }
