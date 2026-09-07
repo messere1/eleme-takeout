@@ -89,13 +89,14 @@ onMounted(async () => {
         <span class="section-title">🏪 附近店铺</span>
         <span class="feed-count">共 {{ shops.length }} 家</span>
       </header>
-      <p v-if="feedError" class="feed-note">{{ feedError }}</p>
+      <p v-if="feedError" data-testid="home-feed-note" class="feed-note">{{ feedError }}</p>
 
       <div class="shop-stream">
         <RouterLink
           v-for="shop in shops"
           :key="shop.id"
           :to="`/shops/${shop.id}`"
+          :data-testid="`home-shop-${shop.id}`"
           class="shop-card"
         >
           <div class="shop-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>

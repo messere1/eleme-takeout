@@ -71,9 +71,13 @@ http.interceptors.response.use(
         httpStatus: status,
         data: body.data,
       })
+      // 仅当“带了 token 却仍 401/过期”时才清登录态并跳登录；
+      // 未登录浏览公开页遇到 401 不跳转，只抛错给页面自行兜底。
+      const sentToken = Boolean(error.config?.headers?.Authorization)
       if (
         status === 401 &&
         (body.code === 'AUTH_INVALID' || body.code === 'AUTH_EXPIRED') &&
+        sentToken &&
         !isPublicRequest(url)
       ) {
         await handleUnauthorized()
