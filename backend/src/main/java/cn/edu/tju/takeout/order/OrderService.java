@@ -8,6 +8,7 @@ import cn.edu.tju.takeout.shop.Shop;
 import cn.edu.tju.takeout.shop.ShopMapper;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -83,7 +84,7 @@ public class OrderService {
 
             throw new BusinessException(
                     HttpStatus.CONFLICT,
-                    "SHOP_NOT_OPEN",
+                    "BUSINESS_CONFLICT",
                     "店铺未营业"
             );
         }
@@ -104,16 +105,6 @@ public class OrderService {
                     totalAmount.add(subtotal);
         }
 
-        Order order =
-                Order.pending(
-                        generateOrderNo(),
-                        userId,
-                        shopId,
-                        totalAmount
-                );
-
-        orderMapper.insert(order);
-
         for (CartCheckoutLine line : lines) {
 
             int affected =
@@ -127,10 +118,25 @@ public class OrderService {
 
                 throw new BusinessException(
                         HttpStatus.CONFLICT,
-                        "INSUFFICIENT_STOCK",
+                        "BUSINESS_CONFLICT",
                         "商品库存不足"
                 );
             }
+        }
+
+        Order order =
+                Order.pending(
+                        generateOrderNo(),
+                        userId,
+                        shopId,
+                        totalAmount
+                );
+
+        orderMapper.insert(order);
+
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        for (CartCheckoutLine line : lines) {
 
             OrderItem item =
                     OrderItem.from(
@@ -139,15 +145,14 @@ public class OrderService {
                     );
 
             orderMapper.insertItem(item);
+            orderItems.add(item);
         }
 
         cartMapper.deleteByUserId(userId);
 
         return OrderView.from(
                 order,
-                orderMapper.findItemsByOrderId(
-                        order.getId()
-                )
+                orderItems
         );
     }
 
