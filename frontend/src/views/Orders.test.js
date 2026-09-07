@@ -105,4 +105,13 @@ describe('订单列表页', () => {
     expect(cancelOrder).toHaveBeenCalledWith(11)
     expect(wrapper.get('[data-testid="order-row-11"]').text()).toContain('已取消')
   })
+
+  it('列表加载失败时展示可理解的错误状态', async () => {
+    listOrders.mockRejectedValue(new Error('网络错误'))
+    const { wrapper } = await mountView(Orders, { path: '/orders' })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('无法加载订单')
+    expect(wrapper.get('[data-testid="orders-empty"]').text()).toContain('暂无订单')
+  })
 })

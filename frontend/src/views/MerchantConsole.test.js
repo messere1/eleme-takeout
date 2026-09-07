@@ -94,4 +94,15 @@ describe('商家后台', () => {
     expect(deleteCategory).toHaveBeenCalledWith(30)
     expect(wrapper.find('[data-testid="category-item-30"]').exists()).toBe(false)
   })
+
+  it('删除非空分类失败时展示原因并保留分类', async () => {
+    deleteCategory.mockRejectedValue(new Error('分类下存在商品，不能删除'))
+    const { wrapper } = await mountConsole()
+
+    await wrapper.get('[data-testid="category-delete-30"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="console-message"]').text()).toContain('分类下存在商品')
+    expect(wrapper.find('[data-testid="category-item-30"]').exists()).toBe(true)
+  })
 })

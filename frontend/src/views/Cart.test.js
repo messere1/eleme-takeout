@@ -108,4 +108,15 @@ describe('购物车页', () => {
     expect(removeItem).toHaveBeenCalledWith(50)
     expect(wrapper.find('[data-testid="cart-item-50"]').exists()).toBe(false)
   })
+
+  it('修改数量失败时保留原数量并展示后端原因', async () => {
+    updateItem.mockRejectedValue(new Error('库存不足'))
+    const { wrapper } = await mountCart(AVAILABLE_CART)
+
+    await wrapper.get('[data-testid="cart-plus-50"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="cart-qty-50"]').text()).toContain('2')
+    expect(wrapper.text()).toContain('库存不足')
+  })
 })

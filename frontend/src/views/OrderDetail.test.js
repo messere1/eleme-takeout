@@ -50,4 +50,13 @@ describe('订单详情页', () => {
     expect(first.text()).toContain('17.00')
     expect(wrapper.get('[data-testid="order-item-44"]').text()).toContain('柠檬茶')
   })
+
+  it('详情加载失败时展示错误状态而不是永久加载', async () => {
+    getOrder.mockRejectedValue(new Error('无权访问'))
+    const { wrapper } = await mountView(OrderDetail, { path: '/orders/11' })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('无法加载订单详情')
+    expect(wrapper.text()).not.toContain('订单加载中')
+  })
 })

@@ -26,8 +26,8 @@ const PRODUCTS = {
   31: [{ id: 44, categoryId: 31, name: '柠檬茶', description: '现泡', price: 6, stock: 10, status: 'ON_SALE' }],
 }
 
-async function mountShop() {
-  getShop.mockResolvedValue(SHOP)
+async function mountShop(shop = SHOP) {
+  getShop.mockResolvedValue(shop)
   listCategories.mockResolvedValue(CATEGORIES)
   listProducts.mockImplementation(async (_shopId, categoryId) => PRODUCTS[categoryId] || [])
   const ctx = await mountView(Shop, { path: '/shops/7' })
@@ -80,5 +80,12 @@ describe('店铺页（顾客点单）', () => {
     await wrapper.get('[data-testid="add-40"]').trigger('click')
     await flushPromises()
     expect(wrapper.get('[data-testid="shop-message"]').text()).toContain('库存不足')
+  })
+
+  it('店铺非营业状态时禁止加购', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, status: 'CLOSED' })
+
+    expect(wrapper.get('[data-testid="add-40"]').element.disabled).toBe(true)
+    expect(addToCart).not.toHaveBeenCalled()
   })
 })
