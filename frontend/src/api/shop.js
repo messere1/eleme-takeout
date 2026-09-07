@@ -2,6 +2,11 @@
 // 公开接口无需登录；响应经 http 拦截器解包 code===0 返回业务 data。
 import { http } from './http'
 
+// 店铺列表,后端 GET /api/v1/shops 待补充；接口就绪后返回真实列表。
+export function listShops() {
+  return http.get('/shops')
+}
+
 export function getShop(shopId) {
   return http.get(`/shops/${shopId}`)
 }

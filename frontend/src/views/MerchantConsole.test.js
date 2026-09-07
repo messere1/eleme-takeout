@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-// 商家后台红灯基线
 // console-shop-name / console-shop-status / console-status / console-name-input /
 // console-notice-input / console-save-shop / console-message /
 // category-item-<id> / category-delete-<id> / category-name-input / category-sort-input / category-create-btn。
