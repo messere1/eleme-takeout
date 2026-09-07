@@ -64,7 +64,7 @@ describe('商家注册页', () => {
     await fillAndSubmit(wrapper, VALID)
     expect(registerMerchant).toHaveBeenCalledWith(VALID)
     expect(session.loadShop()?.shopId).toBe(7)
-    expect(router.currentRoute.value.path).toBe('/login')
+    expect(router.currentRoute.value.path).toBe('/merchant/login')
   })
 
   it('商家已存在（409）时展示提示', async () => {

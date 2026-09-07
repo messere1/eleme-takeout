@@ -6,23 +6,23 @@ import { session } from '@/utils/session'
 
 const router = useRouter()
 
-const form = reactive({ account: '', password: '' })
+const form = reactive({ phone: '', password: '' })
 const errorMessage = ref('')
 const submitting = ref(false)
 
 async function submit() {
   errorMessage.value = ''
-  const account = form.account.trim()
-  if (!account || !form.password) {
-    errorMessage.value = '请输入账号和密码'
+  const phone = form.phone.trim()
+  if (!phone || !form.password) {
+    errorMessage.value = '请输入手机号和密码'
     return
   }
 
   submitting.value = true
   try {
-    const data = await login({ account, password: form.password, role: 'CUSTOMER' })
-    session.save({ token: data.token, role: data.role || 'CUSTOMER' })
-    router.push('/')
+    const data = await login({ account: phone, password: form.password, role: 'MERCHANT' })
+    session.save({ token: data.token, role: data.role || 'MERCHANT' })
+    router.push('/merchant')
   } catch (error) {
     errorMessage.value = error?.message || '登录失败，请稍后重试'
   } finally {
@@ -32,33 +32,34 @@ async function submit() {
 </script>
 
 <template>
-  <div class="auth-page">
-    <section class="auth-card">
+  <div class="merchant-page">
+    <section class="merchant-card">
       <header class="card-head">
-        <span class="card-emoji">🍜</span>
-        <h2>欢迎回来</h2>
-        <p class="card-tip">登录后开始点单</p>
+        <span class="card-emoji">🏪</span>
+        <h2>商家登录</h2>
+        <p class="card-tip">登录后进入商家后台</p>
       </header>
 
       <div class="field">
-        <label for="login-account">账号</label>
+        <label for="merchant-login-phone">手机号</label>
         <el-input
-          id="login-account"
-          v-model="form.account"
-          data-testid="login-account"
+          id="merchant-login-phone"
+          v-model="form.phone"
+          data-testid="merchant-login-phone"
           class="auth-input"
-          placeholder="手机号或用户名"
+          placeholder="注册商家时的手机号"
+          maxlength="11"
           @keyup.enter="submit"
         />
       </div>
 
       <div class="field">
-        <label for="login-password">密码</label>
+        <label for="merchant-login-password">密码</label>
         <el-input
-          id="login-password"
+          id="merchant-login-password"
           v-model="form.password"
           type="password"
-          data-testid="login-password"
+          data-testid="merchant-login-password"
           class="auth-input"
           placeholder="请输入密码"
           show-password
@@ -66,13 +67,13 @@ async function submit() {
         />
       </div>
 
-      <p v-if="errorMessage" data-testid="login-error" role="alert" class="form-error">
+      <p v-if="errorMessage" data-testid="merchant-login-error" role="alert" class="form-error">
         {{ errorMessage }}
       </p>
 
       <el-button
         type="primary"
-        data-testid="login-submit"
+        data-testid="merchant-login-submit"
         class="submit-btn"
         :disabled="submitting"
         @click="submit"
@@ -81,18 +82,19 @@ async function submit() {
       </el-button>
 
       <p class="switch-line">
-        还没有账号？<RouterLink to="/register">去注册</RouterLink>
+        还没有店铺？
+        <RouterLink data-testid="merchant-login-to-register" to="/merchant/register">去入驻</RouterLink>
       </p>
     </section>
   </div>
 </template>
 
 <style scoped>
-.auth-page {
+.merchant-page {
   max-width: 27rem;
   margin: 1.5rem auto 2.5rem;
 }
-.auth-card {
+.merchant-card {
   background: #fff;
   border-radius: var(--card-radius);
   border-top: 5px solid var(--el-color-primary);

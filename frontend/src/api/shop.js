@@ -2,6 +2,11 @@
 // 公开接口无需登录；响应经 http 拦截器解包 code===0 返回业务 data。
 import { http } from './http'
 
+// 店铺列表,后端 GET /api/v1/shops 待补充；接口就绪后返回真实列表。
+export function listShops() {
+  return http.get('/shops')
+}
+
 export function getShop(shopId) {
   return http.get(`/shops/${shopId}`)
 }
@@ -29,4 +34,30 @@ export function createCategory(shopId, payload) {
 
 export function deleteCategory(categoryId) {
   return http.delete(`/categories/${categoryId}`)
+}
+
+// —— 商家商品管理（契约 §6；写操作接口已存在）——
+export function createProduct(shopId, payload) {
+  return http.post(`/shops/${shopId}/products`, payload)
+}
+
+export function updateProduct(productId, payload) {
+  return http.patch(`/products/${productId}`, payload)
+}
+
+export function changeProductStatus(productId, status) {
+  return http.patch(`/products/${productId}/status`, { status })
+}
+
+export function updateProductStock(productId, stock) {
+  return http.patch(`/products/${productId}/stock`, { stock })
+}
+
+export function deleteProduct(productId) {
+  return http.delete(`/products/${productId}`)
+}
+
+// 商家视角商品列表（含下架/删除）：后端需支持 GET /shops/{id}/products?all=true 或提供专用接口。
+export function listMerchantProducts(shopId) {
+  return http.get(`/shops/${shopId}/products`, { params: { all: true } })
 }

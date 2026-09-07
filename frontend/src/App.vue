@@ -13,9 +13,11 @@
         <RouterLink to="/cart">购物车</RouterLink>
         <RouterLink to="/orders">订单</RouterLink>
         <RouterLink to="/profile">我的</RouterLink>
-        <RouterLink to="/merchant/register">开店</RouterLink>
+        <span class="nav-divider">·</span>
         <RouterLink to="/login">登录</RouterLink>
         <RouterLink to="/register">注册</RouterLink>
+        <span class="nav-divider">·</span>
+        <RouterLink to="/merchant/login">商家入口</RouterLink>
       </nav>
     </div>
   </header>
@@ -79,6 +81,10 @@
 }
 .brand-nav a:hover {
   transform: translateY(-1px);
+}
+.nav-divider {
+  margin-left: 0.5rem;
+  color: rgba(255, 255, 255, 0.75);
 }
 .brand-nav a.router-link-exact-active {
   background: #2b1d00;

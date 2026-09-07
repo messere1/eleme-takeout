@@ -9,6 +9,7 @@ import Orders from '@/views/Orders.vue'
 import OrderDetail from '@/views/OrderDetail.vue'
 import Profile from '@/views/Profile.vue'
 import MerchantRegister from '@/views/MerchantRegister.vue'
+import MerchantLogin from '@/views/MerchantLogin.vue'
 import MerchantConsole from '@/views/MerchantConsole.vue'
 
 const routes = [
@@ -21,6 +22,7 @@ const routes = [
   { path: '/orders/:id', name: 'order-detail', component: OrderDetail },
   { path: '/profile', name: 'profile', component: Profile },
   { path: '/merchant/register', name: 'merchant-register', component: MerchantRegister },
+  { path: '/merchant/login', name: 'merchant-login', component: MerchantLogin },
   { path: '/merchant', name: 'merchant-console', component: MerchantConsole },
 ]
 
