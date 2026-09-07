@@ -1,34 +1,33 @@
 # 第一阶段需求—测试追踪矩阵
 
-状态“红灯基线”表示测试代码已完成且可编译，当前因对应 Service 尚未实现而按预期失败。
+状态说明：“通过”表示当前自动化回归通过；“回归失败”表示已有测试稳定暴露实现或契约问题；“部分覆盖”表示后端测试已具备，但前端业务入口尚不完整。
 
-| 需求 | 验收重点 | 自动化测试 | 状态 |
+| 需求 | 验收重点 | 自动化测试 | 当前状态 |
 | --- | --- | --- | --- |
-| FR-001 | 用户注册、重复账号、参数约束 | `UserRegistrationServiceTest`、`UserRegistrationControllerTest` | 红灯基线 |
-| FR-002 | 用户登录、JWT 签发与校验、接口鉴权 | `UserLoginServiceTest`、`MerchantLoginServiceTest`、`UserLoginControllerTest`、`JwtServiceRobustnessTest`、`SecurityIntegrationTest`、`RequestDtoBoundaryTest` | 红灯基线 |
-| FR-003 | 用户资料查询与修改、身份隔离 | `UserProfileServiceTest`、`UserProfileControllerTest` | 红灯基线 |
-| FR-004 | 商家注册、名称/手机号重复、默认店铺 | `MerchantRegistrationServiceTest`、`MerchantRegistrationControllerTest`、`RequestDtoBoundaryTest` | 红灯基线 |
-| FR-005 | 商家独立登录 | `MerchantLoginServiceTest` | 红灯基线 |
-| FR-006 | 商家修改所属店铺营业状态 | `ShopStatusServiceTest`、`ShopStatusControllerTest`、`ShopControllerContractTest` | 红灯基线 |
-| FR-007 | 店铺信息查询、资源不存在、所属权与修改 | `ShopManagementServiceTest`、`ShopControllerContractTest`、`RequestDtoBoundaryTest` | 红灯基线 |
-| FR-008 | 分类增删改查、重复名称/排序、资源不存在、所属权 | `CategoryServiceTest`、`CategoryBoundaryServiceTest`、`CategoryControllerContractTest`、`RequestDtoBoundaryTest` | 红灯基线 |
-| FR-009 | 商品增删改查、上下架、资源不存在与所属权 | `ProductServiceTest`、`ProductBoundaryServiceTest`、`ProductControllerContractTest`、`RequestDtoBoundaryTest` | 红灯基线 |
-| FR-010 | 商品价格为正数且最多两位小数 | `ProductPriceValidationTest` | 已通过 |
-| FR-011 | 库存非负、商品与店铺校验 | `ProductStockServiceTest`、`ProductBoundaryServiceTest`、`ProductControllerContractTest`、`RequestDtoBoundaryTest` | 红灯基线 |
-| FR-012 | 添加购物车、数量合并、下架与商品不存在 | `CartAddServiceTest`、`CartBoundaryServiceTest`、`CartControllerContractTest`、`RequestDtoBoundaryTest` | 红灯基线 |
-| FR-013 | 购物车金额、商品可用性和库存提示 | `CartQueryServiceTest`、`CartControllerContractTest` | 红灯基线 |
-| FR-014 | 修改购物车数量、零值边界和越权防护 | `CartUpdateServiceTest`、`CartControllerContractTest`、`RequestDtoBoundaryTest` | 红灯基线 |
-| FR-015 | 删除单项、清空购物车和越权防护 | `CartDeleteServiceTest`、`CartControllerContractTest` | 红灯基线 |
-| FR-016 | 事务化创建订单、空/跨店/下架场景、库存和购物车一致性 | `OrderCreationServiceTest`、`OrderBoundaryServiceTest`、`OrderControllerContractTest` | 红灯基线 |
-| FR-017 | 用户订单列表、筛选、分页及上下界 | `OrderListServiceTest`、`OrderBoundaryServiceTest`、`OrderControllerContractTest` | 红灯基线 |
-| FR-018 | 订单不存在、非法角色及用户/商家访问控制 | `OrderDetailAuthorizationTest`、`OrderBoundaryServiceTest`、`OrderControllerContractTest`、`SecurityIntegrationTest` | 红灯基线 |
-| FR-020 | 统一成功与失败响应、追踪编号 | `ApiResponseTest` | 已通过 |
-| FR-021 | 参数错误及字段级错误响应 | `ValidationErrorTest`、各 Controller 参数校验测试 | 已通过 |
-| 前端入口 | 平台名称、阶段状态、主内容区域、应用挂载 | `App.test.js`、`main.test.js` | 已通过 |
+| FR-001 | 用户注册、重复账号、参数约束 | `UserRegistrationServiceTest`、`UserRegistrationControllerTest`、`Register.test.js` | 通过 |
+| FR-002 | 用户登录、JWT、鉴权和失败提示 | `UserLoginServiceTest`、`MerchantLoginServiceTest`、`UserLoginControllerTest`、`JwtServiceRobustnessTest`、`SecurityIntegrationTest`、`Login.test.js` | 回归失败：凭证错误文案与契约不一致 |
+| FR-003 | 用户资料查询、修改和身份隔离 | `UserProfileServiceTest`、`UserProfileControllerTest`、`Profile.test.js` | 通过 |
+| FR-004 | 商家注册、重复约束和默认店铺 | `MerchantRegistrationServiceTest`、`MerchantRegistrationControllerTest`、`MerchantRegister.test.js` | 回归失败：成功后的跳转目标不一致 |
+| FR-005 | 商家独立登录 | `MerchantLoginServiceTest`、`MerchantLogin.test.js` | 回归失败：商家登录页尚无有效内容 |
+| FR-006 | 商家修改所属店铺营业状态 | `ShopStatusServiceTest`、`ShopStatusControllerTest`、`MerchantConsole.test.js` | 通过 |
+| FR-007 | 店铺查询、修改、资源不存在和所属权 | `ShopManagementServiceTest`、`ShopControllerContractTest`、`MerchantConsole.test.js` | 通过 |
+| FR-008 | 分类增删改查、重复名称、资源归属和非空删除 | `CategoryServiceTest`、`CategoryBoundaryServiceTest`、`CategoryControllerContractTest`、`MerchantConsole.test.js` | 通过 |
+| FR-009 | 商品增删改查、上下架、资源归属 | `ProductServiceTest`、`ProductBoundaryServiceTest`、`ProductControllerContractTest` | 部分覆盖：商家商品管理页面缺失 |
+| FR-010 | 商品价格为正数且最多两位小数 | `ProductPriceValidationTest`、`RequestDtoBoundaryTest` | 通过 |
+| FR-011 | 库存非负、商品与店铺校验 | `ProductStockServiceTest`、`ProductBoundaryServiceTest`、`ProductControllerContractTest` | 回归失败：库存操作返回资源不存在或抛错 |
+| FR-012 | 添加购物车、数量合并、下架与商品不存在 | `CartAddServiceTest`、`CartBoundaryServiceTest`、`CartControllerContractTest`、`Shop.test.js` | 回归失败：下架错误码、停业店铺仍可加购 |
+| FR-013 | 购物车金额、商品可用性和库存提示 | `CartQueryServiceTest`、`CartControllerContractTest`、`Cart.test.js` | 通过 |
+| FR-014 | 修改数量、零值边界、库存和越权 | `CartUpdateServiceTest`、`CartControllerContractTest`、`Cart.test.js` | 回归失败：库存错误码及前端异常处理 |
+| FR-015 | 删除单项、清空购物车和越权 | `CartDeleteServiceTest`、`CartControllerContractTest`、`Cart.test.js` | 通过 |
+| FR-016 | 事务下单、空/跨店/下架、库存和响应明细 | `OrderCreationServiceTest`、`OrderBoundaryServiceTest`、`OrderControllerContractTest` | 回归失败：错误码和成功响应明细不符合断言 |
+| FR-017 | 订单列表、筛选及分页边界 | `OrderListServiceTest`、`OrderBoundaryServiceTest`、`OrderControllerContractTest`、`Orders.test.js` | 回归失败：`size=101` 未拒绝 |
+| FR-018 | 订单详情、非法角色和访问控制 | `OrderDetailAuthorizationTest`、`OrderBoundaryServiceTest`、`OrderControllerContractTest`、`OrderDetail.test.js` | 通过 |
+| FR-020 | 统一成功/失败响应与追踪编号 | `ApiResponseTest`、`http.test.js` | 通过 |
+| FR-021 | 参数错误及字段级错误响应 | `ValidationErrorTest`、`RequestDtoBoundaryTest`、各 Controller 参数测试 | 通过 |
 
 ## 追踪规则
 
-1. 每次需求变更先更新本矩阵，再编写失败测试。
+1. 每次需求变更先更新本矩阵，再编写能在旧行为上准确失败的测试。
 2. 测试提交使用 `test(FR-xxx): ...`，不得与实现提交混合。
 3. 新增或修改功能至少包含正常、边界、异常和权限场景中的适用项。
-4. 功能负责人完成实现后，将对应状态由“红灯基线”改为“已通过”，并记录回归结果。
+4. 功能负责人完成实现后，由测试专员回归并更新状态和缺陷证据。

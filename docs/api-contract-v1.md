@@ -7,7 +7,7 @@
 - 数据格式：`application/json; charset=UTF-8`
 - 时间格式：ISO 8601，例如 `2026-09-01T12:30:00`
 - 金额格式：JSON number，后端使用两位小数的 `BigDecimal`
-- 当前状态：接口契约和测试已定义，核心 Service 尚待后端人员依据测试实现
+- 当前状态：接口契约和测试已定义，核心 Service 已进入实现与回归阶段，未通过项见 `phase-1-regression-defects.md`
 
 本文档以当前 Controller、DTO 和安全配置为准。接口变更时应先更新本文档和对应失败测试，再修改业务实现。
 
