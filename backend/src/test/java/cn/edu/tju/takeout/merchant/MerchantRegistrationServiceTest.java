@@ -64,5 +64,20 @@ class MerchantRegistrationServiceTest {
         verify(merchantMapper, never()).insert(any());
         verify(shopMapper, never()).insert(any());
     }
-}
 
+    @Test
+    void duplicateMerchantPhoneIsRejected() {
+        Merchant existing = Merchant.registered(
+                "其他餐厅", "13800138000", "hash", "快餐");
+        when(merchantMapper.findByName("北洋餐厅")).thenReturn(Optional.empty());
+        when(merchantMapper.findByPhone("13800138000")).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> merchantService.register(new MerchantRegistrationRequest(
+                "北洋餐厅", "13800138000", "abc12345", "中式快餐")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).code())
+                .isEqualTo("MERCHANT_ALREADY_EXISTS");
+        verify(merchantMapper, never()).insert(any());
+        verify(shopMapper, never()).insert(any());
+    }
+}

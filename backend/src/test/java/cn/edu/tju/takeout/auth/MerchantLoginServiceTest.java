@@ -56,5 +56,18 @@ class MerchantLoginServiceTest {
                 .extracting(error -> ((BusinessException) error).code())
                 .isEqualTo("AUTH_INVALID");
     }
-}
 
+    @Test
+    void wrongMerchantPasswordUsesGenericCredentialError() {
+        Merchant merchant = Merchant.registered(
+                "北洋餐厅", "13800138000", encoder.encode("abc12345"), "中式快餐");
+        when(merchantMapper.findByPhone("13800138000")).thenReturn(Optional.of(merchant));
+
+        assertThatThrownBy(() -> authService.login(
+                new LoginRequest("13800138000", "wrong123", "MERCHANT")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("用户名或密码错误")
+                .extracting(error -> ((BusinessException) error).code())
+                .isEqualTo("AUTH_INVALID");
+    }
+}

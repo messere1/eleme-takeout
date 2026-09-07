@@ -56,10 +56,19 @@ class ShopManagementServiceTest {
                 .isEqualTo("FORBIDDEN");
     }
 
+    @Test
+    void missingShopReturnsNotFound() {
+        when(shopMapper.findById(404L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> shopService.getShop(404L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).code())
+                .isEqualTo("RESOURCE_NOT_FOUND");
+    }
+
     private static Shop shop(Long id, Long merchantId) {
         Shop shop = Shop.initiallyClosed(merchantId, "北洋餐厅");
         shop.setId(id);
         return shop;
     }
 }
-
