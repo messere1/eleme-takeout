@@ -36,18 +36,36 @@ async function load() {
 }
 
 async function plus(item) {
-  await updateItem(item.id, item.quantity + 1)
-  item.quantity += 1
+  message.value = ''
+  try {
+    await updateItem(item.id, item.quantity + 1)
+    item.quantity += 1
+  } catch (error) {
+    if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
+      router.push('/login')
+      return
+    }
+    message.value = error?.message || '修改数量失败，请稍后重试'
+  }
 }
 
 async function minus(item) {
+  message.value = ''
   if (item.quantity <= 1) {
-    await removeItem(item.id)
-    items.value = items.value.filter((entry) => entry.id !== item.id)
+    try {
+      await removeItem(item.id)
+      items.value = items.value.filter((entry) => entry.id !== item.id)
+    } catch (error) {
+      message.value = error?.message || '删除失败，请稍后重试'
+    }
     return
   }
-  await updateItem(item.id, item.quantity - 1)
-  item.quantity -= 1
+  try {
+    await updateItem(item.id, item.quantity - 1)
+    item.quantity -= 1
+  } catch (error) {
+    message.value = error?.message || '修改数量失败，请稍后重试'
+  }
 }
 
 async function remove(item) {

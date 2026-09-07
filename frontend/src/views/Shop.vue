@@ -40,6 +40,10 @@ async function load() {
 
 async function addProduct(product) {
   message.value = ''
+  if (shop.value?.status !== 'OPEN') {
+    message.value = '店铺未营业，暂不能加购'
+    return
+  }
   try {
     await addToCart({ productId: product.id, quantity: 1 })
     message.value = '已加入购物车'
@@ -104,7 +108,7 @@ onMounted(async () => {
           <button
             :data-testid="`add-${product.id}`"
             class="add-btn"
-            :disabled="product.status !== 'ON_SALE'"
+            :disabled="product.status !== 'ON_SALE' || shop.status !== 'OPEN'"
             @click="addProduct(product)"
           >
             加购
