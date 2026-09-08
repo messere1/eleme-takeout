@@ -29,6 +29,7 @@ eleme-takeout/
 - [第一阶段需求—测试追踪矩阵](docs/phase-1-test-traceability.md)
 - [第一阶段回归测试报告](docs/phase-1-test-report.md)
 - [第一阶段回归缺陷清单](docs/phase-1-regression-defects.md)
+- [前后端最终测试记录（2026-09-08）](docs/final-test-report-2026-09-08.md)
 
 `docs/` 计划集中存放数据库设计、API 文档、架构设计、TDD 测试报告、需求迭代记录、团队分工、开发日志和交叉验收材料。
 

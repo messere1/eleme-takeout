@@ -9,9 +9,11 @@ import static org.mockito.Mockito.when;
 import cn.edu.tju.takeout.cart.CartCheckoutLine;
 import cn.edu.tju.takeout.cart.CartMapper;
 import cn.edu.tju.takeout.common.BusinessException;
+import cn.edu.tju.takeout.merchant.MerchantMapper;
 import cn.edu.tju.takeout.product.ProductMapper;
 import cn.edu.tju.takeout.shop.Shop;
 import cn.edu.tju.takeout.shop.ShopMapper;
+import cn.edu.tju.takeout.user.UserMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,17 +32,20 @@ class OrderBoundaryServiceTest {
     @Mock private CartMapper cartMapper;
     @Mock private ProductMapper productMapper;
     @Mock private ShopMapper shopMapper;
+    @Mock private UserMapper userMapper;
+    @Mock private MerchantMapper merchantMapper;
     private OrderService service;
 
     @BeforeEach
     void setUp() {
-        service = new OrderService(orderMapper, cartMapper, productMapper, shopMapper);
+        service = new OrderService(
+                orderMapper, cartMapper, productMapper, shopMapper, userMapper, merchantMapper);
     }
 
     @Test
     void emptyCartCannotCreateOrder() {
         when(cartMapper.findCheckoutLinesByUserId(7L)).thenReturn(List.of());
-        assertCode(() -> service.create(7L), "BUSINESS_CONFLICT");
+        assertCode(() -> service.create(7L, "天津大学"), "BUSINESS_CONFLICT");
         verify(orderMapper, never()).insert(any());
     }
 
@@ -48,7 +53,7 @@ class OrderBoundaryServiceTest {
     void productsFromDifferentShopsCannotCreateOneOrder() {
         when(cartMapper.findCheckoutLinesByUserId(7L)).thenReturn(List.of(
                 line(50L, 20L, "ON_SALE"), line(51L, 21L, "ON_SALE")));
-        assertCode(() -> service.create(7L), "BUSINESS_CONFLICT");
+        assertCode(() -> service.create(7L, "天津大学"), "BUSINESS_CONFLICT");
         verify(orderMapper, never()).insert(any());
     }
 
@@ -57,7 +62,7 @@ class OrderBoundaryServiceTest {
         when(cartMapper.findCheckoutLinesByUserId(7L))
                 .thenReturn(List.of(line(50L, 20L, "ON_SALE")));
         when(shopMapper.findById(20L)).thenReturn(Optional.empty());
-        assertCode(() -> service.create(7L), "RESOURCE_NOT_FOUND");
+        assertCode(() -> service.create(7L, "天津大学"), "RESOURCE_NOT_FOUND");
         verify(orderMapper, never()).insert(any());
     }
 
@@ -66,7 +71,7 @@ class OrderBoundaryServiceTest {
         when(cartMapper.findCheckoutLinesByUserId(7L))
                 .thenReturn(List.of(line(50L, 20L, "OFF_SALE")));
         when(shopMapper.findById(20L)).thenReturn(Optional.of(openShop()));
-        assertCode(() -> service.create(7L), "BUSINESS_CONFLICT");
+        assertCode(() -> service.create(7L, "天津大学"), "BUSINESS_CONFLICT");
         verify(orderMapper, never()).insert(any());
     }
 
