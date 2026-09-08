@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: takeout-postgres
+
+    environment:
+      POSTGRES_DB: take_out
+      POSTGRES_USER: take_out
+      POSTGRES_PASSWORD: take_out
+      TZ: Asia/Shanghai
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      # 数据卷保存
+      - takeout-postgres-data:/var/lib/postgresql/data
+
+      # 直接使用后端现有表结构文件
+      - ./backend/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+
+      # 稍后创建的演示数据
+      - ./database/data.sql:/docker-entrypoint-initdb.d/02-data.sql:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U take_out -d take_out"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+    restart: unless-stopped
+
+volumes:
+  takeout-postgres-data:
