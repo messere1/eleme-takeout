@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { clearCart, getCart, removeItem, updateItem } from '@/api/cart'
 import { createOrder } from '@/api/order'
+import { getProfile } from '@/api/user'
 
 const router = useRouter()
 
@@ -10,6 +11,16 @@ const items = ref([])
 const busy = ref(false)
 const message = ref('')
 const loadError = ref('')
+const checkoutAddress = ref('')
+
+async function seedDefaultAddress() {
+  try {
+    const me = await getProfile()
+    if (me?.address) checkoutAddress.value = me.address
+  } catch {
+    // 未填地址则让用户手动输入
+  }
+}
 
 const total = computed(() =>
   items.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -82,7 +93,9 @@ async function checkout() {
   message.value = ''
   busy.value = true
   try {
-    const order = await createOrder()
+    const order = await createOrder({
+      address: checkoutAddress.value.trim() || undefined,
+    })
     router.push(`/orders/${order.id}`)
   } catch (error) {
     if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
@@ -95,7 +108,10 @@ async function checkout() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  seedDefaultAddress()
+  load()
+})
 </script>
 
 <template>
@@ -143,6 +159,17 @@ onMounted(load)
           </div>
         </li>
       </ul>
+
+      <div class="address-row">
+        <label class="ctrl-label" for="cart-address">收货地址</label>
+        <el-input
+          id="cart-address"
+          v-model="checkoutAddress"
+          data-testid="cart-address"
+          placeholder="默认取「我的-收货地址」，可直接修改"
+          maxlength="255"
+        />
+      </div>
 
       <footer class="cart-footer">
         <span>
@@ -307,5 +334,21 @@ onMounted(load)
 .cart-empty a {
   color: #ff6a00;
   font-weight: 600;
+}
+.address-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+.ctrl-label {
+  font-size: 0.9rem;
+  color: #666;
+  white-space: nowrap;
+}
+.address-row :deep(.el-input) {
+  flex: 1;
+  min-width: 16rem;
 }
 </style>

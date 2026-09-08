@@ -26,13 +26,20 @@ function fmt(value) {
   return (Number(value) || 0).toFixed(2)
 }
 
-async function selectCategory(categoryId) {
+const productPage = ref(1)
+const productTotalPages = ref(1)
+
+async function selectCategory(categoryId, page = 1) {
   activeCategoryId.value = categoryId
-  const data = await listProducts(categoryId, {
-    page: 1,
-    size: 20,
-  })
+  const data = await listProducts(categoryId, { page, size: 20 })
   products.value = data?.items ?? []
+  productPage.value = data?.page ?? page
+  productTotalPages.value = data?.totalPages ?? 1
+}
+
+function goProductsPage(page) {
+  if (!activeCategoryId.value) return
+  selectCategory(activeCategoryId.value, page)
 }
 
 async function load() {
@@ -124,6 +131,22 @@ onMounted(async () => {
         </li>
       </ul>
       <p v-else class="empty-tip">该分类暂时没有商品</p>
+
+      <div v-if="products.length" class="product-pager">
+        <button
+          class="page-btn"
+          data-testid="product-prev"
+          :disabled="productPage <= 1"
+          @click="goProductsPage(productPage - 1)"
+        >上一页</button>
+        <span class="page-info">第 {{ productPage }} / {{ productTotalPages }} 页</span>
+        <button
+          class="page-btn"
+          data-testid="product-next"
+          :disabled="productPage >= productTotalPages"
+          @click="goProductsPage(productPage + 1)"
+        >下一页</button>
+      </div>
 
       <p v-if="message" data-testid="shop-message" role="status" class="shop-message">
         {{ message }}
@@ -242,5 +265,27 @@ onMounted(async () => {
 .loading-tip {
   color: #aaa;
   text-align: center;
+}
+.product-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+.page-btn {
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  cursor: pointer;
+  color: #444;
+}
+.page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.page-info {
+  color: #999;
+  font-size: 0.9rem;
 }
 </style>

@@ -12,6 +12,9 @@ public interface MerchantMapper {
     Optional<Merchant> findByName(String name);
     @Select("SELECT * FROM merchants WHERE phone = #{phone}")
     Optional<Merchant> findByPhone(String phone);
+
+    @Select("SELECT * FROM merchants WHERE id = #{id}")
+    Optional<Merchant> findById(Long id);
     @Insert("""
             INSERT INTO merchants(merchant_name, phone, password_hash, business_scope, created_at)
             VALUES(#{merchantName}, #{phone}, #{passwordHash}, #{businessScope}, #{createdAt})

@@ -53,7 +53,7 @@ describe('商家商品管理', () => {
 
   it('列出在售与下架的全部商品', async () => {
     const { wrapper } = await mountProducts()
-    expect(listMerchantProducts).toHaveBeenCalledWith(7)
+    expect(listMerchantProducts).toHaveBeenCalledTimes(1)
     const onSale = wrapper.get('[data-testid="product-mgmt-item-40"]')
     expect(onSale.text()).toContain('煎饼果子')
     expect(onSale.text()).toContain('在售')

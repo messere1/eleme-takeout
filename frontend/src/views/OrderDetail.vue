@@ -38,6 +38,12 @@ onMounted(async () => {
       </header>
       <p class="order-time">{{ fmtTime(detail.createdAt) }}</p>
 
+      <div v-if="detail.shopPhone || detail.userPhoneMasked || detail.userAddress" class="contact-panel">
+        <p v-if="detail.shopPhone">商家电话：{{ detail.shopPhone }}</p>
+        <p v-if="detail.userPhoneMasked">联系电话：{{ detail.userPhoneMasked }}</p>
+        <p v-if="detail.userAddress">收货地址：{{ detail.userAddress }}</p>
+      </div>
+
       <ul class="item-list">
         <li
           v-for="item in detail.items"
@@ -106,6 +112,20 @@ onMounted(async () => {
   margin: 0;
   color: #aaa;
   font-size: 0.85rem;
+}
+.contact-panel {
+  background: #fff7f0;
+  border: 1px solid #ffe3cf;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.contact-panel p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #4a3a2a;
 }
 .item-list {
   list-style: none;

@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { cancelOrder, listOrders } from '@/api/order'
+import { cancelOrder, confirmOrder, listOrders } from '@/api/order'
 
 const router = useRouter()
 
@@ -32,6 +32,16 @@ async function cancelRow(order) {
     order.status = res?.status || 'CANCELLED'
   } catch (error) {
     loadError.value = error?.message || '取消失败，请稍后重试'
+  }
+}
+
+async function confirmRow(order) {
+  loadError.value = ''
+  try {
+    const res = await confirmOrder(order.id)
+    order.status = res?.status || 'COMPLETED'
+  } catch (error) {
+    loadError.value = error?.message || '确认失败，请稍后重试'
   }
 }
 
@@ -106,6 +116,13 @@ onMounted(() => load(1))
               :data-testid="`order-cancel-${order.id}`"
               @click.stop="cancelRow(order)"
             >取消订单</button>
+          </div>
+          <div v-else-if="order.status === 'ACCEPTED'" class="order-confirm">
+            <button
+              class="confirm-btn"
+              :data-testid="`order-confirm-${order.id}`"
+              @click.stop="confirmRow(order)"
+            >确认完成</button>
           </div>
         </li>
       </ul>
@@ -228,6 +245,16 @@ onMounted(() => load(1))
   background: #fff;
   border-radius: 999px;
   padding: 0.3rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.confirm-btn {
+  border: none;
+  background: #17a25c;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.32rem 0.9rem;
   cursor: pointer;
   font-size: 0.85rem;
   white-space: nowrap;

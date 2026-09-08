@@ -64,55 +64,55 @@ Content-Type: application/json
 
 ### 2.4 常用错误码
 
-| HTTP 状态 | code | 含义 | 前端建议 |
-| ---: | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | 请求字段或分页参数不合法 | 保留表单并显示字段错误 |
-| 401 | `AUTH_REQUIRED` | 未携带登录令牌 | 跳转登录页 |
-| 401 | `AUTH_INVALID` | 凭证错误或 Token 无效 | 清理登录态并跳转登录页 |
-| 401 | `AUTH_EXPIRED` | Token 已过期 | 清理登录态并提示重新登录 |
-| 403 | `FORBIDDEN` | 当前角色或资源归属无权访问 | 显示无权限提示，不重复请求 |
-| 404 | `RESOURCE_NOT_FOUND` | 用户、店铺、分类、商品、购物车项或订单不存在 | 提示资源不存在并刷新列表 |
-| 409 | `USER_ALREADY_EXISTS` | 用户名或手机号已存在 | 提示更换注册信息 |
-| 409 | `MERCHANT_ALREADY_EXISTS` | 商家名称或手机号已存在 | 提示更换注册信息 |
-| 409 | `BUSINESS_CONFLICT` | 库存不足、商品下架、店铺打烊等业务冲突 | 显示 `msg` 并刷新相关数据 |
-| 409 | `ORDER_ALREADY_CANCELLED` | 对已取消订单再次执行取消 | 保持已取消状态，不重复回补库存 |
-| 500 | `INTERNAL_ERROR` | 未预期异常 | 显示通用提示并保留 `traceId`，不得展示堆栈或数据库信息 |
+| HTTP 状态 | code                        | 含义                                         | 前端建议                                                |
+| --------: | --------------------------- | -------------------------------------------- | ------------------------------------------------------- |
+|       400 | `VALIDATION_ERROR`        | 请求字段或分页参数不合法                     | 保留表单并显示字段错误                                  |
+|       401 | `AUTH_REQUIRED`           | 未携带登录令牌                               | 跳转登录页                                              |
+|       401 | `AUTH_INVALID`            | 凭证错误或 Token 无效                        | 清理登录态并跳转登录页                                  |
+|       401 | `AUTH_EXPIRED`            | Token 已过期                                 | 清理登录态并提示重新登录                                |
+|       403 | `FORBIDDEN`               | 当前角色或资源归属无权访问                   | 显示无权限提示，不重复请求                              |
+|       404 | `RESOURCE_NOT_FOUND`      | 用户、店铺、分类、商品、购物车项或订单不存在 | 提示资源不存在并刷新列表                                |
+|       409 | `USER_ALREADY_EXISTS`     | 用户名或手机号已存在                         | 提示更换注册信息                                        |
+|       409 | `MERCHANT_ALREADY_EXISTS` | 商家名称或手机号已存在                       | 提示更换注册信息                                        |
+|       409 | `BUSINESS_CONFLICT`       | 库存不足、商品下架、店铺打烊等业务冲突       | 显示`msg` 并刷新相关数据                              |
+|       409 | `ORDER_ALREADY_CANCELLED` | 对已取消订单再次执行取消                     | 保持已取消状态，不重复回补库存                          |
+|       500 | `INTERNAL_ERROR`          | 未预期异常                                   | 显示通用提示并保留`traceId`，不得展示堆栈或数据库信息 |
 
 ## 3. 接口总览
 
-| 模块 | 方法 | 路径 | 权限 | 说明 |
-| --- | --- | --- | --- | --- |
-| 认证 | POST | `/api/v1/auth/login` | 公开 | 用户或商家登录 |
-| 用户 | POST | `/api/v1/users` | 公开 | 用户注册 |
-| 用户 | GET | `/api/v1/users/me` | CUSTOMER | 查询本人资料 |
-| 用户 | PATCH | `/api/v1/users/me` | CUSTOMER | 修改本人资料 |
-| 商家 | POST | `/api/v1/merchants` | 公开 | 商家注册并创建初始店铺 |
-| 店铺 | GET | `/api/v1/shops?page=1&size=20` | 公开 | 店铺分页列表 |
-| 店铺 | GET | `/api/v1/shops/{shopId}` | 公开 | 查询店铺详情 |
-| 店铺 | PATCH | `/api/v1/shops/{shopId}` | MERCHANT | 修改所属店铺信息 |
-| 店铺 | PATCH | `/api/v1/shops/{shopId}/status` | MERCHANT | 修改所属店铺状态 |
-| 分类 | GET | `/api/v1/shops/{shopId}/categories` | 公开 | 查询店铺分类 |
-| 分类 | POST | `/api/v1/shops/{shopId}/categories` | MERCHANT | 新增所属店铺分类 |
-| 分类 | PATCH | `/api/v1/categories/{categoryId}` | MERCHANT | 修改所属店铺分类 |
-| 分类 | DELETE | `/api/v1/categories/{categoryId}` | MERCHANT | 删除空分类 |
-| 商品 | GET | `/api/v1/categories/{categoryId}/products?page=1&size=20` | 公开 | 分类下商品分页列表 |
-| 商品 | GET | `/api/v1/products/{productId}` | 公开 | 查询可见商品详情 |
-| 商品 | POST | `/api/v1/shops/{shopId}/products` | MERCHANT | 新增商品 |
-| 商品 | PATCH | `/api/v1/products/{productId}` | MERCHANT | 修改商品 |
-| 商品 | PATCH | `/api/v1/products/{productId}/price` | MERCHANT | 修改价格 |
-| 商品 | PATCH | `/api/v1/products/{productId}/status` | MERCHANT | 商品上下架 |
-| 商品 | PATCH | `/api/v1/products/{productId}/stock` | MERCHANT | 修改库存 |
-| 商品 | DELETE | `/api/v1/products/{productId}` | MERCHANT | 逻辑删除商品 |
-| 购物车 | POST | `/api/v1/cart/items` | CUSTOMER | 添加商品 |
-| 购物车 | GET | `/api/v1/cart` | CUSTOMER | 查询购物车 |
-| 购物车 | PATCH | `/api/v1/cart/items/{itemId}` | CUSTOMER | 修改数量；0 表示删除 |
-| 购物车 | DELETE | `/api/v1/cart/items/{itemId}` | CUSTOMER | 删除单项 |
-| 购物车 | DELETE | `/api/v1/cart` | CUSTOMER | 清空本人购物车 |
-| 订单 | POST | `/api/v1/orders` | CUSTOMER | 按当前购物车创建订单 |
-| 订单 | GET | `/api/v1/orders` | CUSTOMER | 查询本人订单列表 |
-| 订单 | GET | `/api/v1/orders/{orderId}` | CUSTOMER/MERCHANT | 查询有权访问的订单详情 |
-| 订单 | GET | `/api/v1/merchant/orders` | MERCHANT | 查询本店订单列表 |
-| 订单 | POST | `/api/v1/orders/{orderId}/cancel` | CUSTOMER | 取消本人 CREATED 订单（阶段2） |
+| 模块   | 方法   | 路径                                                        | 权限              | 说明                           |
+| ------ | ------ | ----------------------------------------------------------- | ----------------- | ------------------------------ |
+| 认证   | POST   | `/api/v1/auth/login`                                      | 公开              | 用户或商家登录                 |
+| 用户   | POST   | `/api/v1/users`                                           | 公开              | 用户注册                       |
+| 用户   | GET    | `/api/v1/users/me`                                        | CUSTOMER          | 查询本人资料                   |
+| 用户   | PATCH  | `/api/v1/users/me`                                        | CUSTOMER          | 修改本人资料                   |
+| 商家   | POST   | `/api/v1/merchants`                                       | 公开              | 商家注册并创建初始店铺         |
+| 店铺   | GET    | `/api/v1/shops?page=1&size=20`                            | 公开              | 店铺分页列表                   |
+| 店铺   | GET    | `/api/v1/shops/{shopId}`                                  | 公开              | 查询店铺详情                   |
+| 店铺   | PATCH  | `/api/v1/shops/{shopId}`                                  | MERCHANT          | 修改所属店铺信息               |
+| 店铺   | PATCH  | `/api/v1/shops/{shopId}/status`                           | MERCHANT          | 修改所属店铺状态               |
+| 分类   | GET    | `/api/v1/shops/{shopId}/categories`                       | 公开              | 查询店铺分类                   |
+| 分类   | POST   | `/api/v1/shops/{shopId}/categories`                       | MERCHANT          | 新增所属店铺分类               |
+| 分类   | PATCH  | `/api/v1/categories/{categoryId}`                         | MERCHANT          | 修改所属店铺分类               |
+| 分类   | DELETE | `/api/v1/categories/{categoryId}`                         | MERCHANT          | 删除空分类                     |
+| 商品   | GET    | `/api/v1/categories/{categoryId}/products?page=1&size=20` | 公开              | 分类下商品分页列表             |
+| 商品   | GET    | `/api/v1/products/{productId}`                            | 公开              | 查询可见商品详情               |
+| 商品   | POST   | `/api/v1/shops/{shopId}/products`                         | MERCHANT          | 新增商品                       |
+| 商品   | PATCH  | `/api/v1/products/{productId}`                            | MERCHANT          | 修改商品                       |
+| 商品   | PATCH  | `/api/v1/products/{productId}/price`                      | MERCHANT          | 修改价格                       |
+| 商品   | PATCH  | `/api/v1/products/{productId}/status`                     | MERCHANT          | 商品上下架                     |
+| 商品   | PATCH  | `/api/v1/products/{productId}/stock`                      | MERCHANT          | 修改库存                       |
+| 商品   | DELETE | `/api/v1/products/{productId}`                            | MERCHANT          | 逻辑删除商品                   |
+| 购物车 | POST   | `/api/v1/cart/items`                                      | CUSTOMER          | 添加商品                       |
+| 购物车 | GET    | `/api/v1/cart`                                            | CUSTOMER          | 查询购物车                     |
+| 购物车 | PATCH  | `/api/v1/cart/items/{itemId}`                             | CUSTOMER          | 修改数量；0 表示删除           |
+| 购物车 | DELETE | `/api/v1/cart/items/{itemId}`                             | CUSTOMER          | 删除单项                       |
+| 购物车 | DELETE | `/api/v1/cart`                                            | CUSTOMER          | 清空本人购物车                 |
+| 订单   | POST   | `/api/v1/orders`                                          | CUSTOMER          | 按当前购物车创建订单           |
+| 订单   | GET    | `/api/v1/orders`                                          | CUSTOMER          | 查询本人订单列表               |
+| 订单   | GET    | `/api/v1/orders/{orderId}`                                | CUSTOMER/MERCHANT | 查询有权访问的订单详情         |
+| 订单   | GET    | `/api/v1/merchant/orders`                                 | MERCHANT          | 查询本店订单列表               |
+| 订单   | POST   | `/api/v1/orders/{orderId}/cancel`                         | CUSTOMER          | 取消本人 CREATED 订单（阶段2） |
 
 ## 4. 认证与账户
 
@@ -130,11 +130,11 @@ Content-Type: application/json
 }
 ```
 
-| 字段 | 类型 | 必填 | 约束 |
-| --- | --- | --- | --- |
-| account | string | 是 | 用户可使用账号，商家使用手机号 |
-| password | string | 是 | 非空 |
-| role | string | 是 | `CUSTOMER` 或 `MERCHANT` |
+| 字段     | 类型   | 必填 | 约束                           |
+| -------- | ------ | ---- | ------------------------------ |
+| account  | string | 是   | 用户可使用账号，商家使用手机号 |
+| password | string | 是   | 非空                           |
+| role     | string | 是   | `CUSTOMER` 或 `MERCHANT`   |
 
 成功响应 `data`：
 
@@ -160,11 +160,11 @@ Content-Type: application/json
 }
 ```
 
-| 字段 | 类型 | 必填 | 约束 |
-| --- | --- | --- | --- |
-| username | string | 是 | 3～30 个字符 |
-| phone | string | 是 | 中国大陆手机号格式 |
-| password | string | 是 | 6～64 位，同时包含字母和数字 |
+| 字段     | 类型   | 必填 | 约束                         |
+| -------- | ------ | ---- | ---------------------------- |
+| username | string | 是   | 3～30 个字符                 |
+| phone    | string | 是   | 中国大陆手机号格式           |
+| password | string | 是   | 6～64 位，同时包含字母和数字 |
 
 成功响应 `data` 为 `UserView`。
 
@@ -209,12 +209,12 @@ Content-Type: application/json
 }
 ```
 
-| 字段 | 类型 | 必填 | 约束 |
-| --- | --- | --- | --- |
-| merchantName | string | 是 | 最多 50 个字符 |
-| phone | string | 是 | 中国大陆手机号格式 |
-| password | string | 是 | 6～64 位，同时包含字母和数字 |
-| businessScope | string | 是 | 最多 100 个字符 |
+| 字段          | 类型   | 必填 | 约束                         |
+| ------------- | ------ | ---- | ---------------------------- |
+| merchantName  | string | 是   | 最多 50 个字符               |
+| phone         | string | 是   | 中国大陆手机号格式           |
+| password      | string | 是   | 6～64 位，同时包含字母和数字 |
+| businessScope | string | 是   | 最多 100 个字符              |
 
 成功响应 `data`：
 
@@ -368,13 +368,13 @@ Content-Type: application/json
 }
 ```
 
-| 字段 | 类型 | 必填 | 约束 |
-| --- | --- | --- | --- |
-| name | string | 是 | 最多 50 个字符 |
-| categoryId | integer | 是 | 分类必须属于当前店铺 |
-| description | string | 否 | 最多 500 个字符 |
-| price | number | 是 | 大于 0，整数最多 8 位，小数最多 2 位 |
-| stock | integer | 是 | 大于等于 0 |
+| 字段        | 类型    | 必填 | 约束                                 |
+| ----------- | ------- | ---- | ------------------------------------ |
+| name        | string  | 是   | 最多 50 个字符                       |
+| categoryId  | integer | 是   | 分类必须属于当前店铺                 |
+| description | string  | 否   | 最多 500 个字符                      |
+| price       | number  | 是   | 大于 0，整数最多 8 位，小数最多 2 位 |
+| stock       | integer | 是   | 大于等于 0                           |
 
 新商品初始状态应为 `OFF_SALE`。
 
@@ -458,13 +458,13 @@ Content-Type: application/json
 
 Query 参数：
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- |
-| status | string | 否 | 无 | 订单状态筛选 |
-| startTime | string | 否 | 无 | ISO 8601 起始时间 |
-| endTime | string | 否 | 无 | ISO 8601 结束时间 |
-| page | integer | 否 | 1 | 从 1 开始 |
-| size | integer | 否 | 20 | 1～100 |
+| 参数      | 类型    | 必填 | 默认值 | 说明              |
+| --------- | ------- | ---- | ------ | ----------------- |
+| status    | string  | 否   | 无     | 订单状态筛选      |
+| startTime | string  | 否   | 无     | ISO 8601 起始时间 |
+| endTime   | string  | 否   | 无     | ISO 8601 结束时间 |
+| page      | integer | 否   | 1      | 从 1 开始         |
+| size      | integer | 否   | 20     | 1～100            |
 
 当 `startTime > endTime` 时返回 400。列表固定按 `createdAt DESC, id DESC` 排序，确保相同创建时间及跨页查询结果稳定。
 

@@ -6,6 +6,8 @@ import {
   deleteProduct,
   listCategories,
   listMerchantProducts,
+  updateProduct,
+  updateProductPrice,
   updateProductStock,
 } from '@/api/shop'
 import { session } from '@/utils/session'
@@ -19,28 +21,75 @@ const STATUS_TEXT = { ON_SALE: '在售', OFF_SALE: '已下架' }
 const products = ref([])
 const categories = ref([])
 const stockEdit = reactive({})
+const priceEdit = reactive({})
+const editingNameId = ref(null)
+const nameEdit = reactive({})
 const message = ref('')
 const creating = ref(false)
+const productPage = ref(1)
+const productTotalPages = ref(1)
 const form = reactive({ categoryId: '', name: '', price: '', stock: '' })
 
 function fmt(value) {
   return (Number(value) || 0).toFixed(2)
 }
 
-async function load() {
+async function load(page = 1) {
   if (missingShop) return
   try {
-    const [cats, list] = await Promise.all([
+    const [cats, res] = await Promise.all([
       listCategories(shopId),
-      listMerchantProducts(),
+      listMerchantProducts({ page, size: 20 }),
     ])
     categories.value = cats || []
-    products.value = list || []
+    const items = Array.isArray(res) ? res : res?.items || []
+    products.value = items
+    productPage.value = Array.isArray(res) ? 1 : res?.page ?? page
+    productTotalPages.value = Array.isArray(res) ? 1 : res?.totalPages ?? 1
     products.value.forEach((product) => {
       stockEdit[product.id] = product.stock
+      priceEdit[product.id] = product.price
+      nameEdit[product.id] = product.name
     })
   } catch (error) {
     message.value = error?.message || '商品加载失败，请稍后重试'
+  }
+}
+
+async function saveProduct(product) {
+  message.value = ''
+  const name = (nameEdit[product.id] || '').trim()
+  if (!name) {
+    message.value = '请输入商品名称'
+    return
+  }
+  try {
+    const res = await updateProduct(product.id, {
+      name,
+      categoryId: product.categoryId,
+      description: product.description || '',
+      price: Number(product.price),
+      stock: Number(product.stock),
+    })
+    product.name = res?.name ?? name
+    editingNameId.value = null
+  } catch (error) {
+    message.value = error?.message || '保存失败，请稍后重试'
+  }
+}
+
+async function savePrice(product) {
+  message.value = ''
+  const price = Number(priceEdit[product.id])
+  if (!Number.isFinite(price) || price <= 0) {
+    message.value = '价格需大于 0'
+    return
+  }
+  try {
+    const res = await updateProductPrice(product.id, price)
+    product.price = res?.price ?? price
+  } catch (error) {
+    message.value = error?.message || '改价失败，请稍后重试'
   }
 }
 
@@ -145,7 +194,17 @@ onMounted(load)
           class="mgmt-item"
         >
           <div class="mgmt-main">
-            <strong>{{ product.name }}</strong>
+            <template v-if="editingNameId === product.id">
+              <el-input
+                v-model="nameEdit[product.id]"
+                class="name-input"
+                placeholder="商品名称"
+                maxlength="50"
+              />
+              <button class="link-btn" @click="saveProduct(product)">保存</button>
+              <button class="link-btn" @click="editingNameId = null">取消</button>
+            </template>
+            <strong v-else>{{ product.name }}</strong>
             <span class="mgmt-price">¥{{ fmt(product.price) }}</span>
             <span class="mgmt-status" :class="{ off: product.status !== 'ON_SALE' }">
               {{ STATUS_TEXT[product.status] || product.status }}
@@ -154,6 +213,11 @@ onMounted(load)
           </div>
 
           <div class="mgmt-actions">
+            <button
+              class="link-btn"
+              :data-testid="`product-mgmt-edit-${product.id}`"
+              @click="editingNameId = product.id"
+            >改名</button>
             <button
               class="primary-btn small"
               :data-testid="`product-mgmt-status-${product.id}`"
@@ -171,6 +235,19 @@ onMounted(load)
               :data-testid="`product-mgmt-save-stock-${product.id}`"
               @click="saveStock(product)"
             >保存</button>
+
+            <el-input
+              v-model="priceEdit[product.id]"
+              class="price-input"
+              :data-testid="`product-mgmt-price-${product.id}`"
+              placeholder="价格"
+            />
+            <button
+              class="link-btn"
+              :data-testid="`product-mgmt-save-price-${product.id}`"
+              @click="savePrice(product)"
+            >改价</button>
+
             <button
               class="link-danger"
               :data-testid="`product-mgmt-delete-${product.id}`"
@@ -180,6 +257,22 @@ onMounted(load)
         </li>
       </ul>
       <p v-else class="empty-tip">还没有商品，先添加一个</p>
+
+      <div v-if="productTotalPages > 1" class="product-pager">
+        <button
+          class="page-btn"
+          data-testid="products-prev"
+          :disabled="productPage <= 1"
+          @click="load(productPage - 1)"
+        >上一页</button>
+        <span class="page-info">第 {{ productPage }} / {{ productTotalPages }} 页</span>
+        <button
+          class="page-btn"
+          data-testid="products-next"
+          :disabled="productPage >= productTotalPages"
+          @click="load(productPage + 1)"
+        >下一页</button>
+      </div>
 
       <div class="create-panel">
         <h3>新增商品</h3>
@@ -279,6 +372,34 @@ onMounted(load)
 }
 .stock-input {
   width: 5rem;
+}
+.price-input {
+  width: 5rem;
+}
+.name-input {
+  width: 11rem;
+}
+.product-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+.page-btn {
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  cursor: pointer;
+  color: #444;
+}
+.page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.page-info {
+  color: #999;
+  font-size: 0.9rem;
 }
 .stock-input :deep(.el-input) {
   width: 100%;

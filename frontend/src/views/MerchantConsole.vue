@@ -1,7 +1,16 @@
 <script setup>
 
-import { onMounted, ref } from 'vue'
-import { changeStatus, createCategory, deleteCategory, getShop, listCategories, updateShop } from '@/api/shop'
+import { onMounted, reactive, ref } from 'vue'
+import {
+  changeStatus,
+  createCategory,
+  deleteCategory,
+  getMyShop,
+  getShop,
+  listCategories,
+  updateCategory,
+  updateShop,
+} from '@/api/shop'
 import { session } from '@/utils/session'
 
 const STATUS_TEXT = {
@@ -11,8 +20,8 @@ const STATUS_TEXT = {
 }
 
 const stored = session.loadShop()
-const shopId = stored?.shopId
-const missingShop = !shopId
+let shopId = stored?.shopId ?? null
+const missingShop = ref(!shopId)
 
 const shop = ref(null)
 const editName = ref('')
@@ -20,11 +29,52 @@ const editNotice = ref('')
 const categories = ref([])
 const newCategoryName = ref('')
 const newCategorySort = ref('')
+const editingCatId = ref(null)
+const catNameEdit = reactive({})
+const catSortEdit = reactive({})
 const message = ref('')
 const savingShop = ref(false)
 
+function startEditCategory(category) {
+  editingCatId.value = category.id
+  catNameEdit[category.id] = category.name
+  catSortEdit[category.id] = category.sort
+}
+
+async function saveCategory(category) {
+  message.value = ''
+  const name = (catNameEdit[category.id] || '').trim()
+  if (!name) {
+    message.value = '请输入分类名称'
+    return
+  }
+  try {
+    const sort = Number(catSortEdit[category.id])
+    const res = await updateCategory(category.id, {
+      name,
+      sort: Number.isNaN(sort) ? category.sort : sort,
+    })
+    category.name = res?.name ?? name
+    category.sort = res?.sort ?? category.sort
+    editingCatId.value = null
+  } catch (error) {
+    message.value = error?.message || '保存失败，请稍后重试'
+  }
+}
+
 async function load() {
-  if (missingShop) return
+  // 优先按登录身份获取“我的店铺”，接口不可用时回退本地缓存
+  try {
+    const mine = await getMyShop()
+    if (mine?.id) shopId = Number(mine.id)
+  } catch {
+    /* ignore：使用缓存 shopId */
+  }
+  if (!shopId) {
+    missingShop.value = true
+    return
+  }
+  missingShop.value = false
   try {
     shop.value = await getShop(shopId)
     editName.value = shop.value.shopName || ''
@@ -173,12 +223,31 @@ onMounted(load)
             :data-testid="`category-item-${category.id}`"
             class="cat-item"
           >
-            <span>{{ category.name }}（排序 {{ category.sort }}）</span>
-            <button
-              class="link-danger"
-              :data-testid="`category-delete-${category.id}`"
-              @click="removeCategory(category)"
-            >删除</button>
+            <template v-if="editingCatId === category.id">
+              <el-input
+                v-model="catNameEdit[category.id]"
+                class="cat-name-inline"
+                placeholder="分类名称"
+              />
+              <el-input
+                v-model="catSortEdit[category.id]"
+                class="cat-sort-inline"
+                placeholder="排序"
+              />
+              <button class="link-btn" @click="saveCategory(category)">保存</button>
+              <button class="link-btn" @click="editingCatId = null">取消</button>
+            </template>
+            <template v-else>
+              <span>{{ category.name }}（排序 {{ category.sort }}）</span>
+              <div class="cat-ops">
+                <button class="link-btn" @click="startEditCategory(category)">编辑</button>
+                <button
+                  class="link-danger"
+                  :data-testid="`category-delete-${category.id}`"
+                  @click="removeCategory(category)"
+                >删除</button>
+              </div>
+            </template>
           </li>
         </ul>
         <p v-else class="empty-tip">还没有分类，先添加一个</p>
@@ -298,10 +367,27 @@ onMounted(load)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   border: 1px solid #f0f0f0;
   border-radius: 10px;
   padding: 0.6rem 0.9rem;
+  flex-wrap: wrap;
+}
+.cat-ops {
+  display: flex;
+  gap: 0.5rem;
+}
+.cat-name-inline {
+  width: 10rem;
+}
+.cat-sort-inline {
+  width: 5rem;
+}
+.link-btn {
+  border: none;
+  background: transparent;
+  color: var(--el-color-primary);
+  cursor: pointer;
 }
 .link-danger {
   border: none;

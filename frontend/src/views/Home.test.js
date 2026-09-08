@@ -58,11 +58,11 @@ describe('首页店铺流（分页）', () => {
     expect(wrapper.get('[data-testid="home-shop-3"]').text()).toContain('深夜烧烤')
   })
 
-  it('列表接口异常时回退到示例店铺并提示', async () => {
+  it('列表接口异常时提示加载失败且不伪造店铺', async () => {
     listShops.mockRejectedValue(new Error('offline'))
     const { wrapper } = await mountHome()
     const note = wrapper.get('[data-testid="home-feed-note"]')
-    expect(note.text()).toContain('示例')
-    expect(wrapper.get('[data-testid="home-shop-1"]').exists()).toBe(true)
+    expect(note.text()).toContain('加载失败')
+    expect(wrapper.find('[data-testid="home-shop-1"]').exists()).toBe(false)
   })
 })

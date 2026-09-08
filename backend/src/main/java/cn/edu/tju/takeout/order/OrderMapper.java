@@ -12,8 +12,8 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface OrderMapper {
     @Insert("""
-            INSERT INTO orders(order_no, user_id, shop_id, total_amount, status, created_at)
-            VALUES(#{orderNo}, #{userId}, #{shopId}, #{totalAmount}, #{status}, #{createdAt})
+            INSERT INTO orders(order_no, user_id, shop_id, total_amount, status, address, created_at)
+            VALUES(#{orderNo}, #{userId}, #{shopId}, #{totalAmount}, #{status}, #{address}, #{createdAt})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Order order);
@@ -87,4 +87,10 @@ public interface OrderMapper {
             WHERE id = #{orderId} AND status = 'CREATED'
             """)
     int markCancelledIfAllowed(Long orderId);
+
+    @Update("""
+            UPDATE orders SET status = #{to}
+            WHERE id = #{id} AND status = #{from}
+            """)
+    int transitionStatus(Long id, String from, String to);
 }

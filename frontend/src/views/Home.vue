@@ -2,20 +2,10 @@
 import { onMounted, ref } from 'vue'
 import { listShops } from '@/api/shop'
 
-const DEMO_SHOPS = [
-  { id: 1, shopName: '北洋餐厅', notice: '煎饼果子现做现卖，营业到 21:00', status: 'OPEN', emoji: '🥞', bg: '#fff1e8' },
-  { id: 2, shopName: '川渝小馆', notice: '麻辣鲜香，满 30 减 5', status: 'OPEN', emoji: '🌶️', bg: '#fff0f0' },
-  { id: 3, shopName: '茶百道奶茶', notice: '第二杯半价，今天点它', status: 'OPEN', emoji: '🧋', bg: '#f4f1ff' },
-  { id: 4, shopName: '日料小屋', notice: '寿司拼盘 9 折上新', status: 'TEMP_CLOSED', emoji: '🍣', bg: '#eef8ff' },
-  { id: 5, shopName: '深夜烧烤', notice: '21 点后营业，撸串走起', status: 'CLOSED', emoji: '🍢', bg: '#fff7ed' },
-  { id: 6, shopName: '面包工坊', notice: '现烤吐司，早餐优选', status: 'OPEN', emoji: '🍞', bg: '#fdeef7' },
-]
-
 const EMOJI = ['🥞', '🌶️', '🧋', '🍣', '🍢', '🍞', '🍔', '🥡']
 const BG = ['#fff1e8', '#fff0f0', '#f4f1ff', '#eef8ff', '#fff7ed', '#fdeef7']
 
 const shops = ref([])
-const demoOnly = ref(false)
 const feedError = ref('')
 
 const CATEGORIES = [
@@ -54,15 +44,12 @@ async function load(page) {
     shops.value = items.map(decorate)
     currentPage.value = data?.page ?? page
     totalPages.value = data?.totalPages ?? 1
-    demoOnly.value = false
     if (items.length === 0) feedError.value = '暂时没有可展示的店铺'
   } catch {
-    // 后端列表接口未就绪：退回示例店铺保证浏览体验
-    shops.value = DEMO_SHOPS.map((shop, index) => decorate(shop, index))
+    shops.value = []
     currentPage.value = 1
     totalPages.value = 1
-    demoOnly.value = true
-    feedError.value = '后端店铺列表接口未就绪，当前展示示例店铺'
+    feedError.value = '店铺列表加载失败，请稍后重试'
   } finally {
     feedLoading.value = false
   }

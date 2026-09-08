@@ -28,3 +28,7 @@ export function completeOrder(orderId) {
 export function cancelOrder(orderId) {
   return http.post(`/orders/${orderId}/cancel`)
 }
+
+export function confirmOrder(orderId) {
+  return http.post(`/orders/${orderId}/confirm`)
+}

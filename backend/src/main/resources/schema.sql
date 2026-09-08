@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS orders (
     shop_id BIGINT NOT NULL REFERENCES shops(id),
     total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount > 0),
     status VARCHAR(20) NOT NULL,
+    address VARCHAR(255),
     created_at TIMESTAMP NOT NULL
 );
 
