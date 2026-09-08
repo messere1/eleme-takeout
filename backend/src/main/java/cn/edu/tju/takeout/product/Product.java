@@ -48,5 +48,6 @@ public class Product {
     }
 
     public void changeStatus(String status) { this.status = status; }
+    public void updatePrice(BigDecimal price) { this.price = price; }
     public void updateStock(Integer stock) { this.stock = stock; }
 }

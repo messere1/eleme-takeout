@@ -51,6 +51,11 @@ public class SecurityConfig {
                                 "/api/v1/auth/login", "/api/v1/users", "/api/v1/merchants")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/shops/**").permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET, 
+                                "/api/v1/categories/*/products",
+                                "/api/v1/products/*"
+                        ).permitAll()
                         .requestMatchers("/api/v1/cart/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/v1/users/me").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders").hasRole("CUSTOMER")
@@ -68,6 +73,8 @@ public class SecurityConfig {
                                 "/api/v1/shops/*/products")
                         .hasRole("MERCHANT")
                         .requestMatchers("/api/v1/categories/**", "/api/v1/products/**")
+                        .hasRole("MERCHANT")
+                        .requestMatchers("/api/v1/merchant/**")
                         .hasRole("MERCHANT")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

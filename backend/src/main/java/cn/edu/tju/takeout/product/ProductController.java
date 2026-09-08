@@ -64,4 +64,40 @@ public class ProductController {
         return ApiResponse.success(
                 productService.updateStock(principal.userId(), productId, request));
     }
+
+    @PatchMapping("/products/{productId}/price")
+    public ApiResponse<ProductView> updatePrice(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long productId,
+            @Valid @RequestBody ProductPriceRequest request) {
+        return ApiResponse.success(
+                productService.updatePrice(principal.userId(), productId, request));
+    }
+
+    @GetMapping("/categories/{categoryId}/products")
+    public ApiResponse<ProductPage> list(
+        @PathVariable Long categoryId,
+        @RequestParam(defaultValue = "1") Integer page,
+        @RequestParam(defaultValue = "20") Integer size) {
+            return ApiResponse.success(
+                productService.listVisible(categoryId, page,size)
+            );
+        }
+    
+    @GetMapping("/products/{productId}")
+    public ApiResponse<ProductView> getProduct(
+        @PathVariable Long productId) {
+
+        return ApiResponse.success(
+            productService.getVisibleProduct(productId)
+        );
+    }
+
+    @GetMapping("/merchant/products")
+    public ApiResponse<List<ProductView>> listForMerchant(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.success(
+                productService.listForMerchant(principal.userId()));
+    }
+
 }

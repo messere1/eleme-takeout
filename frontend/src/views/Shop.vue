@@ -14,6 +14,7 @@ const products = ref([])
 const activeCategoryId = ref(null)
 const message = ref('')
 const loadError = ref('')
+const pendingAddId = ref(null)
 
 const STATUS_TEXT = {
   OPEN: '营业中',
@@ -27,7 +28,11 @@ function fmt(value) {
 
 async function selectCategory(categoryId) {
   activeCategoryId.value = categoryId
-  products.value = await listProducts(shopId, categoryId)
+  const data = await listProducts(categoryId, {
+    page: 1,
+    size: 20,
+  })
+  products.value = data?.items ?? []
 }
 
 async function load() {
@@ -44,6 +49,7 @@ async function addProduct(product) {
     message.value = '店铺未营业，暂不能加购'
     return
   }
+  pendingAddId.value = product.id
   try {
     await addToCart({ productId: product.id, quantity: 1 })
     message.value = '已加入购物车'
@@ -53,6 +59,8 @@ async function addProduct(product) {
       return
     }
     message.value = error?.message || '加购失败，请稍后重试'
+  } finally {
+    pendingAddId.value = null
   }
 }
 
@@ -108,7 +116,7 @@ onMounted(async () => {
           <button
             :data-testid="`add-${product.id}`"
             class="add-btn"
-            :disabled="product.status !== 'ON_SALE' || shop.status !== 'OPEN'"
+            :disabled="product.status !== 'ON_SALE' || shop.status !== 'OPEN' || pendingAddId === product.id"
             @click="addProduct(product)"
           >
             加购

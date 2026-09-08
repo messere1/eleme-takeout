@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue'
 import { listShops } from '@/api/shop'
 
-// 当前后端暂无 GET /shops 列表接口，这里前端测试先放一组示例店铺看到滑动效果；
 const DEMO_SHOPS = [
   { id: 1, shopName: '北洋餐厅', notice: '煎饼果子现做现卖，营业到 21:00', status: 'OPEN', emoji: '🥞', bg: '#fff1e8' },
   { id: 2, shopName: '川渝小馆', notice: '麻辣鲜香，满 30 减 5', status: 'OPEN', emoji: '🌶️', bg: '#fff0f0' },
@@ -42,18 +41,34 @@ function statusText(status) {
   return { OPEN: '营业中', CLOSED: '休息中', TEMP_CLOSED: '临时闭店' }[status] || status
 }
 
-onMounted(async () => {
+const currentPage = ref(1)
+const totalPages = ref(1)
+const feedLoading = ref(false)
+
+async function load(page) {
+  feedLoading.value = true
+  feedError.value = ''
   try {
-    const data = await listShops()
-    shops.value = (data || []).map(decorate)
-    demoOnly.value = shops.value.length === 0
+    const data = await listShops({ page, size: 20 })
+    const items = data?.items || []
+    shops.value = items.map(decorate)
+    currentPage.value = data?.page ?? page
+    totalPages.value = data?.totalPages ?? 1
+    demoOnly.value = false
+    if (items.length === 0) feedError.value = '暂时没有可展示的店铺'
   } catch {
     // 后端列表接口未就绪：退回示例店铺保证浏览体验
     shops.value = DEMO_SHOPS.map((shop, index) => decorate(shop, index))
+    currentPage.value = 1
+    totalPages.value = 1
     demoOnly.value = true
     feedError.value = '后端店铺列表接口未就绪，当前展示示例店铺'
+  } finally {
+    feedLoading.value = false
   }
-})
+}
+
+onMounted(() => load(1))
 </script>
 
 <template>
@@ -116,6 +131,22 @@ onMounted(async () => {
           </div>
           <span class="enter">进店 ›</span>
         </RouterLink>
+      </div>
+
+      <div v-if="shops.length" class="feed-pager">
+        <button
+          class="page-btn"
+          data-testid="home-prev"
+          :disabled="currentPage <= 1 || feedLoading"
+          @click="load(currentPage - 1)"
+        >上一页</button>
+        <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
+        <button
+          class="page-btn"
+          data-testid="home-next"
+          :disabled="currentPage >= totalPages || feedLoading"
+          @click="load(currentPage + 1)"
+        >下一页</button>
       </div>
     </section>
 
@@ -345,6 +376,28 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 0.75rem;
+}
+.feed-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+.page-btn {
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  cursor: pointer;
+  color: #444;
+}
+.page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.page-info {
+  color: #999;
+  font-size: 0.9rem;
 }
 .deal-card {
   background: #fff;
