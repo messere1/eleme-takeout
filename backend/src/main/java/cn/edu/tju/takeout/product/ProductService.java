@@ -30,8 +30,8 @@ public class ProductService {
     public ProductView create(Long merchantId, Long shopId, ProductRequest request) {
         Shop shop=shopMapper.findById(shopId).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
         );
 
@@ -42,7 +42,7 @@ public class ProductService {
             "无权操作该店铺"
             );
         }
-        
+
         Category category=categoryMapper.findById(request.categoryId())
             .orElseThrow(()->
                 new BusinessException(
@@ -55,19 +55,19 @@ public class ProductService {
         if(!category.getShopId().equals(shopId)){
             throw new BusinessException(
                 HttpStatus.CONFLICT,
-                "BUSINESS_CONFLICT", 
+                "BUSINESS_CONFLICT",
                 "分类不属于该店铺"
             );
         }
 
         Product product=Product.of(
-            null, 
-            shopId, 
-            category.getId(), 
-            request.name(), 
-            request.description(), 
-            request.price(), 
-            request.stock(), 
+            null,
+            shopId,
+            category.getId(),
+            request.name(),
+            request.description(),
+            request.price(),
+            request.stock(),
             "OFF_SALE"
         );
 
@@ -79,7 +79,7 @@ public class ProductService {
     public ProductView update(Long merchantId, Long productId, ProductRequest request) {
         Product product=productMapper.findById(productId).orElseThrow(()->
             new BusinessException(
-                HttpStatus.NOT_FOUND, 
+                HttpStatus.NOT_FOUND,
                 "RESOURCE_NOT_FOUND",
                 "商品不存在"
             )
@@ -87,8 +87,8 @@ public class ProductService {
 
         Shop shop=shopMapper.findById(product.getShopId()).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
         );
 
@@ -99,7 +99,7 @@ public class ProductService {
             "无权操作该店铺"
             );
         }
-        
+
         Category category=categoryMapper.findById(request.categoryId())
             .orElseThrow(()->
                 new BusinessException(
@@ -112,11 +112,11 @@ public class ProductService {
         if(!category.getShopId().equals(product.getShopId())){
             throw new BusinessException(
                 HttpStatus.CONFLICT,
-                "BUSINESS_CONFLICT", 
+                "BUSINESS_CONFLICT",
                 "分类不属于该店铺"
             );
-        }        
-        
+        }
+
         product.update(request);
 
         productMapper.update(product);
@@ -126,7 +126,7 @@ public class ProductService {
     public ProductView changeStatus(Long merchantId, Long productId, ProductStatusRequest request) {
         Product product=productMapper.findById(productId).orElseThrow(()->
             new BusinessException(
-                HttpStatus.NOT_FOUND, 
+                HttpStatus.NOT_FOUND,
                 "RESOURCE_NOT_FOUND",
                 "商品不存在"
             )
@@ -134,8 +134,8 @@ public class ProductService {
 
         Shop shop=shopMapper.findById(product.getShopId()).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
         );
 
@@ -146,7 +146,7 @@ public class ProductService {
             "无权操作该店铺"
             );
         }
-        
+
         product.changeStatus(request.status());
         productMapper.updateStatus(product);
         return ProductView.from(product);
@@ -155,7 +155,7 @@ public class ProductService {
     public void delete(Long merchantId, Long productId) {
         Product product=productMapper.findById(productId).orElseThrow(()->
             new BusinessException(
-                HttpStatus.NOT_FOUND, 
+                HttpStatus.NOT_FOUND,
                 "RESOURCE_NOT_FOUND",
                 "商品不存在"
             )
@@ -163,8 +163,8 @@ public class ProductService {
 
         Shop shop=shopMapper.findById(product.getShopId()).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
         );
 
@@ -193,14 +193,14 @@ public class ProductService {
         if(request.stock()==null || request.stock()<0){
             throw new BusinessException(
                 HttpStatus.BAD_REQUEST,
-                "VALIDATION_ERROR", 
+                "VALIDATION_ERROR",
                 "库存不能小于0"
             );
         }
 
         Product product=productMapper.findById(productId).orElseThrow(()->
             new BusinessException(
-                HttpStatus.NOT_FOUND, 
+                HttpStatus.NOT_FOUND,
                 "RESOURCE_NOT_FOUND",
                 "商品不存在"
             )
@@ -208,8 +208,8 @@ public class ProductService {
 
         Shop shop=shopMapper.findById(product.getShopId()).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
         );
 
@@ -229,8 +229,8 @@ public class ProductService {
     public void decreaseStock(Long productId, Integer quantity) {
         if(quantity==null || quantity<=0){
             throw new BusinessException(
-                HttpStatus.BAD_REQUEST, 
-                "VALIDATION_ERROR", 
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
                 "扣减数量必须大于0"
             );
         }
@@ -238,8 +238,8 @@ public class ProductService {
         int affected=productMapper.decreaseStockIfAvailable(productId, quantity);
         if(affected<=0){
             throw new BusinessException(
-                HttpStatus.CONFLICT, 
-                "BUSINESS_CONFLICT", 
+                HttpStatus.CONFLICT,
+                "BUSINESS_CONFLICT",
                 "商品库存不足"
             );
         }
@@ -254,15 +254,15 @@ public class ProductService {
         int pagesize=size==null?20:size;
         if(currentpage<1){
             throw new BusinessException(
-                HttpStatus.BAD_REQUEST, 
-                "VALIDATION_ERROR", 
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
                 "页码必须大于等于1"
             );
         }
 
         if(pagesize<1||pagesize>100){
             throw new BusinessException(
-                HttpStatus.BAD_REQUEST, 
+                HttpStatus.BAD_REQUEST,
                 "VALIDATION_ERROR",
                 "每页数量必须在1到100之间"
             );
@@ -270,8 +270,8 @@ public class ProductService {
 
         categoryMapper.findById(categoryId)
             .orElseThrow(()->new BusinessException(
-                HttpStatus.NOT_FOUND, 
-                "RESOURCE_NOT_FOUND", 
+                HttpStatus.NOT_FOUND,
+                "RESOURCE_NOT_FOUND",
                 "分类不存在"
                 )
             );
@@ -304,7 +304,7 @@ public class ProductService {
                 "RESOURCE_NOT_FOUND",
                 "商品不存在"
             ));
-        return ProductView.from(product);   
+        return ProductView.from(product);
     }
 
     public ProductView updatePrice(

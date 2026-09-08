@@ -52,7 +52,7 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/shops/**").permitAll()
                         .requestMatchers(
-                                HttpMethod.GET, 
+                                HttpMethod.GET,
                                 "/api/v1/categories/*/products",
                                 "/api/v1/products/*"
                         ).permitAll()

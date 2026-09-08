@@ -83,7 +83,7 @@ public class ProductController {
                 productService.listVisible(categoryId, page,size)
             );
         }
-    
+
     @GetMapping("/products/{productId}")
     public ApiResponse<ProductView> getProduct(
         @PathVariable Long productId) {

@@ -59,7 +59,7 @@ public interface ProductMapper {
     @Update("UPDATE products SET stock = stock + #{quantity} WHERE id = #{productId}")
     int increaseStock(Long productId, Integer quantity);
 
-    //用于分页查询       
+    //用于分页查询
     @Select("""
         SELECT * FROM products WHERE category_id = #{categoryId} AND status = 'ON_SALE'
         AND deleted = FALSE ORDER BY id ASC LIMIT #{limit} OFFSET #{offset}
@@ -85,7 +85,7 @@ public interface ProductMapper {
         FROM products
         WHERE id=#{productId}
         AND status='ON_SALE'
-        AND deleted=FALSE            
+        AND deleted=FALSE
         """)
     Optional<Product> findVisibleById(Long productId);
 

@@ -21,7 +21,7 @@ public class ShopService {
         Shop shop=shopMapper.findByMerchantId(merchantId)
             .orElseThrow(()->new BusinessException(
                 HttpStatus.NOT_FOUND,
-                "RESOURCE_NOT_FOUND", 
+                "RESOURCE_NOT_FOUND",
                 "当前商家尚未创建店铺"
             )
         );
@@ -31,8 +31,8 @@ public class ShopService {
     public ShopView changeStatus(Long merchantId, Long shopId, ShopStatusRequest request) {
         Shop shop=shopMapper.findById(shopId).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
         );
 
@@ -43,7 +43,7 @@ public class ShopService {
             "无权修改该店铺"
             );
         }
-        
+
         shop.changeStatus(request.status());
         shopMapper.updateStatus(shop);
         return ShopView.from(shop);
@@ -53,8 +53,8 @@ public class ShopService {
     public ShopView getShop(Long shopId) {
         Shop shop=shopMapper.findById(shopId).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
     );
     return ShopView.from(shop);
@@ -64,8 +64,8 @@ public class ShopService {
         //先找商家
         Shop shop=shopMapper.findById(shopId).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
         );
 
@@ -78,7 +78,7 @@ public class ShopService {
         }
 
         shop.updateInfo(
-            request.shopName().trim(), 
+            request.shopName().trim(),
             request.notice().trim()
         );
 
@@ -92,15 +92,15 @@ public class ShopService {
         int pageSize=size==null?20:size;
         if(currentPage<1){
             throw new BusinessException(
-                HttpStatus.BAD_REQUEST, 
-                "VALIDATION_ERROR", 
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
                 "页码必须大于等于1"
             );
         }
 
         if(pageSize<1||pageSize>100){
             throw new BusinessException(
-                HttpStatus.BAD_REQUEST, 
+                HttpStatus.BAD_REQUEST,
                 "VALIDATION_ERROR",
                 "每页数量必须在1到100之间"
             );
