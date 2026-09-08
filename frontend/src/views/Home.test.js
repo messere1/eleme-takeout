@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// 首页店铺流 红灯基线。mock 掉 api 模块；页面须提供 data-testid：
-// home-shop-feed / home-shop-<id> / home-feed-note（示例/离线提示）。
+// 首页店铺流（分页）测试。mock 掉 api 模块；页面须提供 data-testid：
+// home-shop-<id> / home-feed-note / home-prev / home-next。
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -10,10 +10,16 @@ import { listShops } from '@/api/shop'
 import { mountView } from '@/test/mountView'
 import Home from './Home.vue'
 
-const SHOPS = [
-  { id: 1, shopName: '北洋餐厅', notice: '煎饼果子现做现卖', status: 'OPEN' },
-  { id: 2, shopName: '川渝小馆', notice: '麻辣鲜香', status: 'OPEN' },
-]
+const SHOP_A = { id: 1, shopName: '北洋餐厅', notice: '煎饼果子现做现卖', status: 'OPEN' }
+const SHOP_B = { id: 2, shopName: '川渝小馆', notice: '麻辣鲜香', status: 'OPEN' }
+const PAGE1 = { items: [SHOP_A, SHOP_B], page: 1, size: 20, total: 3, totalPages: 2 }
+const PAGE2 = {
+  items: [{ id: 3, shopName: '深夜烧烤', notice: '夜宵档', status: 'OPEN' }],
+  page: 2,
+  size: 20,
+  total: 3,
+  totalPages: 2,
+}
 
 async function mountHome() {
   const ctx = await mountView(Home, { path: '/' })
@@ -21,26 +27,35 @@ async function mountHome() {
   return ctx
 }
 
-describe('首页店铺流', () => {
+describe('首页店铺流（分页）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('列表接口返回时逐家渲染店铺卡片', async () => {
-    listShops.mockResolvedValue(SHOPS)
+  it('按分页参数取店铺并渲染', async () => {
+    listShops.mockResolvedValue(PAGE1)
     const { wrapper } = await mountHome()
-    expect(listShops).toHaveBeenCalledTimes(1)
+    expect(listShops).toHaveBeenCalledWith({ page: 1, size: 20 })
     expect(wrapper.get('[data-testid="home-shop-1"]').text()).toContain('北洋餐厅')
-    expect(wrapper.get('[data-testid="home-shop-1"]').text()).toContain('营业中')
     expect(wrapper.get('[data-testid="home-shop-2"]').text()).toContain('川渝小馆')
   })
 
   it('点击店铺卡片进入该店', async () => {
-    listShops.mockResolvedValue(SHOPS)
+    listShops.mockResolvedValue(PAGE1)
     const { wrapper, router } = await mountHome()
     await wrapper.get('[data-testid="home-shop-1"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/shops/1')
+  })
+
+  it('总页数大于 1 时可翻页拉取', async () => {
+    listShops.mockImplementation(async ({ page }) => (page === 2 ? PAGE2 : PAGE1))
+    const { wrapper } = await mountHome()
+    expect(wrapper.get('[data-testid="home-next"]').element.disabled).toBe(false)
+    await wrapper.get('[data-testid="home-next"]').trigger('click')
+    await flushPromises()
+    expect(listShops).toHaveBeenLastCalledWith({ page: 2, size: 20 })
+    expect(wrapper.get('[data-testid="home-shop-3"]').text()).toContain('深夜烧烤')
   })
 
   it('列表接口异常时回退到示例店铺并提示', async () => {
@@ -48,7 +63,6 @@ describe('首页店铺流', () => {
     const { wrapper } = await mountHome()
     const note = wrapper.get('[data-testid="home-feed-note"]')
     expect(note.text()).toContain('示例')
-    // 示例店铺仍然可浏览
     expect(wrapper.get('[data-testid="home-shop-1"]').exists()).toBe(true)
   })
 })
