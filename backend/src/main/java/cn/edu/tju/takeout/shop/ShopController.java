@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -36,5 +37,13 @@ public class ShopController {
             @PathVariable Long shopId,
             @Valid @RequestBody ShopUpdateRequest request) {
         return ApiResponse.success(shopService.updateShop(principal.userId(), shopId, request));
+    }
+
+    @GetMapping
+    public ApiResponse<ShopPage> listShops(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+
+        return ApiResponse.success(shopService.listShops(page, size));
     }
 }

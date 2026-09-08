@@ -1,5 +1,7 @@
 package cn.edu.tju.takeout.shop;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -15,11 +17,22 @@ public class ShopService {
         this.shopMapper=shopMapper;
     }
 
+    public ShopView getMyShop(Long merchantId){
+        Shop shop=shopMapper.findByMerchantId(merchantId)
+            .orElseThrow(()->new BusinessException(
+                HttpStatus.NOT_FOUND,
+                "RESOURCE_NOT_FOUND",
+                "当前商家尚未创建店铺"
+            )
+        );
+        return ShopView.from(shop);
+    }
+
     public ShopView changeStatus(Long merchantId, Long shopId, ShopStatusRequest request) {
         Shop shop=shopMapper.findById(shopId).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
         );
 
@@ -30,7 +43,7 @@ public class ShopService {
             "无权修改该店铺"
             );
         }
-        
+
         shop.changeStatus(request.status());
         shopMapper.updateStatus(shop);
         return ShopView.from(shop);
@@ -40,8 +53,8 @@ public class ShopService {
     public ShopView getShop(Long shopId) {
         Shop shop=shopMapper.findById(shopId).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
     );
     return ShopView.from(shop);
@@ -51,8 +64,8 @@ public class ShopService {
         //先找商家
         Shop shop=shopMapper.findById(shopId).orElseThrow(()->
         new BusinessException(
-            HttpStatus.NOT_FOUND, 
-            "RESOURCE_NOT_FOUND", 
+            HttpStatus.NOT_FOUND,
+            "RESOURCE_NOT_FOUND",
             "店铺不存在")
         );
 
@@ -65,7 +78,7 @@ public class ShopService {
         }
 
         shop.updateInfo(
-            request.shopName().trim(), 
+            request.shopName().trim(),
             request.notice().trim()
         );
 
@@ -74,6 +87,43 @@ public class ShopService {
         return ShopView.from(shop);
     }
 
+    public ShopPage listShops(Integer page, Integer size){
+        int currentPage=page==null?1:page;
+        int pageSize=size==null?20:size;
+        if(currentPage<1){
+            throw new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "页码必须大于等于1"
+            );
+        }
+
+        if(pageSize<1||pageSize>100){
+            throw new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "每页数量必须在1到100之间"
+            );
+        }
+
+        int offset = (currentPage - 1) * pageSize;
+
+        List<ShopView> items = shopMapper.findPage(pageSize, offset)
+            .stream()
+            .map(ShopView::from)
+            .toList();
+
+        long total = shopMapper.countAll();
+        int totalPages = (int) ((total + pageSize - 1) / pageSize);
+
+        return new ShopPage(
+            items,
+            currentPage,
+            pageSize,
+            total,
+            totalPages
+        );
+    }
     private UnsupportedOperationException pending() {
         return new UnsupportedOperationException("待功能开发：店铺业务尚未实现");
     }

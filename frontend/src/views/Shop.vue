@@ -28,7 +28,11 @@ function fmt(value) {
 
 async function selectCategory(categoryId) {
   activeCategoryId.value = categoryId
-  products.value = await listProducts(shopId, categoryId)
+  const data = await listProducts(categoryId, {
+    page: 1,
+    size: 20,
+  })
+  products.value = data?.items ?? []
 }
 
 async function load() {

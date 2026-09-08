@@ -47,6 +47,9 @@ public interface ProductMapper {
     @Update("UPDATE products SET stock = #{stock} WHERE id = #{id} AND deleted = FALSE")
     void updateStock(Product product);
 
+    @Update("UPDATE products SET price = #{price} WHERE id = #{id} AND deleted = FALSE")
+    void updatePrice(Product product);
+
     @Update("""
             UPDATE products SET stock = stock - #{quantity}
             WHERE id = #{productId} AND deleted = FALSE AND stock >= #{quantity}
@@ -55,4 +58,43 @@ public interface ProductMapper {
 
     @Update("UPDATE products SET stock = stock + #{quantity} WHERE id = #{productId}")
     int increaseStock(Long productId, Integer quantity);
+
+    //用于分页查询
+    @Select("""
+        SELECT * FROM products WHERE category_id = #{categoryId} AND status = 'ON_SALE'
+        AND deleted = FALSE ORDER BY id ASC LIMIT #{limit} OFFSET #{offset}
+        """)
+    List<Product> findVisiblePageByCategoryId(
+                Long categoryId,
+                int limit,
+                int offset
+        );
+
+    @Select("""
+                SELECT COUNT(*)
+                FROM products
+                WHERE category_id = #{categoryId}
+                AND status = 'ON_SALE'
+                AND deleted = FALSE
+        """)
+    long countVisibleByCategoryId(Long categoryId);
+
+    //用于查看商品详情
+    @Select("""
+        SELECT *
+        FROM products
+        WHERE id=#{productId}
+        AND status='ON_SALE'
+        AND deleted=FALSE
+        """)
+    Optional<Product> findVisibleById(Long productId);
+
+    @Select("""
+            SELECT *
+            FROM products
+            WHERE shop_id = #{shopId}
+              AND deleted = FALSE
+            ORDER BY category_id ASC, id ASC
+            """)
+    List<Product> findAllByShopId(Long shopId);
 }

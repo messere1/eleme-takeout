@@ -32,7 +32,7 @@ async function load() {
   try {
     const [cats, list] = await Promise.all([
       listCategories(shopId),
-      listMerchantProducts(shopId),
+      listMerchantProducts(),
     ])
     categories.value = cats || []
     products.value = list || []

@@ -3,7 +3,7 @@
 import { http } from './http'
 
 // 店铺列表（公开分页）。
-export function listShops(params) {
+export function listShops(params = { page: 1, size: 20 }) {
   return http.get('/shops', { params })
 }
 
@@ -33,7 +33,6 @@ export function getProduct(productId) {
 export function updateProductPrice(productId, price) {
   return http.patch(`/products/${productId}/price`, { price })
 }
-
 // —— 商家后台写操作（需 MERCHANT token，仅能操作本人店铺；契约 §5/§6）——
 export function updateShop(shopId, payload) {
   return http.patch(`/shops/${shopId}`, payload)
@@ -72,7 +71,11 @@ export function deleteProduct(productId) {
   return http.delete(`/products/${productId}`)
 }
 
+export function getMyShop() {
+  return http.get('/merchant/shop')
+}
+
 // 商家视角商品列表（含下架/删除商品）。
-export function listMerchantProducts(shopId) {
-  return http.get(`/shops/${shopId}/products`, { params: { all: true } })
+export function listMerchantProducts() {
+  return http.get('/merchant/products')
 }

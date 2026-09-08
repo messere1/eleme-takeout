@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue'
 import { listShops } from '@/api/shop'
 
-// 当前后端暂无 GET /shops 列表接口，这里前端测试先放一组示例店铺看到滑动效果；
 const DEMO_SHOPS = [
   { id: 1, shopName: '北洋餐厅', notice: '煎饼果子现做现卖，营业到 21:00', status: 'OPEN', emoji: '🥞', bg: '#fff1e8' },
   { id: 2, shopName: '川渝小馆', notice: '麻辣鲜香，满 30 减 5', status: 'OPEN', emoji: '🌶️', bg: '#fff0f0' },

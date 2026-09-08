@@ -4,6 +4,7 @@
 *.iml
 .DS_Store
 Thumbs.db
+~$*.docx
 
 # Java/Maven
 backend/target/
@@ -19,4 +20,3 @@ frontend/.vite/
 .env
 .env.*
 !.env.example
-

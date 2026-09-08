@@ -1,5 +1,6 @@
 package cn.edu.tju.takeout.shop;
 
+import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -27,4 +28,10 @@ public interface ShopMapper {
 
     @Update("UPDATE shops SET shop_name = #{shopName}, notice = #{notice} WHERE id = #{id}")
     void updateInfo(Shop shop);
+
+    @Select("SELECT * FROM shops ORDER BY id LIMIT #{limit} OFFSET #{offset}")
+    List<Shop> findPage(int limit, int offset);
+
+    @Select("SELECT COUNT(*) FROM shops")
+    long countAll();
 }
