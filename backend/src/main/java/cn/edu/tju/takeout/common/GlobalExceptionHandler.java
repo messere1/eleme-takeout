@@ -28,4 +28,11 @@ public class GlobalExceptionHandler {
                 ApiResponse.failure("VALIDATION_ERROR", "请求参数校验失败", data);
         return ResponseEntity.badRequest().body(body);
     }
+
+    @ExceptionHandler(Exception.class)
+    ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception exception) {
+        ApiResponse<Void> body =
+                ApiResponse.failure("INTERNAL_ERROR", "服务器内部错误，请稍后重试", null);
+        return ResponseEntity.status(500).body(body);
+    }
 }
