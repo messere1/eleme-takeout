@@ -19,7 +19,7 @@ function fmtTime(value) {
   return value ? String(value).replace('T', ' ').slice(0, 16) : ''
 }
 
-const STATUS_TEXT = { PENDING: '待处理', ACCEPTED: '已接单', COMPLETED: '已完成', CANCELLED: '已取消' }
+const STATUS_TEXT = { CREATED: '待处理', CANCELLED: '已取消', ACCEPTED: '已接单', COMPLETED: '已完成', PENDING: '待处理' }
 
 function statusText(status) {
   return STATUS_TEXT[status] || status
@@ -37,7 +37,7 @@ async function cancelRow(order) {
 
 async function load(page) {
   try {
-    const params = { page, size: 10 }
+    const params = { page, size: 20 }
     if (selectedStatus.value) params.status = selectedStatus.value
     const data = await listOrders(params)
     orders.value = data?.items ?? []
@@ -79,7 +79,7 @@ onMounted(() => load(1))
         @change="onStatusChange"
       >
         <option value="">全部</option>
-        <option value="PENDING">待处理</option>
+        <option value="CREATED">待处理</option>
       </select>
     </div>
 
@@ -100,7 +100,7 @@ onMounted(() => load(1))
             <span class="order-time">{{ fmtTime(order.createdAt) }}</span>
             <strong class="order-amount">¥{{ fmt(order.totalAmount) }}</strong>
           </div>
-          <div v-if="order.status === 'PENDING'" class="order-cancel">
+          <div v-if="order.status === 'CREATED' || order.status === 'PENDING'" class="order-cancel">
             <button
               class="cancel-btn"
               :data-testid="`order-cancel-${order.id}`"

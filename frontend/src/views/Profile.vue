@@ -8,11 +8,15 @@ const message = ref('')
 const saving = ref(false)
 
 async function load() {
-  const me = await getProfile()
-  username.value = me.username || ''
-  form.nickname = me.nickname || ''
-  form.phone = me.phone || ''
-  form.address = me.address || ''
+  try {
+    const me = await getProfile()
+    username.value = me.username || ''
+    form.nickname = me.nickname || ''
+    form.phone = me.phone || ''
+    form.address = me.address || ''
+  } catch (error) {
+    message.value = error?.message || '无法加载资料，请稍后重试'
+  }
 }
 
 async function save() {

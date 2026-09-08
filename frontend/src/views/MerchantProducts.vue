@@ -20,6 +20,7 @@ const products = ref([])
 const categories = ref([])
 const stockEdit = reactive({})
 const message = ref('')
+const creating = ref(false)
 const form = reactive({ categoryId: '', name: '', price: '', stock: '' })
 
 function fmt(value) {
@@ -28,15 +29,19 @@ function fmt(value) {
 
 async function load() {
   if (missingShop) return
-  const [cats, list] = await Promise.all([
-    listCategories(shopId),
-    listMerchantProducts(shopId),
-  ])
-  categories.value = cats || []
-  products.value = list || []
-  products.value.forEach((product) => {
-    stockEdit[product.id] = product.stock
-  })
+  try {
+    const [cats, list] = await Promise.all([
+      listCategories(shopId),
+      listMerchantProducts(shopId),
+    ])
+    categories.value = cats || []
+    products.value = list || []
+    products.value.forEach((product) => {
+      stockEdit[product.id] = product.stock
+    })
+  } catch (error) {
+    message.value = error?.message || '商品加载失败，请稍后重试'
+  }
 }
 
 async function toggleStatus(product) {
@@ -97,6 +102,7 @@ async function createNew() {
     message.value = '库存需为非负整数'
     return
   }
+  creating.value = true
   try {
     const created = await createProduct(shopId, {
       categoryId,
@@ -112,6 +118,8 @@ async function createNew() {
     form.stock = ''
   } catch (error) {
     message.value = error?.message || '创建失败，请稍后重试'
+  } finally {
+    creating.value = false
   }
 }
 
@@ -185,7 +193,12 @@ onMounted(load)
           <el-input v-model="form.name" data-testid="product-name" placeholder="商品名称" maxlength="50" />
           <el-input v-model="form.price" data-testid="product-price" placeholder="价格" />
           <el-input v-model="form.stock" data-testid="product-stock" placeholder="库存" />
-          <button class="primary-btn" data-testid="product-create-btn" @click="createNew">添加</button>
+          <button
+            class="primary-btn"
+            data-testid="product-create-btn"
+            :disabled="creating"
+            @click="createNew"
+          >{{ creating ? '添加中…' : '添加' }}</button>
         </div>
       </div>
     </template>
