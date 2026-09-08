@@ -62,7 +62,6 @@ async function saveStock(product) {
     message.value = '库存需为非负整数'
     return
   }
-  creating.value = true
   try {
     const res = await updateProductStock(product.id, stock)
     product.stock = res?.stock ?? stock
@@ -103,6 +102,7 @@ async function createNew() {
     message.value = '库存需为非负整数'
     return
   }
+  creating.value = true
   try {
     const created = await createProduct(shopId, {
       categoryId,

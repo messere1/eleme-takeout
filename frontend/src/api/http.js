@@ -13,12 +13,13 @@ const PUBLIC_PATHS = ['/auth/login', '/users', '/merchants']
 
 // 统一业务错误体：页面只读 message/code/data.fieldErrors。
 export class ApiError extends Error {
-  constructor(message, { code, httpStatus, data } = {}) {
+  constructor(message, { code, httpStatus, data, traceId } = {}) {
     super(message)
     this.name = 'ApiError'
     this.code = code
     this.httpStatus = httpStatus
     this.data = data
+    this.traceId = traceId
   }
 }
 
@@ -63,6 +64,7 @@ http.interceptors.response.use(
       code: body.code,
       httpStatus: response.status,
       data: body.data,
+      traceId: body.traceId,
     })
   },
   async (error) => {
@@ -76,6 +78,7 @@ http.interceptors.response.use(
         code: body.code,
         httpStatus: status,
         data: body.data,
+        traceId: body.traceId,
       })
       // 仅当“带了 token 却仍 401/过期”时才清登录态并跳登录；
       // 未登录浏览公开页遇到 401 不跳转，只抛错给页面自行兜底。

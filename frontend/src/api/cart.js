@@ -6,11 +6,11 @@ export function getCart() {
 }
 
 export function addToCart(payload) {
-  return http.post('/cart', payload)
+  return http.post('/cart/items', payload)
 }
 
 export function updateItem(itemId, quantity) {
-  return http.put(`/cart/items/${itemId}`, { quantity })
+  return http.patch(`/cart/items/${itemId}`, { quantity })
 }
 
 export function removeItem(itemId) {

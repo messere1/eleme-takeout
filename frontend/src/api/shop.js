@@ -2,9 +2,9 @@
 // 公开接口无需登录；响应经 http 拦截器解包 code===0 返回业务 data。
 import { http } from './http'
 
-// 店铺列表（首页店铺流）。
-export function listShops(params={page:1,size:20}) {
-  return http.get('/shops',{params})
+// 店铺列表（公开分页）。
+export function listShops(params = { page: 1, size: 20 }) {
+  return http.get('/shops', { params })
 }
 
 export function getShop(shopId) {
@@ -15,17 +15,23 @@ export function listCategories(shopId) {
   return http.get(`/shops/${shopId}/categories`)
 }
 
-export function listProducts(
-  categoryId,
-  params = { page: 1, size: 20 },
-) {
-  return http.get(`/categories/${categoryId}/products`, {
-    params,
-  })
+// 商品按分类分页（SRS V1.2：GET /categories/{id}/products）。
+// 兼容旧调用 listProducts(shopId, categoryId) 与新契约 listProducts(categoryId, {page,size})。
+export function listProducts(first, second) {
+  const isNew = typeof second === 'object'
+  const categoryId = isNew ? first : second
+  const params = isNew ? second : { page: 1, size: 20 }
+  return http.get(`/categories/${categoryId}/products`, { params })
 }
 
+// 商品详情（公开）。
 export function getProduct(productId) {
   return http.get(`/products/${productId}`)
+}
+
+// 商品价格修改（独立接口）。
+export function updateProductPrice(productId, price) {
+  return http.patch(`/products/${productId}/price`, { price })
 }
 // —— 商家后台写操作（需 MERCHANT token，仅能操作本人店铺；契约 §5/§6）——
 export function updateShop(shopId, payload) {
@@ -51,10 +57,6 @@ export function createProduct(shopId, payload) {
 
 export function updateProduct(productId, payload) {
   return http.patch(`/products/${productId}`, payload)
-}
-
-export function updateProductPrice(productId, price) {
-  return http.patch(`/products/${productId}/price`, { price })
 }
 
 export function changeProductStatus(productId, status) {

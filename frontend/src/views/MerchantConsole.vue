@@ -21,17 +21,23 @@ const categories = ref([])
 const newCategoryName = ref('')
 const newCategorySort = ref('')
 const message = ref('')
+const savingShop = ref(false)
 
 async function load() {
   if (missingShop) return
-  shop.value = await getShop(shopId)
-  editName.value = shop.value.shopName || ''
-  editNotice.value = shop.value.notice || ''
-  categories.value = await listCategories(shopId)
+  try {
+    shop.value = await getShop(shopId)
+    editName.value = shop.value.shopName || ''
+    editNotice.value = shop.value.notice || ''
+    categories.value = await listCategories(shopId)
+  } catch (error) {
+    message.value = error?.message || '店铺加载失败，请稍后重试'
+  }
 }
 
 async function saveShop() {
   message.value = ''
+  savingShop.value = true
   try {
     const data = await updateShop(shopId, {
       shopName: editName.value.trim(),
@@ -41,6 +47,8 @@ async function saveShop() {
     message.value = '已保存'
   } catch (error) {
     message.value = error?.message || '保存失败，请稍后重试'
+  } finally {
+    savingShop.value = false
   }
 }
 
@@ -102,7 +110,11 @@ onMounted(load)
       <RouterLink to="/login">用账号登录</RouterLink>。
     </p>
 
-    <template v-else-if="shop">
+    <p v-if="message" data-testid="console-message" role="status" class="console-message">
+      {{ message }}
+    </p>
+
+    <template v-if="shop">
       <section class="panel">
         <h3>店铺</h3>
         <div class="console-head">
@@ -144,7 +156,12 @@ onMounted(load)
           </select>
         </div>
 
-        <button class="primary-btn" data-testid="console-save-shop" @click="saveShop">保存店铺资料</button>
+        <button
+          class="primary-btn"
+          data-testid="console-save-shop"
+          :disabled="savingShop"
+          @click="saveShop"
+        >保存店铺资料</button>
       </section>
 
       <section class="panel">
@@ -184,9 +201,6 @@ onMounted(load)
         </div>
       </section>
 
-      <p v-if="message" data-testid="console-message" role="status" class="console-message">
-        {{ message }}
-      </p>
     </template>
   </section>
 </template>

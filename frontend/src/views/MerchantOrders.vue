@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { acceptOrder, completeOrder, listMerchantOrders } from '@/api/order'
-import { session } from '@/utils/session'
 
 const STATUS_TEXT = {
   PENDING: '待接单',
@@ -9,10 +8,6 @@ const STATUS_TEXT = {
   COMPLETED: '已完成',
   CANCELLED: '已取消',
 }
-
-const stored = session.loadShop()
-const shopId = stored?.shopId
-const missingShop = !shopId
 
 const orders = ref([])
 const message = ref('')
@@ -26,7 +21,6 @@ function statusText(status) {
 }
 
 async function load() {
-  if (missingShop) return
   try {
     orders.value = (await listMerchantOrders()) || []
   } catch (error) {
@@ -61,15 +55,9 @@ onMounted(load)
   <section class="console">
     <h2>订单管理</h2>
 
-    <p v-if="missingShop" class="console-missing">
-      还没有店铺？<RouterLink to="/register">去注册开店</RouterLink>，或
-      <RouterLink to="/login">用账号登录</RouterLink>。
-    </p>
+    <p v-if="message" class="console-message">{{ message }}</p>
 
-    <template v-else>
-      <p v-if="message" class="console-message">{{ message }}</p>
-
-      <ul v-if="orders.length" class="order-list">
+    <ul v-if="orders.length" class="order-list">
         <li
           v-for="order in orders"
           :key="order.id"
@@ -97,8 +85,7 @@ onMounted(load)
           </div>
         </li>
       </ul>
-      <div v-else data-testid="order-mgmt-empty" class="orders-empty">暂无订单</div>
-    </template>
+    <div v-else data-testid="order-mgmt-empty" class="orders-empty">暂无订单</div>
   </section>
 </template>
 
