@@ -6,6 +6,17 @@ const form = reactive({ nickname: '', phone: '', address: '' })
 const username = ref('')
 const message = ref('')
 const saving = ref(false)
+const avatar = ref('')
+
+function onAvatarPick(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    avatar.value = String(reader.result)
+  }
+  reader.readAsDataURL(file)
+}
 
 async function load() {
   try {
@@ -43,6 +54,15 @@ onMounted(load)
   <section class="profile-page">
     <h2>个人资料</h2>
     <p v-if="username" class="account-line">账号：{{ username }}</p>
+
+    <div class="avatar-row">
+      <img v-if="avatar" :src="avatar" class="avatar-preview" alt="头像预览" />
+      <div v-else class="avatar-placeholder">头像</div>
+      <label class="avatar-btn">
+        上传头像
+        <input type="file" accept="image/*" data-testid="profile-avatar-input" @change="onAvatarPick" />
+      </label>
+    </div>
 
     <div class="field">
       <label for="profile-nickname">昵称</label>
@@ -112,6 +132,31 @@ onMounted(load)
   margin: 0;
   color: #999;
   font-size: 0.85rem;
+}
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.avatar-preview,
+.avatar-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f3f5;
+  color: #999;
+}
+.avatar-btn {
+  color: var(--el-color-primary);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.avatar-btn input {
+  display: none;
 }
 .field {
   display: flex;

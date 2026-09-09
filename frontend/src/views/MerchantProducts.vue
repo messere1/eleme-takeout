@@ -26,6 +26,17 @@ const editingNameId = ref(null)
 const nameEdit = reactive({})
 const message = ref('')
 const creating = ref(false)
+const imgSrc = reactive({})
+
+function handleImg(productId, event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    imgSrc[productId] = String(reader.result)
+  }
+  reader.readAsDataURL(file)
+}
 const productPage = ref(1)
 const productTotalPages = ref(1)
 const form = reactive({ categoryId: '', name: '', price: '', stock: '' })
@@ -42,6 +53,9 @@ async function load(page = 1) {
       listMerchantProducts({ page, size: 20 }),
     ])
     categories.value = cats || []
+    if (!form.categoryId && categories.value.length) {
+      form.categoryId = String(categories.value[0].id)
+    }
     const items = Array.isArray(res) ? res : res?.items || []
     products.value = items
     productPage.value = Array.isArray(res) ? 1 : res?.page ?? page
@@ -194,6 +208,13 @@ onMounted(load)
           class="mgmt-item"
         >
           <div class="mgmt-main">
+            <span class="prod-thumb">
+              <img v-if="imgSrc[product.id]" :src="imgSrc[product.id]" class="prod-img" alt="菜品图" />
+              <label class="img-label">+图
+                <input type="file" accept="image/*" class="file-input"
+                  :data-testid="`product-img-${product.id}`" @change="handleImg(product.id, $event)" />
+              </label>
+            </span>
             <template v-if="editingNameId === product.id">
               <el-input
                 v-model="nameEdit[product.id]"
@@ -276,9 +297,10 @@ onMounted(load)
 
       <div class="create-panel">
         <h3>新增商品</h3>
+        <label class="ctrl-label" for="product-category">所属分类</label>
         <div class="create-row">
           <select v-model="form.categoryId" data-testid="product-category" class="select">
-            <option value="">选择分类</option>
+            <option v-if="!categories.length" value="" disabled>（暂无分类，请先到「店铺」添加）</option>
             <option v-for="category in categories" :key="category.id" :value="String(category.id)">
               {{ category.name }}
             </option>
@@ -454,5 +476,31 @@ onMounted(load)
   padding: 0.5rem 0.6rem;
   background: #fff;
   color: #333;
+}
+.prod-thumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.prod-img {
+  width: 2.6rem;
+  height: 2.6rem;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.img-label {
+  font-size: 0.8rem;
+  color: #ff6a00;
+  cursor: pointer;
+  border: 1px dashed #ffb36e;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+}
+.file-input {
+  display: none;
+}
+.ctrl-label {
+  font-size: 0.9rem;
+  color: #666;
 }
 </style>

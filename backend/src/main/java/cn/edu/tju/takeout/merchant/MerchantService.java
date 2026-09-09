@@ -31,6 +31,19 @@ public class MerchantService {
         );
     }
 
+    public MerchantProfileView getMe(Long merchantId) {
+        Merchant merchant = merchantMapper.findById(merchantId)
+                .orElseThrow(() -> new BusinessException(
+                        HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "商家不存在"));
+        Shop shop = shopMapper.findByMerchantId(merchantId).orElse(null);
+        return new MerchantProfileView(
+                merchant.getId(), merchant.getMerchantName(), merchant.getPhone(),
+                merchant.getBusinessScope(),
+                shop != null ? shop.getId() : null,
+                shop != null ? shop.getShopName() : null,
+                shop != null ? shop.getStatus() : null);
+    }
+
     @Transactional
     public MerchantView register(MerchantRegistrationRequest request) {
         String merchantname=request.merchantName().trim();

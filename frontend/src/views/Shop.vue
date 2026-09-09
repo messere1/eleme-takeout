@@ -95,57 +95,61 @@ onMounted(async () => {
         >{{ STATUS_TEXT[shop.status] || shop.status }}</span>
       </header>
 
-      <nav class="cat-bar">
-        <button
-          v-for="category in categories"
-          :key="category.id"
-          :data-testid="`category-${category.id}`"
-          class="cat-tab"
-          :class="{ active: activeCategoryId === category.id }"
-          @click="selectCategory(category.id)"
-        >
-          {{ category.name }}
-        </button>
-      </nav>
-
-      <ul v-if="products.length" class="product-list">
-        <li
-          v-for="product in products"
-          :key="product.id"
-          :data-testid="`product-card-${product.id}`"
-          class="product-card"
-        >
-          <div class="product-info">
-            <strong>{{ product.name }}</strong>
-            <span class="product-desc">{{ product.description }}</span>
-            <span class="product-price">¥{{ fmt(product.price) }}</span>
-          </div>
+      <div class="shop-body">
+        <aside class="cat-rail">
           <button
-            :data-testid="`add-${product.id}`"
-            class="add-btn"
-            :disabled="product.status !== 'ON_SALE' || shop.status !== 'OPEN' || pendingAddId === product.id"
-            @click="addProduct(product)"
+            v-for="category in categories"
+            :key="category.id"
+            :data-testid="`category-${category.id}`"
+            class="cat-tab rail-tab"
+            :class="{ active: activeCategoryId === category.id }"
+            @click="selectCategory(category.id)"
           >
-            加购
+            {{ category.name }}
           </button>
-        </li>
-      </ul>
-      <p v-else class="empty-tip">该分类暂时没有商品</p>
+        </aside>
 
-      <div v-if="products.length" class="product-pager">
-        <button
-          class="page-btn"
-          data-testid="product-prev"
-          :disabled="productPage <= 1"
-          @click="goProductsPage(productPage - 1)"
-        >上一页</button>
-        <span class="page-info">第 {{ productPage }} / {{ productTotalPages }} 页</span>
-        <button
-          class="page-btn"
-          data-testid="product-next"
-          :disabled="productPage >= productTotalPages"
-          @click="goProductsPage(productPage + 1)"
-        >下一页</button>
+        <div class="prod-scroll">
+          <ul v-if="products.length" class="product-list">
+            <li
+              v-for="product in products"
+              :key="product.id"
+              :data-testid="`product-card-${product.id}`"
+              class="product-card"
+            >
+              <div class="product-info">
+                <strong>{{ product.name }}</strong>
+                <span class="product-desc">{{ product.description }}</span>
+                <span class="product-price">¥{{ fmt(product.price) }}</span>
+              </div>
+              <button
+                :data-testid="`add-${product.id}`"
+                class="add-btn"
+                :disabled="product.status !== 'ON_SALE' || shop.status !== 'OPEN' || pendingAddId === product.id"
+                @click="addProduct(product)"
+              >
+                加购
+              </button>
+            </li>
+          </ul>
+          <p v-else class="empty-tip">该分类暂时没有商品</p>
+
+          <div v-if="products.length" class="product-pager">
+            <button
+              class="page-btn"
+              data-testid="product-prev"
+              :disabled="productPage <= 1"
+              @click="goProductsPage(productPage - 1)"
+            >上一页</button>
+            <span class="page-info">第 {{ productPage }} / {{ productTotalPages }} 页</span>
+            <button
+              class="page-btn"
+              data-testid="product-next"
+              :disabled="productPage >= productTotalPages"
+              @click="goProductsPage(productPage + 1)"
+            >下一页</button>
+          </div>
+        </div>
       </div>
 
       <p v-if="message" data-testid="shop-message" role="status" class="shop-message">
@@ -287,5 +291,41 @@ onMounted(async () => {
 .page-info {
   color: #999;
   font-size: 0.9rem;
+}
+.shop-body {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+.cat-rail {
+  width: 6.4rem;
+  flex-shrink: 0;
+  height: 60vh;
+  position: sticky;
+  top: 0.75rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-right: 1px solid #f0f0f0;
+  padding-right: 0.25rem;
+}
+.rail-tab {
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.prod-scroll {
+  flex: 1;
+  min-width: 0;
+  height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 </style>

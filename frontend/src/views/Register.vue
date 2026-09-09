@@ -67,6 +67,8 @@ async function submit() {
         merchantId: data.id,
         shopId: data.shopId,
         merchantName: data.merchantName,
+        merchantPhone: form.phone,
+        businessScope: form.businessScope.trim(),
       })
     }
     // 注册成功后自动登录，并按角色进入对应主页面
@@ -155,15 +157,24 @@ async function submit() {
 
       <template v-if="form.role === 'MERCHANT'">
         <div class="field">
-          <label for="register-scope">经营范围</label>
+          <label for="register-scope">经营类别</label>
           <el-input
             id="register-scope"
             v-model="form.businessScope"
             data-testid="register-scope"
             class="auth-input"
-            placeholder="如：中式快餐"
+            list="merchant-scope-list"
+            placeholder="选择或输入自定义类别，如：中式快餐"
             maxlength="100"
           />
+          <datalist id="merchant-scope-list">
+            <option value="中式快餐"></option>
+            <option value="西式简餐"></option>
+            <option value="奶茶甜品"></option>
+            <option value="烧烤夜宵"></option>
+            <option value="日韩料理"></option>
+            <option value="地方菜系"></option>
+          </datalist>
         </div>
       </template>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { cancelOrder, confirmOrder, listOrders } from '@/api/order'
 
@@ -71,6 +71,32 @@ function goDetail(order) {
   router.push(`/orders/${order.id}`)
 }
 
+const UNPAID_MINUTES = 15
+const now = ref(Date.now())
+let ticker = null
+if (import.meta.env.MODE !== 'test') {
+  ticker = setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+}
+onUnmounted(() => {
+  if (ticker) clearInterval(ticker)
+})
+
+function pad(n) {
+  return String(n).padStart(2, '0')
+}
+
+function countdownText(order) {
+  if (order.status !== 'CREATED' && order.status !== 'PENDING') return ''
+  const deadline = new Date(order.createdAt).getTime() + UNPAID_MINUTES * 60 * 1000
+  const remain = deadline - now.value
+  if (Number.isNaN(remain)) return ''
+  if (remain <= 0) return '已超时，等待自动取消'
+  const s = Math.floor(remain / 1000)
+  return `距自动取消 ${pad(Math.floor(s / 60))}:${pad(s % 60)}`
+}
+
 onMounted(() => load(1))
 </script>
 
@@ -105,6 +131,7 @@ onMounted(() => load(1))
           <div class="order-main">
             <span class="order-no">{{ order.orderNo }}</span>
             <span class="order-status">{{ statusText(order.status) }}</span>
+            <span v-if="countdownText(order)" class="order-countdown">{{ countdownText(order) }}</span>
           </div>
           <div class="order-sub">
             <span class="order-time">{{ fmtTime(order.createdAt) }}</span>
@@ -280,5 +307,10 @@ onMounted(() => load(1))
   padding: 0.3rem 0.6rem;
   background: #fff;
   color: #444;
+}
+.order-countdown {
+  font-size: 0.78rem;
+  color: #e34d1c;
+  font-variant-numeric: tabular-nums;
 }
 </style>

@@ -24,6 +24,17 @@ let shopId = stored?.shopId ?? null
 const missingShop = ref(!shopId)
 
 const shop = ref(null)
+const cover = ref('')
+
+function onCoverPick(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    cover.value = String(reader.result)
+  }
+  reader.readAsDataURL(file)
+}
 const editName = ref('')
 const editNotice = ref('')
 const categories = ref([])
@@ -167,6 +178,13 @@ onMounted(load)
     <template v-if="shop">
       <section class="panel">
         <h3>店铺</h3>
+        <div class="cover-row">
+          <img v-if="cover" :src="cover" class="cover-preview" alt="封面预览" />
+          <div v-else class="cover-placeholder">店铺封面</div>
+          <label class="link-btn">上传封面
+            <input type="file" accept="image/*" data-testid="console-cover-input" class="file-input" @change="onCoverPick" />
+          </label>
+        </div>
         <div class="console-head">
           <strong data-testid="console-shop-name">{{ shop.shopName }}</strong>
           <span
@@ -314,6 +332,33 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+.cover-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.cover-preview,
+.cover-placeholder {
+  width: 8rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f3f5;
+  color: #999;
+  font-size: 0.85rem;
+}
+.file-input {
+  display: none;
+}
+.link-btn {
+  border: none;
+  background: transparent;
+  color: var(--el-color-primary);
+  cursor: pointer;
 }
 .console-head strong {
   font-size: 1.15rem;

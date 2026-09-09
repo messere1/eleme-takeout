@@ -11,6 +11,10 @@ import Profile from '@/views/Profile.vue'
 import MerchantConsole from '@/views/MerchantConsole.vue'
 import MerchantProducts from '@/views/MerchantProducts.vue'
 import MerchantOrders from '@/views/MerchantOrders.vue'
+import MerchantProfile from '@/views/MerchantProfile.vue'
+import Pay from '@/views/Pay.vue'
+import Admin from '@/views/Admin.vue'
+import { session } from '@/utils/session'
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -24,11 +28,31 @@ const routes = [
   { path: '/merchant', name: 'merchant-console', component: MerchantConsole },
   { path: '/merchant/products', name: 'merchant-products', component: MerchantProducts },
   { path: '/merchant/orders', name: 'merchant-orders', component: MerchantOrders },
+  { path: '/merchant/profile', name: 'merchant-profile', component: MerchantProfile },
+  { path: '/orders/:id/pay', name: 'pay', component: Pay },
+  { path: '/admin', name: 'admin', component: Admin },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+const CUSTOMER_ONLY = new Set(['/cart', '/orders', '/profile'])
+router.beforeEach((to) => {
+  const auth = session.load()
+  const role = auth?.role || ''
+  if (CUSTOMER_ONLY.has(to.path)) {
+    if (!auth) return { path: '/login' }
+    if (role !== 'CUSTOMER') return { path: '/' }
+  }
+  if (to.path.startsWith('/merchant')) {
+    if (role !== 'MERCHANT') return { path: '/login' }
+  }
+  if (to.path === '/admin') {
+    if (role !== 'ADMIN') return { path: '/login' }
+  }
+  return true
 })
 
 export default router

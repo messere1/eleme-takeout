@@ -4,3 +4,11 @@ import { http } from './http'
 export function registerMerchant(payload) {
   return http.post('/merchants', payload)
 }
+
+export function listMerchants(params = { page: 1, size: 20 }) {
+  return http.get('/admin/merchants', { params })
+}
+
+export function getMyMerchant() {
+  return http.get('/merchants/me')
+}

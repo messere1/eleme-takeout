@@ -5,9 +5,12 @@ import { session } from '@/utils/session'
 
 const router = useRouter()
 const logged = ref(false)
+const role = ref('')
 
 function refresh() {
-  logged.value = Boolean(session.load())
+  const auth = session.load()
+  logged.value = Boolean(auth)
+  role.value = auth?.role || ''
 }
 
 function logout() {
@@ -25,37 +28,34 @@ onBeforeUnmount(() => window.removeEventListener('auth-change', refresh))
 <template>
   <header class="brand-bar">
     <div class="brand-inner">
-      <div class="brand-title">
+      <RouterLink to="/" class="brand-title">
         <span class="brand-logo">🍜</span>
-        <div>
+        <span class="brand-text">
           <h1>轻量级外卖服务平台</h1>
-          <p class="brand-slogan">附近好店 · 准时送达</p>
-        </div>
-      </div>
-      <nav class="brand-nav">
-        <RouterLink to="/">首页</RouterLink>
-        <RouterLink to="/cart">购物车</RouterLink>
-        <RouterLink to="/orders">订单</RouterLink>
-        <RouterLink to="/profile">我的</RouterLink>
-        <template v-if="logged">
-          <span class="nav-divider">·</span>
-          <button class="nav-link logout" @click="logout">退出</button>
-        </template>
-        <template v-else>
-          <span class="nav-divider">·</span>
-          <RouterLink to="/login">登录</RouterLink>
-          <RouterLink to="/register">注册</RouterLink>
-        </template>
-      </nav>
+          <span class="brand-slogan">附近好店 · 准时送达</span>
+        </span>
+      </RouterLink>
+      <button v-if="logged" class="nav-link logout" @click="logout">退出</button>
     </div>
   </header>
 
-  <!-- 当前路由对应的页面渲染在这里 -->
   <main class="shell">
     <RouterView />
   </main>
 
-  <footer class="site-footer">轻量级外卖服务平台 · 软件工程综合实践</footer>
+  <!-- 手机端底部 Tab：按角色显示（商家只见商家后台页，可随时回主界面） -->
+  <nav v-if="role === 'MERCHANT'" class="tabbar merchant">
+    <RouterLink to="/merchant" class="tab"><span class="ico">🏪</span><span>店铺</span></RouterLink>
+    <RouterLink to="/merchant/products" class="tab"><span class="ico">🍽️</span><span>商品管理</span></RouterLink>
+    <RouterLink to="/merchant/orders" class="tab"><span class="ico">📋</span><span>订单管理</span></RouterLink>
+    <RouterLink to="/merchant/profile" class="tab"><span class="ico">👤</span><span>我的</span></RouterLink>
+  </nav>
+  <nav v-else class="tabbar">
+    <RouterLink to="/" class="tab"><span class="ico">🏠</span><span>首页</span></RouterLink>
+    <RouterLink to="/cart" class="tab"><span class="ico">🛒</span><span>购物车</span></RouterLink>
+    <RouterLink to="/orders" class="tab"><span class="ico">📋</span><span>订单</span></RouterLink>
+    <RouterLink to="/profile" class="tab"><span class="ico">👤</span><span>我的</span></RouterLink>
+  </nav>
 </template>
 
 <style scoped>
@@ -64,83 +64,88 @@ onBeforeUnmount(() => window.removeEventListener('auth-change', refresh))
   color: #2b1d00;
 }
 .brand-inner {
-  max-width: 72rem;
+  max-width: 48rem;
   margin: 0 auto;
-  padding: 0.9rem 1.5rem;
+  padding: 0.7rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap;
 }
 .brand-title {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: inherit;
 }
 .brand-logo {
-  font-size: 1.9rem;
+  font-size: 1.7rem;
   line-height: 1;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 12px;
-  padding: 0.35rem 0.45rem;
+  padding: 0.3rem 0.45rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
-.brand-title h1 {
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+.brand-text h1 {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   line-height: 1.2;
 }
 .brand-slogan {
-  margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   opacity: 0.7;
 }
-.brand-nav a {
-  margin-left: 0.5rem;
-  padding: 0.4rem 1.1rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #b34700;
-  font-weight: 600;
-  font-size: 0.92rem;
-  text-decoration: none;
-  transition: transform 0.12s ease;
-}
-.brand-nav a:hover {
-  transform: translateY(-1px);
-}
-.nav-divider {
-  margin-left: 0.5rem;
-  color: rgba(255, 255, 255, 0.75);
-}
 .nav-link.logout {
-  margin-left: 0.5rem;
   border: none;
   background: rgba(255, 255, 255, 0.92);
   color: #b34700;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   border-radius: 999px;
-  padding: 0.4rem 1.1rem;
+  padding: 0.35rem 1rem;
   cursor: pointer;
 }
-.brand-nav a.router-link-exact-active {
-  background: #2b1d00;
-  color: #ffd98a;
-}
-
 .shell {
-  max-width: 72rem;
+  max-width: 48rem;
   margin: 0 auto;
-  padding: 1.5rem;
-  min-height: calc(100vh - 190px);
+  padding: 1rem 1rem calc(4.6rem);
+  min-height: calc(100vh - 7rem);
 }
-
-.site-footer {
-  text-align: center;
-  color: #b0b0b0;
-  font-size: 0.8rem;
-  padding: 1.25rem;
+.tabbar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 100%;
+  max-width: 48rem;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  z-index: 20;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.5rem 0 0.55rem;
+  color: #999;
+  text-decoration: none;
+  font-size: 0.7rem;
+}
+.tab .ico {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.tab.router-link-exact-active {
+  color: #ff5000;
+  font-weight: 600;
 }
 </style>
