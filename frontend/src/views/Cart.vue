@@ -418,4 +418,21 @@ onMounted(() => {
 .sheet-checkout { width: 100%; }
 .field { display: flex; flex-direction: column; gap: 0.35rem; }
 .field label { font-size: 0.85rem; color: #666; }
+@media (max-width: 520px) {
+  .cart-page {
+    padding: 1rem;
+  }
+  .cart-ops {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .cart-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+  .footer-actions {
+    justify-content: flex-end;
+  }
+}
 </style>

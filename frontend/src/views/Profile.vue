@@ -178,4 +178,12 @@ onMounted(load)
 .save-btn {
   align-self: flex-start;
 }
+@media (max-width: 520px) {
+  .profile-page {
+    padding: 1rem;
+  }
+  .avatar-row {
+    flex-wrap: wrap;
+  }
+}
 </style>

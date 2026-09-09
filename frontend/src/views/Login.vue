@@ -172,4 +172,5 @@ async function submit() {
   text-decoration: none;
   font-weight: 600;
 }
+@media (max-width: 520px) { .auth-page { margin: 1rem auto; } .auth-card { padding: 1.4rem 1.1rem; } }
 </style>

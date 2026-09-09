@@ -132,6 +132,7 @@ onMounted(() => load(1))
           class="order-row"
           @click="goDetail(order)"
         >
+          <span class="order-shop-thumb">🏪</span>
           <div class="order-main">
             <span class="order-no">{{ order.orderNo }}</span>
             <span class="order-status">{{ statusText(order.status) }}</span>
@@ -213,10 +214,42 @@ onMounted(() => load(1))
 .order-row:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+.order-row {
+  flex-wrap: wrap;
+}
 .order-main {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+.order-no {
+  word-break: break-all;
+}
+.order-sub {
+  margin-left: auto;
+}
+@media (max-width: 520px) {
+  .orders-page {
+    padding: 1rem;
+  }
+  .order-row {
+    gap: 0.5rem;
+    padding: 0.6rem 0.7rem;
+  }
+  .order-status,
+  .order-countdown {
+    font-size: 0.72rem;
+  }
+  .order-amount {
+    font-size: 0.95rem;
+  }
+  .cancel-btn,
+  .confirm-btn {
+    font-size: 0.78rem;
+    padding: 0.28rem 0.7rem;
+  }
 }
 .order-no {
   font-weight: 600;
@@ -289,6 +322,17 @@ onMounted(() => load(1))
   cursor: pointer;
   font-size: 0.85rem;
   white-space: nowrap;
+}
+.order-shop-thumb {
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 8px;
+  background: #fff4ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
 }
 .page-note {
   margin: 0 0 0.75rem;

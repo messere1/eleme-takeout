@@ -328,4 +328,27 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0.6rem;
 }
+.shop-head {
+  flex-wrap: wrap;
+}
+.product-card {
+  flex-wrap: wrap;
+}
+.product-card .add-btn {
+  margin-left: auto;
+}
+@media (max-width: 520px) {
+  .shop-page {
+    padding: 0.9rem;
+  }
+  .cat-rail {
+    width: 5rem;
+  }
+  .product-info strong {
+    word-break: break-word;
+  }
+  .product-desc {
+    white-space: normal;
+  }
+}
 </style>

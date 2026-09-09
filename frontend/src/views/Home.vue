@@ -386,6 +386,25 @@ onMounted(() => load(1))
   color: #999;
   font-size: 0.9rem;
 }
+@media (max-width: 560px) {
+  .channel {
+    grid-template-columns: repeat(4, 1fr);
+    row-gap: 0.6rem;
+  }
+  .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hero-emoji {
+    font-size: 1.6rem;
+  }
+  .deal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .flash-home {
+    padding: 0.5rem;
+  }
+}
 .deal-card {
   background: #fff;
   border-radius: var(--card-radius);
