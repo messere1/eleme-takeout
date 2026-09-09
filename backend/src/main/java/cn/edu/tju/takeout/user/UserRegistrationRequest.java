@@ -14,5 +14,10 @@ public record UserRegistrationRequest(
         @NotBlank(message = "密码不能为空")
         @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).{6,64}$", message = "密码必须为6到64位且同时包含字母和数字")
         String password) {
-}
 
+    @Override
+    public String toString() {
+        return "UserRegistrationRequest[username=" + username
+                + ", phone=***, password=***]";
+    }
+}

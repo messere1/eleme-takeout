@@ -2,11 +2,10 @@ spring:
   application:
     name: take-out-backend
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/take_out}
+    url: ${DB_URL:jdbc:postgresql://localhost:15432/take_out}
     username: ${DB_USERNAME:take_out}
     password: ${DB_PASSWORD:take_out}
 
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
-

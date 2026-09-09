@@ -28,11 +28,9 @@ function fmt(value) {
 
 async function selectCategory(categoryId) {
   activeCategoryId.value = categoryId
-  const data = await listProducts(categoryId, {
-    page: 1,
-    size: 20,
-  })
-  products.value = data?.items ?? []
+  const data = await listProducts(shopId, categoryId)
+  // 兼容旧版数组响应和当前分页响应，便于不同分支的前端与后端联调。
+  products.value = Array.isArray(data) ? data : (data?.items ?? [])
 }
 
 async function load() {

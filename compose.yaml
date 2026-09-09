@@ -10,7 +10,8 @@ services:
       TZ: Asia/Shanghai
 
     ports:
-      - "5432:5432"
+      # 使用 15432，避免与开发机上已有的 PostgreSQL 或其他容器冲突。
+      - "15432:5432"
 
     volumes:
       # 数据卷保存

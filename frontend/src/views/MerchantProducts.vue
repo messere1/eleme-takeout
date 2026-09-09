@@ -32,7 +32,8 @@ async function load() {
   try {
     const [cats, list] = await Promise.all([
       listCategories(shopId),
-      listMerchantProducts(),
+      // 当前接口按登录身份查询；保留 shopId 参数兼容旧版前端调用。
+      listMerchantProducts(shopId),
     ])
     categories.value = cats || []
     products.value = list || []

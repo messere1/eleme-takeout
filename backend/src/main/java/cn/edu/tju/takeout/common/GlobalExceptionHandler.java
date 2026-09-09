@@ -2,6 +2,7 @@ package cn.edu.tju.takeout.common;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -27,5 +28,12 @@ public class GlobalExceptionHandler {
         ApiResponse<Map<String, Object>> body =
                 ApiResponse.failure("VALIDATION_ERROR", "请求参数校验失败", data);
         return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(Exception.class)
+    ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception exception) {
+        ApiResponse<Void> body = ApiResponse.failure(
+                "INTERNAL_ERROR", "服务器内部错误", null);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
