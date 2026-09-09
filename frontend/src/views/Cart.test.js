@@ -142,4 +142,21 @@ describe('购物车页', () => {
     expect(wrapper.get('[data-testid="cart-checkout"]').element.disabled).toBe(true)
     expect(createOrder).toHaveBeenCalledTimes(1)
   })
+
+  it('按FR-024采集收货人、联系电话和地址并提交快照', async () => {
+    createOrder.mockResolvedValue({ id: 60, status: 'CREATED' })
+    const { wrapper } = await mountCart(AVAILABLE_CART)
+
+    await wrapper.get('[data-testid="cart-recipient-name"]').setValue('张同学')
+    await wrapper.get('[data-testid="cart-recipient-phone"]').setValue('02285356000')
+    await wrapper.get('[data-testid="cart-address"]').setValue('天津大学北洋园校区学生宿舍1号楼')
+    await wrapper.get('[data-testid="cart-checkout"]').trigger('click')
+    await flushPromises()
+
+    expect(createOrder).toHaveBeenCalledWith({
+      recipientName: '张同学',
+      recipientPhone: '02285356000',
+      deliveryAddress: '天津大学北洋园校区学生宿舍1号楼',
+    })
+  })
 })

@@ -1,4 +1,4 @@
-# 轻量级外卖服务平台 API 接口文档 V1.2
+# 轻量级外卖服务平台 API 接口文档 V1.4
 
 ## 1. 文档状态
 
@@ -7,10 +7,10 @@
 - 数据格式：`application/json; charset=UTF-8`
 - 时间格式：ISO 8601，例如 `2026-09-01T12:30:00`
 - 金额格式：JSON number，后端使用两位小数的 `BigDecimal`
-- 需求基线：`srs/软件需求规格说明书-SRS-V1.2.docx`
-- 当前状态：V1.2 契约已确认，尚未对齐的实现由失败测试跟踪，详见 `phase-1-regression-defects.md`
+- 需求基线：`srs/软件需求规格说明书-SRS-V1.4.docx`
+- 当前状态：V1.4 契约已确认；新增缺口由失败测试跟踪，详见 `srs-v1.4-test-impact-analysis.md`
 
-本文档以 SRS V1.2 为契约依据。当前 Controller 或前端调用与本文不一致时，以本文和 SRS 为准，先提交失败测试，再由功能负责人修改实现。文件名暂保留 `api-contract-v1.md`，避免已有链接失效。
+本文档以 SRS V1.4 为契约依据。当前 Controller 或前端调用与本文不一致时，以本文和 SRS 为准，先提交失败测试，再由功能负责人修改实现。文件名暂保留 `api-contract-v1.md`，避免已有链接失效。
 
 ## 2. 统一约定
 
@@ -27,6 +27,9 @@ Content-Type: application/json
 
 - `CUSTOMER`：普通用户
 - `MERCHANT`：商家
+- `ADMIN`：管理员；本阶段仅允许只读查询用户和商家账户列表
+
+同一自然人可分别注册顾客和商家账户。同一手机号在顾客集合内、商家集合内分别唯一，但允许跨角色重复；登录必须同时提交角色以消除歧义。
 
 ### 2.2 统一成功响应
 
@@ -112,7 +115,12 @@ Content-Type: application/json
 | 订单   | GET    | `/api/v1/orders`                                          | CUSTOMER          | 查询本人订单列表               |
 | 订单   | GET    | `/api/v1/orders/{orderId}`                                | CUSTOMER/MERCHANT | 查询有权访问的订单详情         |
 | 订单   | GET    | `/api/v1/merchant/orders`                                 | MERCHANT          | 查询本店订单列表               |
-| 订单   | POST   | `/api/v1/orders/{orderId}/cancel`                         | CUSTOMER          | 取消本人 CREATED 订单（阶段2） |
+| 订单   | POST   | `/api/v1/orders/{orderId}/cancel`                         | CUSTOMER          | 取消本人 CREATED 订单          |
+| 订单   | POST   | `/api/v1/orders/{orderId}/accept`                         | MERCHANT          | 接受本店 CREATED 订单          |
+| 订单   | POST   | `/api/v1/orders/{orderId}/complete`                       | MERCHANT          | 完成本店 ACCEPTED 订单         |
+| 订单   | POST   | `/api/v1/orders/{orderId}/confirm`                        | CUSTOMER          | 确认本人 ACCEPTED 订单已完成   |
+| 管理员 | GET    | `/api/v1/admin/users?page=1&size=20`                      | ADMIN             | 只读查询用户账户列表           |
+| 管理员 | GET    | `/api/v1/admin/merchants?page=1&size=20`                  | ADMIN             | 只读查询商家账户列表           |
 
 ## 4. 认证与账户
 
@@ -132,9 +140,9 @@ Content-Type: application/json
 
 | 字段     | 类型   | 必填 | 约束                           |
 | -------- | ------ | ---- | ------------------------------ |
-| account  | string | 是   | 用户可使用账号，商家使用手机号 |
+| account  | string | 是   | 用户可使用账号或手机号，商家使用手机号，管理员使用管理员账号 |
 | password | string | 是   | 非空                           |
-| role     | string | 是   | `CUSTOMER` 或 `MERCHANT`   |
+| role     | string | 是   | `CUSTOMER`、`MERCHANT` 或 `ADMIN` |
 
 成功响应 `data`：
 
@@ -446,7 +454,23 @@ Content-Type: application/json
 
 ### 8.1 创建订单
 
-`POST /api/v1/orders`，需要 `CUSTOMER`，无请求体。
+`POST /api/v1/orders`，需要 `CUSTOMER`。请求体：
+
+```json
+{
+  "recipientName": "张同学",
+  "recipientPhone": "02285356000",
+  "deliveryAddress": "天津大学北洋园校区学生宿舍1号楼"
+}
+```
+
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| `recipientName` | string | 是 | 去除首尾空白后 1～50 个字符 |
+| `recipientPhone` | string | 是 | 规范化后 7～15 位数字；可表示手机号、固定电话或国际号码，分隔符不入库 |
+| `deliveryAddress` | string | 是 | 去除首尾空白后 5～255 个字符 |
+
+三项信息必须作为订单快照保存，后续用户修改个人资料不得改变历史订单。收货人可以不是下单用户。为避免语义混乱，V1.4 不再使用通用字段名 `address` 表示订单收货地址。
 
 后端从当前用户购物车创建订单。购物车为空、店铺未营业、商品已下架或库存不足时返回 `409 BUSINESS_CONFLICT`。
 
@@ -512,6 +536,9 @@ GET /api/v1/orders?status=CREATED&page=1&size=20&startTime=2026-09-01T00:00:00
   "totalAmount": 17.00,
   "status": "CREATED",
   "createdAt": "2026-09-01T12:30:00",
+  "recipientName": "张同学",
+  "recipientPhoneMasked": "022****6000",
+  "deliveryAddress": "天津大学北洋园校区学生宿舍1号楼",
   "items": [
     {
       "productId": 40,
@@ -530,7 +557,7 @@ GET /api/v1/orders?status=CREATED&page=1&size=20&startTime=2026-09-01T00:00:00
 
 `GET /api/v1/merchant/orders`，需要 `MERCHANT`。仅返回当前商家所属店铺的订单；顾客令牌或其他店铺商家访问返回 403。响应采用订单列表分页结构，默认 `page=1`、`size=20`。
 
-### 8.5 取消订单（阶段2 FR-019）
+### 8.5 取消订单（FR-019）
 
 `POST /api/v1/orders/{orderId}/cancel`，需要 `CUSTOMER`。
 
@@ -539,9 +566,31 @@ GET /api/v1/orders?status=CREATED&page=1&size=20&startTime=2026-09-01T00:00:00
 - 重复取消返回 `409 ORDER_ALREADY_CANCELLED`，不得再次回补。
 - 并发取消最多一次成功。
 
-`ACCEPTED`、`COMPLETED` 及 `/accept`、`/complete` 不属于当前 SRS V1.2 基线。需要此类状态或接口时，必须先登记 CR、更新状态转换表、本文档和测试。
+### 8.6 接单、完成与确认收货（FR-022）
 
-## 9. 前端联调建议
+- `POST /api/v1/orders/{orderId}/accept`：仅所属店铺商家可把 `CREATED` 改为 `ACCEPTED`。
+- `POST /api/v1/orders/{orderId}/complete`：仅所属店铺商家可把 `ACCEPTED` 改为 `COMPLETED`。
+- `POST /api/v1/orders/{orderId}/confirm`：仅订单所属顾客可把 `ACCEPTED` 改为 `COMPLETED`。
+- 对不存在订单返回 404；越权返回 403；源状态不匹配或并发更新失败返回 409。
+- 状态更新必须采用条件更新，禁止重复操作覆盖更新者的结果。
+
+## 9. 管理员只读查询
+
+### 9.1 查询用户账户列表
+
+`GET /api/v1/admin/users?page=1&size=20`，仅限 `ADMIN`。返回账户标识、用户名、脱敏手机号、昵称和创建时间；不得返回密码摘要、Token 或完整敏感日志信息。
+
+### 9.2 查询商家账户列表
+
+`GET /api/v1/admin/merchants?page=1&size=20`，仅限 `ADMIN`。返回账户标识、商家名称、脱敏手机号、经营范围、所属店铺标识和创建时间。
+
+分页统一为 `page` 默认 1，`size` 默认 20、最大 100。管理员本阶段不得新增、修改、停用或删除任何账户，也不得操作店铺、订单或数据库。写请求应返回 403 或不存在的接口 404。
+
+## 10. 延期需求边界
+
+在线支付、15 分钟未付款自动取消、部分退款、退款凭证图片上传、账号注销与手机号回收、管理员分级写权限、骑手配送均为延期需求，不属于 V1.4 当前验收基线。前后端不得提前假设这些字段、状态或接口已经存在；若后续启用，必须先登记需求变更并更新状态机、接口文档和测试。
+
+## 11. 前端联调建议
 
 1. Axios 基础地址配置为后端服务地址，业务请求统一添加 `/api/v1`。
 2. 请求拦截器仅在存在 Token 时添加 `Authorization`，注册和登录不需要 Token。
@@ -551,7 +600,7 @@ GET /api/v1/orders?status=CREATED&page=1&size=20&startTime=2026-09-01T00:00:00
 6. 金额只用于展示和提交商品资料；购物车小计、总价和订单金额以后端响应为准。
 7. 不在请求中传递当前用户或商家编号，身份统一从 JWT 获取。
 
-## 10. 联调前检查清单
+## 12. 联调前检查清单
 
 - [ ] 前后端确认服务地址、端口和跨域策略。
 - [ ] 登录后能够正确保存并携带 Token。

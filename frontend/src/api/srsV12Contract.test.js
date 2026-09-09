@@ -16,7 +16,7 @@ import * as cartApi from './cart'
 import * as orderApi from './order'
 import * as shopApi from './shop'
 
-describe('SRS V1.2 前端接口契约', () => {
+describe('SRS V1.4 前端接口契约（文件名保留以兼容历史链接）', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('店铺列表使用公开分页接口', async () => {
@@ -53,5 +53,27 @@ describe('SRS V1.2 前端接口契约', () => {
     expect(http.get).toHaveBeenCalledWith('/orders', {
       params: { page: 1, size: 20, status: 'CREATED' },
     })
+  })
+
+  it('下单时完整传递收货信息快照', async () => {
+    const recipient = {
+      recipientName: '张同学',
+      recipientPhone: '02285356000',
+      deliveryAddress: '天津大学北洋园校区学生宿舍1号楼',
+    }
+
+    await orderApi.createOrder(recipient)
+
+    expect(http.post).toHaveBeenCalledWith('/orders', recipient)
+  })
+
+  it('订单流转使用V1.4约定的接单、完成和确认收货接口', async () => {
+    await orderApi.acceptOrder(60)
+    await orderApi.completeOrder(60)
+    await orderApi.confirmOrder(60)
+
+    expect(http.post).toHaveBeenNthCalledWith(1, '/orders/60/accept')
+    expect(http.post).toHaveBeenNthCalledWith(2, '/orders/60/complete')
+    expect(http.post).toHaveBeenNthCalledWith(3, '/orders/60/confirm')
   })
 })
