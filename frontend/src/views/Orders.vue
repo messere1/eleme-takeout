@@ -53,8 +53,12 @@ async function load(page) {
     orders.value = data?.items ?? []
     currentPage.value = data?.page ?? page
     totalPages.value = data?.totalPages ?? 1
-  } catch {
-    loadError.value = '未连接后端，无法加载订单（仅静态预览）'
+  } catch (error) {
+    if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
+      router.push('/login')
+      return
+    }
+    loadError.value = '无法加载订单：' + (error?.message || '请确认已登录且后端服务正常')
   }
 }
 
