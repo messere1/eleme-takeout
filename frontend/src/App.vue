@@ -60,6 +60,9 @@ onBeforeUnmount(() => window.removeEventListener('auth-change', refresh))
 
 <style scoped>
 .brand-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   background: var(--brand-gradient);
   color: #2b1d00;
 }

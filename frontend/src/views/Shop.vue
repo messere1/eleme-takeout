@@ -2,7 +2,10 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getShop, listCategories, listProducts } from '@/api/shop'
-import { addToCart } from '@/api/cart'
+import { addToCart, getCart } from '@/api/cart'
+import { createOrder } from '@/api/order'
+import { getProfile } from '@/api/user'
+import { session } from '@/utils/session'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,17 +50,92 @@ function foodBg(name) {
 const productPage = ref(1)
 const productTotalPages = ref(1)
 
-async function selectCategory(categoryId, page = 1) {
-  activeCategoryId.value = categoryId
-  const data = await listProducts(categoryId, { page, size: 20 })
-  products.value = data?.items ?? []
-  productPage.value = data?.page ?? page
-  productTotalPages.value = data?.totalPages ?? 1
+// 点单页底部购物车：底部常驻条 + 上滑卷轴
+const isCustomer = session.load()?.role === 'CUSTOMER'
+const cartItems = ref([])
+const cartTotal = ref(0)
+const sheetOpen = ref(false)
+const recipient = ref('')
+const contact = ref('')
+const deliveryAddress = ref('')
+const ordering = ref(false)
+
+function cartCount() {
+  return cartItems.value.reduce((sum, item) => sum + (item.quantity || 0), 0)
 }
 
-function goProductsPage(page) {
-  if (!activeCategoryId.value) return
-  selectCategory(activeCategoryId.value, page)
+async function loadCart() {
+  if (!isCustomer) return
+  try {
+    const data = await getCart()
+    cartItems.value = data?.items ?? []
+    cartTotal.value = data?.totalAmount ?? 0
+  } catch {
+    /* 未登录或接口不可用 */
+  }
+}
+
+async function seedAddress() {
+  if (!isCustomer) return
+  try {
+    const me = await getProfile()
+    if (me?.address) deliveryAddress.value = me.address
+    if (me?.username) recipient.value = me.username
+    if (me?.phone) contact.value = me.phone
+  } catch {
+    /* 忽略 */
+  }
+}
+
+async function openSheet() {
+  sheetOpen.value = true
+  await seedAddress()
+  await loadCart()
+}
+
+async function submitFromSheet() {
+  if (ordering.value) return
+  ordering.value = true
+  message.value = ''
+  try {
+    const order = await createOrder({
+      recipientName: recipient.value.trim(),
+      recipientPhone: contact.value.trim(),
+      deliveryAddress: deliveryAddress.value.trim(),
+    })
+    sheetOpen.value = false
+    router.push(`/orders/${order.id}`)
+  } catch (error) {
+    message.value = error?.message || '下单失败，请稍后重试'
+  } finally {
+    ordering.value = false
+  }
+}
+
+const prodLoading = ref(false)
+
+async function selectCategory(categoryId, page = 1, append = false) {
+  if (prodLoading.value) return
+  prodLoading.value = true
+  activeCategoryId.value = categoryId
+  try {
+    const data = await listProducts(categoryId, { page, size: 20 })
+    const items = data?.items ?? []
+    products.value = append ? products.value.concat(items) : items
+    productPage.value = data?.page ?? page
+    productTotalPages.value = data?.totalPages ?? 1
+  } finally {
+    prodLoading.value = false
+  }
+}
+
+// 光标在商品框内滚动时触底加载下一页；框外滚动不受影响
+function onProductsScroll(event) {
+  const el = event.target
+  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60
+  if (nearBottom && productPage.value < productTotalPages.value) {
+    selectCategory(activeCategoryId.value, productPage.value + 1, true)
+  }
 }
 
 async function load() {
@@ -78,6 +156,7 @@ async function addProduct(product) {
   try {
     await addToCart({ productId: product.id, quantity: 1 })
     message.value = '已加入购物车'
+    loadCart()
   } catch (error) {
     if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
       router.push('/login')
@@ -128,7 +207,7 @@ onMounted(async () => {
           </button>
         </aside>
 
-        <div class="prod-scroll">
+        <div class="prod-scroll" @scroll="onProductsScroll">
           <ul v-if="products.length" class="product-list">
             <li
               v-for="product in products"
@@ -146,6 +225,10 @@ onMounted(async () => {
                 <strong>{{ product.name }}</strong>
                 <span class="product-desc">{{ product.description }}</span>
                 <span class="product-price">¥{{ fmt(product.price) }}</span>
+                <div class="product-tags">
+                  <span class="tag">招牌</span>
+                  <span class="tag">可加购</span>
+                </div>
               </div>
               <button
                 :data-testid="`add-${product.id}`"
@@ -158,22 +241,7 @@ onMounted(async () => {
             </li>
           </ul>
           <p v-else class="empty-tip">该分类暂时没有商品</p>
-
-          <div v-if="products.length" class="product-pager">
-            <button
-              class="page-btn"
-              data-testid="product-prev"
-              :disabled="productPage <= 1"
-              @click="goProductsPage(productPage - 1)"
-            >上一页</button>
-            <span class="page-info">第 {{ productPage }} / {{ productTotalPages }} 页</span>
-            <button
-              class="page-btn"
-              data-testid="product-next"
-              :disabled="productPage >= productTotalPages"
-              @click="goProductsPage(productPage + 1)"
-            >下一页</button>
-          </div>
+          <p v-if="prodLoading" class="feed-loading">加载中…</p>
         </div>
       </div>
 
@@ -182,6 +250,42 @@ onMounted(async () => {
       </p>
     </template>
     <p v-else class="loading-tip">{{ loadError || '店铺加载中…' }}</p>
+
+    <!-- 点单页底部购物车 -->
+    <div v-if="isCustomer && cartItems.length" class="shop-cart-bar" @click="openSheet">
+      <span class="cart-summary">🛒 共 {{ cartCount() }} 件</span>
+      <strong>合计 ¥{{ fmt(cartTotal) }}</strong>
+      <span class="cart-go">{{ sheetOpen ? '收起 ▲' : '去结算' }}</span>
+    </div>
+
+    <div v-if="sheetOpen" class="shop-sheet">
+      <header class="sheet-head">
+        <h3>订单信息</h3>
+        <button class="sheet-close" @click="sheetOpen = false">收起 ▲</button>
+      </header>
+      <ul class="sheet-items">
+        <li v-for="item in cartItems" :key="item.id">
+          <span>{{ item.productName }} × {{ item.quantity }}</span>
+          <strong>¥{{ fmt(item.subtotal) }}</strong>
+        </li>
+      </ul>
+      <div class="field">
+        <label>收货人</label>
+        <el-input v-model="recipient" placeholder="收货人" maxlength="30" />
+      </div>
+      <div class="field">
+        <label>联系电话</label>
+        <el-input v-model="contact" placeholder="联系电话" maxlength="20" />
+      </div>
+      <div class="field">
+        <label>收货地址</label>
+        <el-input v-model="deliveryAddress" placeholder="收货地址" maxlength="255" />
+      </div>
+      <div class="sheet-total">合计 <strong>¥{{ fmt(cartTotal) }}</strong></div>
+      <button class="checkout-btn" :disabled="ordering" @click="submitFromSheet">
+        {{ ordering ? '提交中…' : '提交订单' }}
+      </button>
+    </div>
   </section>
 </template>
 
@@ -370,17 +474,155 @@ onMounted(async () => {
 }
 .product-card {
   flex-wrap: wrap;
+  gap: 0.9rem;
+  padding: 0.8rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.12s ease;
+}
+.product-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
 }
 .dish-thumb {
   flex-shrink: 0;
-  width: 3rem;
-  height: 3rem;
+  width: 3.9rem;
+  height: 3.9rem;
   border-radius: 10px;
   object-fit: cover;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
+  font-size: 2rem;
+}
+.product-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.product-info strong {
+  font-size: 1.02rem;
+}
+.product-price {
+  color: #ff2f00;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.product-tags {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
+.tag {
+  font-size: 0.72rem;
+  color: #ff6a00;
+  background: #fff4ec;
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+}
+
+/* 点单页底部购物车条 + 上滑卷轴 */
+.shop-cart-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(60px + 0.4rem);
+  width: min(96%, 46rem);
+  background: #2b1d00;
+  color: #ffe08a;
+  border-radius: 999px;
+  padding: 0.7rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  z-index: 25;
+}
+.cart-summary {
+  font-weight: 600;
+}
+.cart-go {
+  background: #ff5000;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.3rem 1rem;
+  font-weight: 700;
+}
+.shop-sheet {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 60px;
+  width: min(100%, 48rem);
+  max-height: 66vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  padding: 1rem 1.2rem 1.2rem;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.14);
+  z-index: 26;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.shop-sheet .sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.shop-sheet .sheet-head h3 {
+  margin: 0;
+}
+.shop-sheet .sheet-close {
+  border: none;
+  background: transparent;
+  color: var(--el-color-primary);
+  cursor: pointer;
+}
+.shop-sheet .sheet-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.shop-sheet .sheet-items li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.92rem;
+}
+.shop-sheet .sheet-items li strong {
+  color: #ff2f00;
+}
+.shop-sheet .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.shop-sheet .field label {
+  font-size: 0.85rem;
+  color: #666;
+}
+.shop-sheet .sheet-total {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px dashed #eee;
+  padding-top: 0.6rem;
+}
+.shop-sheet .sheet-total strong {
+  color: #ff2f00;
+}
+.shop-sheet .checkout-btn {
+  border: none;
+  background: var(--brand-gradient);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.7rem 0;
+  cursor: pointer;
 }
 .product-card .add-btn {
   margin-left: auto;
@@ -388,6 +630,9 @@ onMounted(async () => {
 @media (max-width: 520px) {
   .shop-page {
     padding: 0.9rem;
+  }
+  .shop-cart-bar {
+    width: 94%;
   }
   .cat-rail {
     width: 5rem;
