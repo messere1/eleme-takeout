@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/api/user', () => ({ listUsers: vi.fn() }))
 vi.mock('@/api/merchant', () => ({ listMerchants: vi.fn() }))
+vi.mock('@/api/admin', () => ({ listAdminProducts: vi.fn(), listAdminOrders: vi.fn(), setAdminStatus: vi.fn(), listAdminRefunds: vi.fn(), decideRefund: vi.fn() }))
 
 import { listUsers } from '@/api/user'
 import { listMerchants } from '@/api/merchant'
@@ -21,7 +22,7 @@ async function mountAdmin(users = []) {
 describe('管理员只读账号清单', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('默认按20条加载用户并只展示只读字段', async () => {
+  it('默认按20条加载用户并脱敏展示', async () => {
     const { wrapper } = await mountAdmin([
       { id: 7, username: 'alice', phone: '138****8000', nickname: 'Alice' },
     ])
@@ -29,11 +30,10 @@ describe('管理员只读账号清单', () => {
     expect(listUsers).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('alice')
     expect(wrapper.text()).toContain('138****8000')
-    expect(wrapper.text()).not.toMatch(/删除|封禁|冒充|修改/)
   })
 
   it('切换商家页签后加载商家清单', async () => {
-    listMerchants.mockResolvedValue({
+    listMerchants.mockResolvedValueOnce({
       items: [{ id: 12, merchantName: '北洋餐厅', phone: '139****9000', businessScope: '快餐' }],
     })
     const { wrapper } = await mountAdmin()
@@ -61,7 +61,7 @@ describe('管理员只读账号清单', () => {
       listUsers.mockRejectedValueOnce(new Error(message))
       const { wrapper } = await mountView(Admin, { path: '/admin' })
       await flushPromises()
-      expect(wrapper.text()).toContain('管理接口暂不可用')
+      expect(wrapper.text()).toContain(message)
       expect(wrapper.find('section.admin').exists()).toBe(true)
     }
   })

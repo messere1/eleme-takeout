@@ -23,11 +23,10 @@ class MerchantRegistrationControllerTest {
         mvc.perform(post("/api/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"merchantName":"北洋餐厅","phone":"13800138000","password":"abc12345","businessScope":"中式快餐"}
+                                {"merchantName":"北洋餐厅","phone":"13800138000","password":"abc12345","businessScope":"中式快餐","shopAddress":"天津大学北洋园校区"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.merchantName").value("北洋餐厅"))
                 .andExpect(jsonPath("$.data.shopStatus").value("CLOSED"));
     }
 }
-

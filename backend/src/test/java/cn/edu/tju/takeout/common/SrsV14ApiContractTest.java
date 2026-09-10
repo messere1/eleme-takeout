@@ -10,6 +10,7 @@ import cn.edu.tju.takeout.cart.CartLineView;
 import cn.edu.tju.takeout.merchant.MerchantController;
 import cn.edu.tju.takeout.merchant.MerchantRegistrationRequest;
 import cn.edu.tju.takeout.user.UserController;
+import cn.edu.tju.takeout.admin.AdminController;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Set;
@@ -46,7 +47,7 @@ class SrsV14ApiContractTest {
 
     @Test
     void exposesAdministratorAccountLists() {
-        Stream<Mapping> adminMappings = Stream.of(UserController.class, MerchantController.class)
+        Stream<Mapping> adminMappings = Stream.of(AdminController.class)
                 .flatMap(SrsV14ApiContractTest::allMappings)
                 .filter(mapping -> mapping.path().startsWith("/api/v1/admin/"));
 

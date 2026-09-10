@@ -6,7 +6,7 @@ import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/api/auth', () => ({ register: vi.fn(), login: vi.fn() }))
-vi.mock('@/api/merchant', () => ({ registerMerchant: vi.fn() }))
+vi.mock('@/api/merchant', () => ({ registerMerchant: vi.fn(), listBusinessCategories: vi.fn().mockResolvedValue([]) }))
 
 import { login, register } from '@/api/auth'
 import { registerMerchant } from '@/api/merchant'
@@ -15,7 +15,7 @@ import { mountView } from '@/test/mountView'
 import Register from './Register.vue'
 
 const CUSTOMER = { username: 'beiyang_user', phone: '13800138000', password: 'abc123' }
-const MERCHANT = { merchantName: '北洋餐厅', phone: '13900139000', password: 'abc123', businessScope: '中式快餐' }
+const MERCHANT = { merchantName: '北洋餐厅', phone: '13900139000', password: 'abc123', businessScope: '中式快餐', shopAddress: '天津大学北洋园校区' }
 
 async function mountRegister() {
   return mountView(Register, { path: '/register' })
@@ -81,6 +81,7 @@ describe('注册页（角色化）', () => {
     await setField(wrapper, 'register-phone', MERCHANT.phone)
     await setField(wrapper, 'register-password', MERCHANT.password)
     await setField(wrapper, 'register-scope', MERCHANT.businessScope)
+    await setField(wrapper, 'register-shop-address', MERCHANT.shopAddress)
     await submit(wrapper)
     expect(registerMerchant).toHaveBeenCalledWith(MERCHANT)
     expect(login).toHaveBeenCalledWith({
