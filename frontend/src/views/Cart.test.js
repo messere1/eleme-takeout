@@ -12,9 +12,11 @@ vi.mock('@/api/cart', () => ({
   clearCart: vi.fn(),
 }))
 vi.mock('@/api/order', () => ({ createOrder: vi.fn() }))
+vi.mock('@/api/user', () => ({ getProfile: vi.fn() }))
 
 import { clearCart, getCart, removeItem, updateItem } from '@/api/cart'
 import { createOrder } from '@/api/order'
+import { getProfile } from '@/api/user'
 import { mountView } from '@/test/mountView'
 import Cart from './Cart.vue'
 
@@ -42,6 +44,7 @@ async function mountCart(cart = FULL_CART) {
 describe('购物车页', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getProfile.mockResolvedValue({})
   })
 
   it('展示商品条目、不可用提示与合计金额', async () => {
@@ -147,8 +150,9 @@ describe('购物车页', () => {
     createOrder.mockResolvedValue({ id: 60, status: 'CREATED' })
     const { wrapper } = await mountCart(AVAILABLE_CART)
 
-    await wrapper.get('[data-testid="cart-recipient-name"]').setValue('张同学')
-    await wrapper.get('[data-testid="cart-recipient-phone"]').setValue('02285356000')
+    await wrapper.get('.cart-drawer-bar').trigger('click')
+    await wrapper.get('[data-testid="cart-recipient"]').setValue('张同学')
+    await wrapper.get('[data-testid="cart-contact"]').setValue('02285356000')
     await wrapper.get('[data-testid="cart-address"]').setValue('天津大学北洋园校区学生宿舍1号楼')
     await wrapper.get('[data-testid="cart-checkout"]').trigger('click')
     await flushPromises()
@@ -158,5 +162,29 @@ describe('购物车页', () => {
       recipientPhone: '02285356000',
       deliveryAddress: '天津大学北洋园校区学生宿舍1号楼',
     })
+  })
+
+  it('从本人资料预填收货信息但允许改成其他收货人', async () => {
+    getProfile.mockResolvedValue({
+      username: '下单用户',
+      phone: '13800138000',
+      address: '天津大学北洋园校区',
+    })
+    const { wrapper } = await mountCart(AVAILABLE_CART)
+    await wrapper.get('.cart-drawer-bar').trigger('click')
+
+    expect(wrapper.get('[data-testid="cart-recipient"]').element.value).toBe('下单用户')
+    expect(wrapper.get('[data-testid="cart-contact"]').element.value).toBe('13800138000')
+
+    await wrapper.get('[data-testid="cart-recipient"]').setValue('代收人')
+    expect(wrapper.get('[data-testid="cart-recipient"]').element.value).toBe('代收人')
+  })
+
+  it('收货人、联系电话或地址为空时禁止提交', async () => {
+    const { wrapper } = await mountCart(AVAILABLE_CART)
+    await wrapper.get('.cart-drawer-bar').trigger('click')
+
+    expect(wrapper.get('.sheet-checkout').element.disabled).toBe(true)
+    expect(createOrder).not.toHaveBeenCalled()
   })
 })

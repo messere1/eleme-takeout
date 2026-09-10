@@ -75,6 +75,46 @@ class SecurityIntegrationTest {
                 .andExpect(jsonPath("$.code").value(0));
     }
 
+    @Test
+    void adminCannotUseCustomerOrMerchantBusinessEndpoints() throws Exception {
+        String admin = bearer(99L, "ADMIN");
+
+        mockMvc.perform(get("/api/v1/cart").header("Authorization", admin))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+        mockMvc.perform(patch("/api/v1/shops/20/status")
+                        .header("Authorization", admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"OPEN\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+    }
+
+    @Test
+    void nonAdminCannotReadAdministratorAccountLists() throws Exception {
+        for (String token : new String[] {
+                bearer(7L, "CUSTOMER"), bearer(12L, "MERCHANT")}) {
+            mockMvc.perform(get("/api/v1/admin/users").header("Authorization", token))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.traceId").isNotEmpty());
+            mockMvc.perform(get("/api/v1/admin/merchants").header("Authorization", token))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.traceId").isNotEmpty());
+        }
+    }
+
+    @Test
+    void adminCanReadBothAccountLists() throws Exception {
+        String admin = bearer(99L, "ADMIN");
+
+        mockMvc.perform(get("/api/v1/admin/users").header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+        mockMvc.perform(get("/api/v1/admin/merchants").header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+
     private String bearer(Long userId, String role) {
         return "Bearer " + jwtService.issue(String.valueOf(userId), role);
     }

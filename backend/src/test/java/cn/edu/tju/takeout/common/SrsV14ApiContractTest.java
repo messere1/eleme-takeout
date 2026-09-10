@@ -1,10 +1,15 @@
 package cn.edu.tju.takeout.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
 
 import cn.edu.tju.takeout.order.CreateOrderRequest;
+import cn.edu.tju.takeout.order.Order;
 import cn.edu.tju.takeout.order.OrderController;
+import cn.edu.tju.takeout.order.OrderView;
+import cn.edu.tju.takeout.cart.CartLineView;
+import cn.edu.tju.takeout.merchant.MerchantController;
+import cn.edu.tju.takeout.merchant.MerchantRegistrationRequest;
+import cn.edu.tju.takeout.user.UserController;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Set;
@@ -15,7 +20,7 @@ import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-/** SRS V1.4 新增与变更需求的接口红灯基线，不包含业务实现。 */
+/** SRS V2.0 第二阶段新增与变更需求的接口红灯基线。文件名保留以兼容历史链接。 */
 class SrsV14ApiContractTest {
 
     @Test
@@ -35,27 +40,48 @@ class SrsV14ApiContractTest {
                 .collect(Collectors.toSet());
 
         assertThat(fields)
-                .as("FR-024 下单请求必须包含收货人、联系电话和收货地址")
-                .contains("recipientName", "recipientPhone", "deliveryAddress");
+                .as("FR-016/024 下单请求必须选择店铺购物车并包含完整收货信息")
+                .contains("shopId", "recipientName", "recipientPhone", "deliveryAddress");
     }
 
     @Test
-    void exposesReadOnlyAdministratorAccountLists() {
-        Class<?> controller = loadAdminController();
+    void exposesAdministratorAccountLists() {
+        Stream<Mapping> adminMappings = Stream.of(UserController.class, MerchantController.class)
+                .flatMap(SrsV14ApiContractTest::allMappings)
+                .filter(mapping -> mapping.path().startsWith("/api/v1/admin/"));
 
-        assertMapping(controller, RequestMethod.GET, "/api/v1/admin/users");
-        assertMapping(controller, RequestMethod.GET, "/api/v1/admin/merchants");
-        assertThat(allMappings(controller))
-                .as("FR-023 管理员第一阶段只能查询，不得提供写接口")
-                .allSatisfy(mapping -> assertThat(mapping.httpMethod()).isEqualTo(RequestMethod.GET));
+        assertThat(adminMappings)
+                .extracting(Mapping::path)
+                .contains("/api/v1/admin/users", "/api/v1/admin/merchants");
     }
 
-    private static Class<?> loadAdminController() {
-        try {
-            return Class.forName("cn.edu.tju.takeout.admin.AdminController");
-        } catch (ClassNotFoundException exception) {
-            return fail("FR-023 缺少管理员只读接口：cn.edu.tju.takeout.admin.AdminController");
-        }
+    @Test
+    void orderModelAndResponseCarryImmutableRecipientSnapshot() {
+        assertThat(Arrays.stream(Order.class.getDeclaredFields()).map(field -> field.getName()))
+                .contains("recipientName", "recipientPhone", "deliveryAddress");
+        assertThat(Arrays.stream(OrderView.class.getRecordComponents())
+                .map(component -> component.getName()))
+                .contains("recipientName", "recipientPhoneMasked", "deliveryAddress");
+    }
+
+    @Test
+    void merchantRegistrationCarriesRequiredShopAddress() {
+        assertThat(Arrays.stream(MerchantRegistrationRequest.class.getRecordComponents())
+                .map(component -> component.getName()))
+                .contains("shopAddress");
+    }
+
+    @Test
+    void cartLinesExposeShopIdentityForMultiShopIsolation() {
+        assertThat(Arrays.stream(CartLineView.class.getRecordComponents())
+                .map(component -> component.getName()))
+                .contains("shopId");
+    }
+
+    @Test
+    void exposesPaymentEndpoint() {
+        assertThat(allMappings(OrderController.class).map(Mapping::path))
+                .contains("/api/v1/orders/{orderId}/pay");
     }
 
     private static void assertMapping(
