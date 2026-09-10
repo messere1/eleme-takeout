@@ -8,3 +8,7 @@ export function getProfile() {
 export function updateProfile(payload) {
   return http.patch('/users/me', payload)
 }
+
+export function listUsers(params = { page: 1, size: 20 }) {
+  return http.get('/admin/users', { params })
+}

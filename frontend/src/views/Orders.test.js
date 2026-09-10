@@ -9,9 +9,10 @@ vi.mock('@/api/order', () => ({
   getOrder: vi.fn(),
   createOrder: vi.fn(),
   cancelOrder: vi.fn(),
+  confirmOrder: vi.fn(),
 }))
 
-import { cancelOrder, listOrders } from '@/api/order'
+import { cancelOrder, confirmOrder, listOrders } from '@/api/order'
 import { mountView } from '@/test/mountView'
 import Orders from './Orders.vue'
 
@@ -113,5 +114,17 @@ describe('订单列表页', () => {
 
     expect(wrapper.text()).toContain('无法加载订单')
     expect(wrapper.get('[data-testid="orders-empty"]').text()).toContain('暂无订单')
+  })
+
+  it('已接单订单允许顾客确认收货并更新为已完成', async () => {
+    const accepted = { ...ORDER_A, status: 'ACCEPTED' }
+    confirmOrder.mockResolvedValue({ ...accepted, status: 'COMPLETED' })
+    const { wrapper } = await mountOrders({ ...PAGE1, items: [accepted] })
+
+    await wrapper.get('[data-testid="order-confirm-11"]').trigger('click')
+    await flushPromises()
+
+    expect(confirmOrder).toHaveBeenCalledWith(11)
+    expect(wrapper.get('[data-testid="order-row-11"]').text()).toContain('已完成')
   })
 })

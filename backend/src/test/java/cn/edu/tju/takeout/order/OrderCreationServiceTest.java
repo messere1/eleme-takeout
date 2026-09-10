@@ -10,9 +10,11 @@ import static org.mockito.Mockito.when;
 import cn.edu.tju.takeout.cart.CartCheckoutLine;
 import cn.edu.tju.takeout.cart.CartMapper;
 import cn.edu.tju.takeout.common.BusinessException;
+import cn.edu.tju.takeout.merchant.MerchantMapper;
 import cn.edu.tju.takeout.product.ProductMapper;
 import cn.edu.tju.takeout.shop.Shop;
 import cn.edu.tju.takeout.shop.ShopMapper;
+import cn.edu.tju.takeout.user.UserMapper;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -28,11 +30,14 @@ class OrderCreationServiceTest {
     @Mock private CartMapper cartMapper;
     @Mock private ProductMapper productMapper;
     @Mock private ShopMapper shopMapper;
+    @Mock private UserMapper userMapper;
+    @Mock private MerchantMapper merchantMapper;
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderService(orderMapper, cartMapper, productMapper, shopMapper);
+        orderService = new OrderService(
+                orderMapper, cartMapper, productMapper, shopMapper, userMapper, merchantMapper);
     }
 
     @Test
@@ -40,7 +45,7 @@ class OrderCreationServiceTest {
         when(cartMapper.findCheckoutLinesByUserId(7L)).thenReturn(List.of(line(2, 20)));
         when(shopMapper.findById(20L)).thenReturn(Optional.of(shop("CLOSED")));
 
-        assertThatThrownBy(() -> orderService.create(7L))
+        assertThatThrownBy(() -> orderService.create(7L, "天津大学"))
                 .isInstanceOf(BusinessException.class)
                 .extracting(error -> ((BusinessException) error).code())
                 .isEqualTo("BUSINESS_CONFLICT");
@@ -52,7 +57,7 @@ class OrderCreationServiceTest {
         when(cartMapper.findCheckoutLinesByUserId(7L)).thenReturn(List.of(line(2, 20)));
         when(shopMapper.findById(20L)).thenReturn(Optional.of(shop("TEMP_CLOSED")));
 
-        assertThatThrownBy(() -> orderService.create(7L))
+        assertThatThrownBy(() -> orderService.create(7L, "天津大学"))
                 .isInstanceOf(BusinessException.class)
                 .extracting(error -> ((BusinessException) error).code())
                 .isEqualTo("BUSINESS_CONFLICT");
@@ -64,7 +69,7 @@ class OrderCreationServiceTest {
         when(cartMapper.findCheckoutLinesByUserId(7L)).thenReturn(List.of(line(3, 2)));
         when(shopMapper.findById(20L)).thenReturn(Optional.of(shop("OPEN")));
 
-        assertThatThrownBy(() -> orderService.create(7L))
+        assertThatThrownBy(() -> orderService.create(7L, "天津大学"))
                 .isInstanceOf(BusinessException.class)
                 .extracting(error -> ((BusinessException) error).code())
                 .isEqualTo("BUSINESS_CONFLICT");
@@ -77,7 +82,7 @@ class OrderCreationServiceTest {
         when(shopMapper.findById(20L)).thenReturn(Optional.of(shop("OPEN")));
         when(productMapper.decreaseStockIfAvailable(40L, 2)).thenReturn(1);
 
-        OrderView result = orderService.create(7L);
+        OrderView result = orderService.create(7L, "天津大学");
 
         verify(orderMapper).insert(any(Order.class));
         verify(orderMapper).insertItem(any(OrderItem.class));
@@ -97,7 +102,7 @@ class OrderCreationServiceTest {
         when(shopMapper.findById(20L)).thenReturn(Optional.of(shop("OPEN")));
         when(productMapper.decreaseStockIfAvailable(40L, 2)).thenReturn(0);
 
-        assertThatThrownBy(() -> orderService.create(7L))
+        assertThatThrownBy(() -> orderService.create(7L, "天津大学"))
                 .isInstanceOf(BusinessException.class)
                 .extracting(error -> ((BusinessException) error).code())
                 .isEqualTo("BUSINESS_CONFLICT");
@@ -110,8 +115,8 @@ class OrderCreationServiceTest {
         when(shopMapper.findById(20L)).thenReturn(Optional.of(shop("OPEN")));
         when(productMapper.decreaseStockIfAvailable(40L, 1)).thenReturn(1);
 
-        OrderView first = orderService.create(7L);
-        OrderView second = orderService.create(7L);
+        OrderView first = orderService.create(7L, "天津大学");
+        OrderView second = orderService.create(7L, "天津大学");
 
         assertThat(first.orderNo()).isNotBlank();
         assertThat(second.orderNo()).isNotBlank().isNotEqualTo(first.orderNo());
@@ -128,7 +133,7 @@ class OrderCreationServiceTest {
         when(productMapper.decreaseStockIfAvailable(40L, 3)).thenReturn(1);
         when(productMapper.decreaseStockIfAvailable(41L, 2)).thenReturn(1);
 
-        OrderView result = orderService.create(7L);
+        OrderView result = orderService.create(7L, "天津大学");
 
         assertThat(result.totalAmount()).isEqualByComparingTo(new BigDecimal("0.70"));
         assertThat(result.items()).extracting(OrderItemView::subtotal)

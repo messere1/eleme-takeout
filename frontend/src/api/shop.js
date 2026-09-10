@@ -46,6 +46,10 @@ export function createCategory(shopId, payload) {
   return http.post(`/shops/${shopId}/categories`, payload)
 }
 
+export function updateCategory(categoryId, payload) {
+  return http.patch(`/categories/${categoryId}`, payload)
+}
+
 export function deleteCategory(categoryId) {
   return http.delete(`/categories/${categoryId}`)
 }

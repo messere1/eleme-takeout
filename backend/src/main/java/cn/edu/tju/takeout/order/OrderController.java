@@ -8,6 +8,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,8 +21,11 @@ public class OrderController {
     public OrderController(OrderService orderService) { this.orderService = orderService; }
 
     @PostMapping
-    public ApiResponse<OrderView> create(@AuthenticationPrincipal UserPrincipal principal) {
-        return ApiResponse.success(orderService.create(principal.userId()));
+    public ApiResponse<OrderView> create(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody(required = false) CreateOrderRequest request) {
+        String address = request == null ? null : request.address();
+        return ApiResponse.success(orderService.create(principal.userId(), address));
     }
 
     @GetMapping
@@ -49,5 +53,23 @@ public class OrderController {
     public ApiResponse<OrderView> cancel(
             @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
         return ApiResponse.success(orderService.cancel(principal.userId(), orderId));
+    }
+
+    @PostMapping("/{orderId}/accept")
+    public ApiResponse<OrderView> accept(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
+        return ApiResponse.success(orderService.accept(principal.userId(), orderId));
+    }
+
+    @PostMapping("/{orderId}/complete")
+    public ApiResponse<OrderView> complete(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
+        return ApiResponse.success(orderService.complete(principal.userId(), orderId));
+    }
+
+    @PostMapping("/{orderId}/confirm")
+    public ApiResponse<OrderView> confirm(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
+        return ApiResponse.success(orderService.confirmReceived(principal.userId(), orderId));
     }
 }

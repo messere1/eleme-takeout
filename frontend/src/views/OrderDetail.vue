@@ -18,6 +18,24 @@ function fmtTime(value) {
   return value ? String(value).replace('T', ' ').slice(0, 16) : ''
 }
 
+const FOOD_EMOJI = ['🍜', '🍔', '🧋', '🍕', '🍣', '🥟', '🍗', '🍤', '🍰', '🥡']
+const FOOD_BG = ['#fff1e8', '#fff0f0', '#f4f1ff', '#eef8ff', '#fff7ed', '#fdeef7']
+
+function foodKey(name) {
+  let h = 0
+  const text = String(name || '')
+  for (let i = 0; i < text.length; i += 1) h = (h * 31 + text.charCodeAt(i)) >>> 0
+  return h
+}
+
+function foodEmoji(name) {
+  return FOOD_EMOJI[foodKey(name) % FOOD_EMOJI.length]
+}
+
+function foodBg(name) {
+  return FOOD_BG[foodKey(name) % FOOD_BG.length]
+}
+
 onMounted(async () => {
   try {
     detail.value = await getOrder(orderId)
@@ -36,7 +54,23 @@ onMounted(async () => {
         <h2 data-testid="order-no">{{ detail.orderNo }}</h2>
         <span data-testid="order-status" class="order-status">{{ detail.status }}</span>
       </header>
+      <RouterLink
+        v-if="detail.status === 'CREATED' || detail.status === 'PENDING'"
+        :to="`/orders/${detail.id}/pay`"
+        class="pay-link"
+      >去支付 →</RouterLink>
       <p class="order-time">{{ fmtTime(detail.createdAt) }}</p>
+
+      <div class="shop-banner">
+        <img v-if="detail.shopImage" :src="detail.shopImage" class="shop-thumb" alt="商家图" />
+        <div v-else class="shop-thumb">🏪</div>
+      </div>
+
+      <div v-if="detail.shopPhone || detail.userPhoneMasked || detail.userAddress" class="contact-panel">
+        <p v-if="detail.shopPhone">商家电话：{{ detail.shopPhone }}</p>
+        <p v-if="detail.userPhoneMasked">联系电话：{{ detail.userPhoneMasked }}</p>
+        <p v-if="detail.userAddress">收货地址：{{ detail.userAddress }}</p>
+      </div>
 
       <ul class="item-list">
         <li
@@ -45,6 +79,10 @@ onMounted(async () => {
           :data-testid="`order-item-${item.productId}`"
           class="item-row"
         >
+          <img v-if="item.imageUrl" :src="item.imageUrl" class="dish-thumb" alt="菜品图" />
+          <div v-else class="dish-thumb" :style="{ background: foodBg(item.productName) }">
+            {{ foodEmoji(item.productName) }}
+          </div>
           <span class="item-name">{{ item.productName }}</span>
           <span class="item-meta">
             ¥{{ fmt(item.unitPrice) }} × {{ item.quantity }}
@@ -107,6 +145,47 @@ onMounted(async () => {
   color: #aaa;
   font-size: 0.85rem;
 }
+.shop-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.shop-thumb {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #fff4ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+.dish-thumb {
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 8px;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+.contact-panel {
+  background: #fff7f0;
+  border: 1px solid #ffe3cf;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.contact-panel p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #4a3a2a;
+}
 .item-list {
   list-style: none;
   margin: 0;
@@ -150,5 +229,34 @@ onMounted(async () => {
 .loading-tip {
   color: #aaa;
   text-align: center;
+}
+.detail-head {
+  flex-wrap: wrap;
+}
+.detail-head h2 {
+  word-break: break-all;
+}
+.item-row {
+  flex-wrap: wrap;
+}
+.contact-panel p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  .order-detail {
+    padding: 1rem;
+    gap: 0.6rem;
+  }
+  .detail-head h2 {
+    font-size: 1rem;
+  }
+  .dish-thumb {
+    width: 2.2rem;
+    height: 2.2rem;
+    font-size: 1.1rem;
+  }
+  .item-name {
+    font-size: 0.92rem;
+  }
 }
 </style>

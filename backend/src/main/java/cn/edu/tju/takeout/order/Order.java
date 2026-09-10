@@ -11,6 +11,7 @@ public class Order {
     private BigDecimal totalAmount;
     private String status;
     private LocalDateTime createdAt;
+    private String address;
 
     public static Order created(
             String orderNo, Long userId, Long shopId, BigDecimal totalAmount) {
@@ -47,4 +48,6 @@ public class Order {
     public String getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void changeStatus(String status) { this.status = status; }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 }

@@ -3,9 +3,12 @@ package cn.edu.tju.takeout.order;
 import cn.edu.tju.takeout.cart.CartCheckoutLine;
 import cn.edu.tju.takeout.cart.CartMapper;
 import cn.edu.tju.takeout.common.BusinessException;
+import cn.edu.tju.takeout.merchant.MerchantMapper;
 import cn.edu.tju.takeout.product.ProductMapper;
 import cn.edu.tju.takeout.shop.Shop;
 import cn.edu.tju.takeout.shop.ShopMapper;
+import cn.edu.tju.takeout.user.User;
+import cn.edu.tju.takeout.user.UserMapper;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.ArrayList;
@@ -21,17 +24,22 @@ public class OrderService {
     private final CartMapper cartMapper;
     private final ProductMapper productMapper;
     private final ShopMapper shopMapper;
+    private final UserMapper userMapper;
+    private final MerchantMapper merchantMapper;
     public OrderService(
             OrderMapper orderMapper, CartMapper cartMapper,
-            ProductMapper productMapper, ShopMapper shopMapper) {
+            ProductMapper productMapper, ShopMapper shopMapper,
+            UserMapper userMapper, MerchantMapper merchantMapper) {
         this.orderMapper = orderMapper;
         this.cartMapper = cartMapper;
         this.productMapper = productMapper;
         this.shopMapper = shopMapper;
+        this.userMapper = userMapper;
+        this.merchantMapper = merchantMapper;
     }
 
     @Transactional
-    public OrderView create(Long userId) {
+    public OrderView create(Long userId, String address) {
         List<CartCheckoutLine> lines =
                 cartMapper
                         .findCheckoutLinesByUserId(
@@ -126,6 +134,10 @@ public class OrderService {
             }
         }
 
+        if (address == null || address.isBlank()) {
+            User buyer = userMapper.findById(userId).orElse(null);
+            address = buyer != null ? buyer.getAddress() : null;
+        }
         Order order =
                 Order.created(
                         generateOrderNo(),
@@ -133,6 +145,7 @@ public class OrderService {
                         shopId,
                         totalAmount
                 );
+        order.setAddress(address);
 
         orderMapper.insert(order);
 
@@ -311,10 +324,78 @@ public class OrderService {
                         orderId
                 );
 
-        return OrderView.from(
-                order,
-                items
-        );
+        Shop shopForPhone =
+                shopMapper.findById(order.getShopId()).orElse(null);
+        User buyer =
+                userMapper.findById(order.getUserId()).orElse(null);
+        final String[] shopPhoneHolder = new String[] { null };
+        if (shopForPhone != null && shopForPhone.getMerchantId() != null) {
+            merchantMapper.findById(shopForPhone.getMerchantId())
+                    .ifPresent(merchant -> shopPhoneHolder[0] = merchant.getPhone());
+        }
+        String deliveryAddress = order.getAddress() != null
+                ? order.getAddress()
+                : (buyer != null ? buyer.getAddress() : null);
+        return OrderView.from(order, items)
+                .withContacts(
+                        shopPhoneHolder[0],
+                        maskPhone(buyer != null ? buyer.getPhone() : null),
+                        maskAddress(deliveryAddress));
+    }
+
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() < 7) {
+            return phone;
+        }
+        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
+    }
+
+    private String maskAddress(String address) {
+        if (address == null || address.length() <= 4) {
+            return address;
+        }
+        return address.substring(0, 2) + "****" + address.substring(address.length() - 2);
+    }
+
+    @Transactional
+    public OrderView accept(Long merchantId, Long orderId) {
+        Shop shop = shopMapper.findByMerchantId(merchantId).orElseThrow(this::forbidden);
+        Order order = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+        if (!shop.getId().equals(order.getShopId())) {
+            throw forbidden();
+        }
+        if (orderMapper.transitionStatus(orderId, "CREATED", "ACCEPTED") == 0) {
+            throw businessConflict("订单状态不可接单");
+        }
+        Order updated = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+        return OrderView.from(updated, orderMapper.findItemsByOrderId(orderId));
+    }
+
+    @Transactional
+    public OrderView complete(Long merchantId, Long orderId) {
+        Shop shop = shopMapper.findByMerchantId(merchantId).orElseThrow(this::forbidden);
+        Order order = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+        if (!shop.getId().equals(order.getShopId())) {
+            throw forbidden();
+        }
+        if (orderMapper.transitionStatus(orderId, "ACCEPTED", "COMPLETED") == 0) {
+            throw businessConflict("订单状态不可完成");
+        }
+        Order updated = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+        return OrderView.from(updated, orderMapper.findItemsByOrderId(orderId));
+    }
+
+    @Transactional
+    public OrderView confirmReceived(Long userId, Long orderId) {
+        Order order = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+        if (!order.getUserId().equals(userId)) {
+            throw forbidden();
+        }
+        if (orderMapper.transitionStatus(orderId, "ACCEPTED", "COMPLETED") == 0) {
+            throw businessConflict("订单状态不可确认完成");
+        }
+        Order updated = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+        return OrderView.from(updated, orderMapper.findItemsByOrderId(orderId));
     }
 
     private String generateOrderNo() {

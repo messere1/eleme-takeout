@@ -8,9 +8,11 @@ import static org.mockito.Mockito.when;
 
 import cn.edu.tju.takeout.cart.CartMapper;
 import cn.edu.tju.takeout.common.BusinessException;
+import cn.edu.tju.takeout.merchant.MerchantMapper;
 import cn.edu.tju.takeout.product.ProductMapper;
 import cn.edu.tju.takeout.shop.Shop;
 import cn.edu.tju.takeout.shop.ShopMapper;
+import cn.edu.tju.takeout.user.UserMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,11 +29,14 @@ class OrderDetailAuthorizationTest {
     @Mock private CartMapper cartMapper;
     @Mock private ProductMapper productMapper;
     @Mock private ShopMapper shopMapper;
+    @Mock private UserMapper userMapper;
+    @Mock private MerchantMapper merchantMapper;
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderService(orderMapper, cartMapper, productMapper, shopMapper);
+        orderService = new OrderService(
+                orderMapper, cartMapper, productMapper, shopMapper, userMapper, merchantMapper);
     }
 
     @Test

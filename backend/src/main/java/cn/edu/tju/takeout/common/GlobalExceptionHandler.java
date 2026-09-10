@@ -32,8 +32,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception exception) {
-        ApiResponse<Void> body = ApiResponse.failure(
-                "INTERNAL_ERROR", "服务器内部错误", null);
+        ApiResponse<Void> body =
+                ApiResponse.failure("INTERNAL_ERROR", "服务器内部错误，请稍后重试", null);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }

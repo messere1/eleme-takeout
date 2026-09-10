@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { acceptOrder, completeOrder, listMerchantOrders } from '@/api/order'
 
 const STATUS_TEXT = {
+  CREATED: '待接单',
   PENDING: '待接单',
   ACCEPTED: '已接单',
   COMPLETED: '已完成',
@@ -71,7 +72,7 @@ onMounted(load)
           <div class="order-amount">¥{{ fmt(order.totalAmount) }}</div>
           <div class="order-actions">
             <button
-              v-if="order.status === 'PENDING'"
+              v-if="order.status === 'CREATED' || order.status === 'PENDING'"
               class="primary-btn small"
               :data-testid="`order-mgmt-accept-${order.id}`"
               @click="accept(order)"

@@ -1,7 +1,7 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { cancelOrder, listOrders } from '@/api/order'
+import { cancelOrder, confirmOrder, listOrders } from '@/api/order'
 
 const router = useRouter()
 
@@ -35,6 +35,16 @@ async function cancelRow(order) {
   }
 }
 
+async function confirmRow(order) {
+  loadError.value = ''
+  try {
+    const res = await confirmOrder(order.id)
+    order.status = res?.status || 'COMPLETED'
+  } catch (error) {
+    loadError.value = error?.message || '确认失败，请稍后重试'
+  }
+}
+
 async function load(page) {
   try {
     const params = { page, size: 20 }
@@ -43,8 +53,12 @@ async function load(page) {
     orders.value = data?.items ?? []
     currentPage.value = data?.page ?? page
     totalPages.value = data?.totalPages ?? 1
-  } catch {
-    loadError.value = '未连接后端，无法加载订单（仅静态预览）'
+  } catch (error) {
+    if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
+      router.push('/login')
+      return
+    }
+    loadError.value = '无法加载订单：' + (error?.message || '请确认已登录且后端服务正常')
   }
 }
 
@@ -59,6 +73,32 @@ function go(page) {
 
 function goDetail(order) {
   router.push(`/orders/${order.id}`)
+}
+
+const UNPAID_MINUTES = 15
+const now = ref(Date.now())
+let ticker = null
+if (import.meta.env.MODE !== 'test') {
+  ticker = setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+}
+onUnmounted(() => {
+  if (ticker) clearInterval(ticker)
+})
+
+function pad(n) {
+  return String(n).padStart(2, '0')
+}
+
+function countdownText(order) {
+  if (order.status !== 'CREATED' && order.status !== 'PENDING') return ''
+  const deadline = new Date(order.createdAt).getTime() + UNPAID_MINUTES * 60 * 1000
+  const remain = deadline - now.value
+  if (Number.isNaN(remain)) return ''
+  if (remain <= 0) return '已超时，等待自动取消'
+  const s = Math.floor(remain / 1000)
+  return `距自动取消 ${pad(Math.floor(s / 60))}:${pad(s % 60)}`
 }
 
 onMounted(() => load(1))
@@ -92,9 +132,11 @@ onMounted(() => load(1))
           class="order-row"
           @click="goDetail(order)"
         >
+          <span class="order-shop-thumb">🏪</span>
           <div class="order-main">
             <span class="order-no">{{ order.orderNo }}</span>
             <span class="order-status">{{ statusText(order.status) }}</span>
+            <span v-if="countdownText(order)" class="order-countdown">{{ countdownText(order) }}</span>
           </div>
           <div class="order-sub">
             <span class="order-time">{{ fmtTime(order.createdAt) }}</span>
@@ -106,6 +148,13 @@ onMounted(() => load(1))
               :data-testid="`order-cancel-${order.id}`"
               @click.stop="cancelRow(order)"
             >取消订单</button>
+          </div>
+          <div v-else-if="order.status === 'ACCEPTED'" class="order-confirm">
+            <button
+              class="confirm-btn"
+              :data-testid="`order-confirm-${order.id}`"
+              @click.stop="confirmRow(order)"
+            >确认完成</button>
           </div>
         </li>
       </ul>
@@ -165,10 +214,53 @@ onMounted(() => load(1))
 .order-row:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+.order-row {
+  flex-wrap: wrap;
+}
+.order-shop-thumb {
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 8px;
+  background: #fff4ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
 .order-main {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+.order-no {
+  word-break: break-all;
+}
+.order-sub {
+  margin-left: auto;
+}
+@media (max-width: 520px) {
+  .orders-page {
+    padding: 1rem;
+  }
+  .order-row {
+    gap: 0.5rem;
+    padding: 0.6rem 0.7rem;
+  }
+  .order-status,
+  .order-countdown {
+    font-size: 0.72rem;
+  }
+  .order-amount {
+    font-size: 0.95rem;
+  }
+  .cancel-btn,
+  .confirm-btn {
+    font-size: 0.78rem;
+    padding: 0.28rem 0.7rem;
+  }
 }
 .order-no {
   font-weight: 600;
@@ -232,6 +324,27 @@ onMounted(() => load(1))
   font-size: 0.85rem;
   white-space: nowrap;
 }
+.confirm-btn {
+  border: none;
+  background: #17a25c;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.32rem 0.9rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.order-shop-thumb {
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 8px;
+  background: #fff4ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
 .page-note {
   margin: 0 0 0.75rem;
   color: #e34d1c;
@@ -253,5 +366,10 @@ onMounted(() => load(1))
   padding: 0.3rem 0.6rem;
   background: #fff;
   color: #444;
+}
+.order-countdown {
+  font-size: 0.78rem;
+  color: #e34d1c;
+  font-variant-numeric: tabular-nums;
 }
 </style>

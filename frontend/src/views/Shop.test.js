@@ -29,7 +29,12 @@ const PRODUCTS = {
 async function mountShop(shop = SHOP) {
   getShop.mockResolvedValue(shop)
   listCategories.mockResolvedValue(CATEGORIES)
-  listProducts.mockImplementation(async (_shopId, categoryId) => PRODUCTS[categoryId] || [])
+  listProducts.mockImplementation(async (categoryId) => ({
+    items: PRODUCTS[categoryId] || [],
+    page: 1,
+    size: 20,
+    totalPages: 1,
+  }))
   const ctx = await mountView(Shop, { path: '/shops/7' })
   await flushPromises()
   return ctx
@@ -49,7 +54,7 @@ describe('店铺页（顾客点单）', () => {
 
   it('默认选中第一个分类并展示其商品', async () => {
     const { wrapper } = await mountShop()
-    expect(listProducts).toHaveBeenCalledWith(7, 30)
+    expect(listProducts).toHaveBeenCalledWith(30, { page: 1, size: 20 })
     const card = wrapper.get('[data-testid="product-card-40"]')
     expect(card.text()).toContain('煎饼果子')
     expect(card.text()).toContain('8.50')
@@ -60,7 +65,7 @@ describe('店铺页（顾客点单）', () => {
     const { wrapper } = await mountShop()
     await wrapper.get('[data-testid="category-31"]').trigger('click')
     await flushPromises()
-    expect(listProducts).toHaveBeenCalledWith(7, 31)
+    expect(listProducts).toHaveBeenCalledWith(31, { page: 1, size: 20 })
     expect(wrapper.get('[data-testid="product-card-44"]').text()).toContain('柠檬茶')
     expect(wrapper.text()).not.toContain('煎饼果子')
   })

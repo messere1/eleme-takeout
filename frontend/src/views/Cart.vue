@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { clearCart, getCart, removeItem, updateItem } from '@/api/cart'
 import { createOrder } from '@/api/order'
+import { getProfile } from '@/api/user'
 
 const router = useRouter()
 
@@ -10,6 +11,21 @@ const items = ref([])
 const busy = ref(false)
 const message = ref('')
 const loadError = ref('')
+const checkoutAddress = ref('')
+const recipient = ref('')
+const contact = ref('')
+const drawerOpen = ref(false)
+
+async function seedDefaultAddress() {
+  try {
+    const me = await getProfile()
+    if (me?.address) checkoutAddress.value = me.address
+    if (me?.username) recipient.value = me.username
+    if (me?.phone) contact.value = me.phone
+  } catch {
+    // 未填资料则让用户手动输入
+  }
+}
 
 const total = computed(() =>
   items.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -82,7 +98,11 @@ async function checkout() {
   message.value = ''
   busy.value = true
   try {
-    const order = await createOrder()
+    const order = await createOrder({
+      recipientName: recipient.value.trim(),
+      recipientPhone: contact.value.trim(),
+      deliveryAddress: checkoutAddress.value.trim(),
+    })
     router.push(`/orders/${order.id}`)
   } catch (error) {
     if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
@@ -95,7 +115,10 @@ async function checkout() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  seedDefaultAddress()
+  load()
+})
 </script>
 
 <template>
@@ -144,6 +167,37 @@ onMounted(load)
         </li>
       </ul>
 
+      <div class="address-row">
+        <label class="ctrl-label" for="cart-recipient-name">收货人</label>
+        <el-input
+          id="cart-recipient-name"
+          v-model="recipient"
+          data-testid="cart-recipient-name"
+          placeholder="收货人"
+          maxlength="30"
+        />
+      </div>
+      <div class="address-row">
+        <label class="ctrl-label" for="cart-recipient-phone">联系电话</label>
+        <el-input
+          id="cart-recipient-phone"
+          v-model="contact"
+          data-testid="cart-recipient-phone"
+          placeholder="联系电话"
+          maxlength="20"
+        />
+      </div>
+      <div class="address-row">
+        <label class="ctrl-label" for="cart-address">收货地址</label>
+        <el-input
+          id="cart-address"
+          v-model="checkoutAddress"
+          data-testid="cart-address"
+          placeholder="默认取「我的-收货地址」，可直接修改"
+          maxlength="255"
+        />
+      </div>
+
       <footer class="cart-footer">
         <span>
           合计
@@ -164,6 +218,26 @@ onMounted(load)
           >去结算</button>
         </div>
       </footer>
+
+      <div class="cart-drawer-bar" @click="drawerOpen = !drawerOpen">
+        <span>{{ drawerOpen ? '▼ 收起明细' : '▲ 订单明细' }}（{{ items.length }} 件）</span>
+        <strong>合计 ¥{{ fmt(total) }}</strong>
+      </div>
+
+      <div v-if="drawerOpen" class="cart-sheet">
+        <div class="sheet-head">
+          <h3>订单信息</h3>
+          <button class="sheet-close" @click="drawerOpen = false">收起 ▲</button>
+        </div>
+        <ul class="sheet-items">
+          <li v-for="item in items" :key="item.id">
+            <span>{{ item.productName }} × {{ item.quantity }}</span>
+            <strong>¥{{ fmt(item.subtotal) }}</strong>
+          </li>
+        </ul>
+        <div class="sheet-total">合计 <strong>¥{{ fmt(total) }}</strong></div>
+        <button class="checkout-btn sheet-checkout" :disabled="!canCheckout" @click="checkout">提交订单</button>
+      </div>
 
       <p v-if="message" class="cart-message">{{ message }}</p>
     </template>
@@ -307,5 +381,74 @@ onMounted(load)
 .cart-empty a {
   color: #ff6a00;
   font-weight: 600;
+}
+.address-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+.ctrl-label {
+  font-size: 0.9rem;
+  color: #666;
+  white-space: nowrap;
+}
+.address-row :deep(.el-input) {
+  flex: 1;
+  min-width: 16rem;
+}
+.cart-drawer-bar {
+  position: sticky;
+  bottom: 0.5rem;
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #2b1d00;
+  color: #ffe08a;
+  border-radius: 999px;
+  padding: 0.7rem 1.2rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.cart-sheet {
+  background: #fff;
+  border: 1px solid #f0e6da;
+  border-radius: 16px;
+  padding: 1rem 1.2rem 1.2rem;
+  box-shadow: 0 -6px 22px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 0.5rem;
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.sheet-head h3 { margin: 0; }
+.sheet-close { border: none; background: transparent; color: var(--el-color-primary); cursor: pointer; }
+.sheet-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.sheet-items li { display: flex; justify-content: space-between; font-size: 0.92rem; }
+.sheet-items li strong { color: #ff2f00; }
+.sheet-total { display: flex; justify-content: space-between; border-top: 1px dashed #eee; padding-top: 0.7rem; }
+.sheet-total strong { color: #ff2f00; }
+.sheet-checkout { width: 100%; }
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+.field label { font-size: 0.85rem; color: #666; }
+@media (max-width: 520px) {
+  .cart-page {
+    padding: 1rem;
+  }
+  .cart-ops {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .cart-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+  .footer-actions {
+    justify-content: flex-end;
+  }
 }
 </style>
