@@ -1,7 +1,12 @@
 package cn.edu.tju.takeout.shop;
 
-public record ShopView(Long id, Long merchantId, String shopName, String notice, String status) {
+public record ShopView(Long id, Long merchantId, String shopName, String notice, String status,
+                       String shopAddress, String imageUrl, String coverImageUrl) {
+    public ShopView(Long id, Long merchantId, String shopName, String notice, String status) {
+        this(id, merchantId, shopName, notice, status, null, null, null);
+    }
     static ShopView from(Shop shop) {
-        return new ShopView(shop.getId(), shop.getMerchantId(), shop.getShopName(), shop.getNotice(), shop.getStatus());
+        return new ShopView(shop.getId(), shop.getMerchantId(), shop.getShopName(), shop.getNotice(), shop.getStatus(),
+                shop.getShopAddress(), shop.getImageUrl(), shop.getCoverImageUrl());
     }
 }

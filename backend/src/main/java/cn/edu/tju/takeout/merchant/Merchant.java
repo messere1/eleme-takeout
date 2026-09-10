@@ -9,6 +9,7 @@ public class Merchant {
     private String passwordHash;
     private String businessScope;
     private LocalDateTime createdAt;
+    private boolean enabled = true;
 
     public static Merchant registered(String name, String phone, String passwordHash, String scope) {
         Merchant merchant = new Merchant();
@@ -27,4 +28,5 @@ public class Merchant {
     public String getPasswordHash() { return passwordHash; }
     public String getBusinessScope() { return businessScope; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public boolean isEnabled() { return enabled; }
 }

@@ -27,7 +27,7 @@ async function submit() {
     })
     const role = data.role || form.role
     session.save({ token: data.token, role })
-    router.push(role === 'MERCHANT' ? '/merchant' : '/')
+    router.push({ MERCHANT: '/merchant', ADMIN: '/admin', RIDER: '/rider' }[role] || '/')
   } catch (error) {
     errorMessage.value = error?.message || '登录失败，请稍后重试'
   } finally {
@@ -81,6 +81,8 @@ async function submit() {
         >
           <option value="CUSTOMER">我是顾客</option>
           <option value="MERCHANT">我是商家</option>
+          <option value="ADMIN">我是管理员</option>
+          <option value="RIDER">我是骑手</option>
         </select>
       </div>
 

@@ -14,11 +14,15 @@ public class UserService {
 
     //加密密码
     private final PasswordEncoder passwordEncoder;
+    private cn.edu.tju.takeout.order.OrderMapper orderMapper;
 
     public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder) {
         this.userMapper=userMapper;
         this.passwordEncoder=passwordEncoder;
     }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setOrderMapper(cn.edu.tju.takeout.order.OrderMapper orderMapper) { this.orderMapper = orderMapper; }
 
     // 异常辅助方法
     private BusinessException userAlreadyExists(String message) {
@@ -84,6 +88,15 @@ public class UserService {
 
         userMapper.updateProfile(user);
         return UserView.from(user);
+    }
+
+    public void deleteAccount(Long userId) {
+        if (orderMapper != null && orderMapper.countActiveByUser(userId) > 0) {
+            throw new BusinessException(HttpStatus.CONFLICT,"BUSINESS_CONFLICT","存在进行中订单，暂不能注销");
+        }
+        if (userMapper.softDelete(userId) == 0) {
+            throw new BusinessException(HttpStatus.NOT_FOUND,"RESOURCE_NOT_FOUND","用户不存在或已注销");
+        }
     }
 
     private UnsupportedOperationException pending() {

@@ -28,7 +28,7 @@ onBeforeUnmount(() => window.removeEventListener('auth-change', refresh))
 <template>
   <header class="brand-bar">
     <div class="brand-inner">
-      <RouterLink to="/" class="brand-title">
+      <RouterLink :to="role === 'MERCHANT' ? '/merchant' : role === 'ADMIN' ? '/admin' : role === 'RIDER' ? '/rider' : '/'" class="brand-title">
         <span class="brand-logo">🍜</span>
         <span class="brand-text">
           <h1>轻量级外卖服务平台</h1>
@@ -50,6 +50,8 @@ onBeforeUnmount(() => window.removeEventListener('auth-change', refresh))
     <RouterLink to="/merchant/orders" class="tab"><span class="ico">📋</span><span>订单管理</span></RouterLink>
     <RouterLink to="/merchant/profile" class="tab"><span class="ico">👤</span><span>我的</span></RouterLink>
   </nav>
+  <nav v-else-if="role === 'ADMIN'" class="tabbar single"><RouterLink to="/admin" class="tab"><span class="ico">🛡️</span><span>系统管理</span></RouterLink></nav>
+  <nav v-else-if="role === 'RIDER'" class="tabbar single"><RouterLink to="/rider" class="tab"><span class="ico">🛵</span><span>配送台</span></RouterLink></nav>
   <nav v-else class="tabbar">
     <RouterLink to="/" class="tab"><span class="ico">🏠</span><span>首页</span></RouterLink>
     <RouterLink to="/cart" class="tab"><span class="ico">🛒</span><span>购物车</span></RouterLink>
@@ -130,6 +132,7 @@ onBeforeUnmount(() => window.removeEventListener('auth-change', refresh))
   z-index: 20;
   padding-bottom: env(safe-area-inset-bottom);
 }
+.tabbar.single { grid-template-columns: 1fr; }
 .tab {
   display: flex;
   flex-direction: column;

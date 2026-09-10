@@ -11,8 +11,8 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface ShopMapper {
     @Insert("""
-            INSERT INTO shops(merchant_id, shop_name, notice, status)
-            VALUES(#{merchantId}, #{shopName}, #{notice}, #{status})
+            INSERT INTO shops(merchant_id, shop_name, notice, status, shop_address, image_url, cover_image_url)
+            VALUES(#{merchantId}, #{shopName}, #{notice}, #{status}, #{shopAddress}, #{imageUrl}, #{coverImageUrl})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Shop shop);
@@ -34,4 +34,8 @@ public interface ShopMapper {
 
     @Select("SELECT COUNT(*) FROM shops")
     long countAll();
+
+    @Update("UPDATE shops SET image_url = #{url} WHERE id = #{id}") int updateImage(Long id, String url);
+    @Update("UPDATE shops SET cover_image_url = #{url} WHERE id = #{id}") int updateCover(Long id, String url);
+    @Update("UPDATE shops SET shop_name=#{name}, shop_address=#{address} WHERE id=#{id}") int updateProfile(Long id,String name,String address);
 }

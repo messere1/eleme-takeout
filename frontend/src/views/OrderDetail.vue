@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getOrder } from '@/api/order'
+import { getOrder, requestRefund } from '@/api/order'
 
 const route = useRoute()
 const router = useRouter()
@@ -9,6 +9,9 @@ const orderId = Number(route.params.id)
 
 const detail = ref(null)
 const loadError = ref('')
+const refundAmount = ref('')
+const refundReason = ref('')
+const refundMessage = ref('')
 
 function fmt(value) {
   return (Number(value) || 0).toFixed(2)
@@ -43,6 +46,8 @@ onMounted(async () => {
     loadError.value = '未连接后端，无法加载订单详情（仅静态预览）'
   }
 })
+
+async function submitRefund(){try{await requestRefund(orderId,{amount:Number(refundAmount.value),reason:refundReason.value.trim(),evidenceUrls:[]});refundMessage.value='退款申请已提交'}catch(e){refundMessage.value=e?.message||'退款申请失败'}}
 </script>
 
 <template>
@@ -90,6 +95,11 @@ onMounted(async () => {
         合计
         <strong data-testid="order-total" class="order-total">¥{{ fmt(detail.totalAmount) }}</strong>
       </footer>
+      <section v-if="detail.paymentStatus === 'PAID'" class="refund-box"><h3>申请退款</h3>
+        <el-input v-model="refundAmount" type="number" placeholder="退款金额" />
+        <el-input v-model="refundReason" maxlength="255" placeholder="退款原因" />
+        <button :disabled="!refundAmount || !refundReason.trim()" @click="submitRefund">提交退款申请</button>
+        <p v-if="refundMessage">{{refundMessage}}</p></section>
     </template>
     <p v-else class="loading-tip">{{ loadError || '订单加载中…' }}</p>
   </section>
@@ -225,6 +235,7 @@ onMounted(async () => {
   color: #aaa;
   text-align: center;
 }
+.refund-box{border-top:1px dashed #eee;padding-top:1rem;display:grid;gap:.6rem}.refund-box h3{margin:0}.refund-box button{border:0;border-radius:999px;padding:.5rem;background:var(--brand-gradient)}
 .detail-head {
   flex-wrap: wrap;
 }

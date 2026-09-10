@@ -20,3 +20,5 @@ export function removeItem(itemId) {
 export function clearCart() {
   return http.delete('/cart')
 }
+export function getDeliveryInfo(shopId) { return http.get(`/cart/delivery-info/${shopId}`) }
+export function saveDeliveryInfo(payload) { return http.patch('/cart/delivery-info', payload) }

@@ -9,6 +9,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import cn.edu.tju.takeout.user.User;
 import java.util.Optional;
+import cn.edu.tju.takeout.admin.AdminMapper;
+import cn.edu.tju.takeout.rider.RiderMapper;
 import org.springframework.http.HttpStatus;
 @Service
 public class AuthService {
@@ -18,18 +20,28 @@ public class AuthService {
     private final MerchantMapper merchantMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AdminMapper adminMapper;
+    private final RiderMapper riderMapper;
     public AuthService(UserMapper userMapper, PasswordEncoder passwordEncoder, JwtService jwtService) {
-        this(userMapper, null, passwordEncoder, jwtService);
+        this(userMapper, null, passwordEncoder, jwtService, null, null);
     }
 
-    @Autowired
     public AuthService(
             UserMapper userMapper, MerchantMapper merchantMapper,
             PasswordEncoder passwordEncoder, JwtService jwtService) {
+        this(userMapper, merchantMapper, passwordEncoder, jwtService, null, null);
+    }
+
+    @Autowired
+    public AuthService(UserMapper userMapper, MerchantMapper merchantMapper,
+            PasswordEncoder passwordEncoder, JwtService jwtService,
+            AdminMapper adminMapper, RiderMapper riderMapper) {
         this.userMapper = userMapper;
         this.merchantMapper = merchantMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.adminMapper = adminMapper;
+        this.riderMapper = riderMapper;
     }
 
     public LoginView login(LoginRequest request) {
@@ -99,6 +111,18 @@ public class AuthService {
                     "MERCHANT",
                     EXPIRES_IN_SECONDS
             );
+        }
+
+        if ("ADMIN".equals(role) && adminMapper != null) {
+            var admin = adminMapper.findByAccount(account).orElseThrow(this::invalidCredentials);
+            if (!passwordEncoder.matches(password, admin.getPasswordHash())) throw invalidCredentials();
+            return new LoginView(jwtService.issue(String.valueOf(admin.getId()), "ADMIN"), "ADMIN", EXPIRES_IN_SECONDS);
+        }
+
+        if ("RIDER".equals(role) && riderMapper != null) {
+            var rider = riderMapper.findByAccount(account).orElseThrow(this::invalidCredentials);
+            if (!passwordEncoder.matches(password, rider.getPasswordHash())) throw invalidCredentials();
+            return new LoginView(jwtService.issue(String.valueOf(rider.getId()), "RIDER"), "RIDER", EXPIRES_IN_SECONDS);
         }
 
         throw new BusinessException(

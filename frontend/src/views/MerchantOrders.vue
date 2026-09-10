@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { acceptOrder, completeOrder, listMerchantOrders } from '@/api/order'
+import { acceptOrder, completeOrder, listMerchantOrders, listMerchantRefunds, decideMerchantRefund } from '@/api/order'
 
 const STATUS_TEXT = {
   CREATED: '待接单',
@@ -12,6 +12,7 @@ const STATUS_TEXT = {
 
 const orders = ref([])
 const message = ref('')
+const refunds=ref([])
 
 function fmt(value) {
   return (Number(value) || 0).toFixed(2)
@@ -23,7 +24,7 @@ function statusText(status) {
 
 async function load() {
   try {
-    orders.value = (await listMerchantOrders()) || []
+    const [orderData,refundData]=await Promise.all([listMerchantOrders(),listMerchantRefunds()]);orders.value=orderData?.items||orderData||[];refunds.value=refundData||[]
   } catch (error) {
     message.value = error?.message || '加载订单失败'
   }
@@ -50,6 +51,7 @@ async function complete(order) {
 }
 
 onMounted(load)
+async function decideRefund(r,status){try{const x=await decideMerchantRefund(r.id,status);r.status=x.status}catch(e){message.value=e?.message||'退款处理失败'}}
 </script>
 
 <template>
@@ -87,6 +89,8 @@ onMounted(load)
         </li>
       </ul>
     <div v-else data-testid="order-mgmt-empty" class="orders-empty">暂无订单</div>
+    <h2>退款申请</h2><div v-if="!refunds.length" class="orders-empty">暂无退款申请</div>
+    <div v-for="r in refunds" :key="r.id" class="order-row"><span>订单 {{r.orderId}} · ¥{{fmt(r.amount)}} · {{r.reason}}</span><span>{{r.status}}</span><div v-if="r.status==='PENDING'"><button @click="decideRefund(r,'APPROVED')">批准</button><button @click="decideRefund(r,'REJECTED')">拒绝</button></div></div>
   </section>
 </template>
 

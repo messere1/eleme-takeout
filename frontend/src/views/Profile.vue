@@ -1,33 +1,42 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { getProfile, updateProfile } from '@/api/user'
+import { getProfile, updateProfile, deleteAccount } from '@/api/user'
+import { uploadImage } from '@/api/upload'
+import { session } from '@/utils/session'
+import { useRouter } from 'vue-router'
 
 const form = reactive({ nickname: '', phone: '', address: '' })
 const username = ref('')
 const message = ref('')
 const saving = ref(false)
 const avatar = ref('')
+const userId = ref(null)
+const router = useRouter()
 
-function onAvatarPick(event) {
+async function onAvatarPick(event) {
   const file = event.target.files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    avatar.value = String(reader.result)
-  }
-  reader.readAsDataURL(file)
+  try { const result = await uploadImage(file, 'USER_AVATAR', userId.value); avatar.value = result.url; message.value='头像已上传' }
+  catch (error) { message.value=error?.message||'头像上传失败' }
 }
 
 async function load() {
   try {
     const me = await getProfile()
     username.value = me.username || ''
+    userId.value = me.id
+    avatar.value = me.avatarUrl || ''
     form.nickname = me.nickname || ''
     form.phone = me.phone || ''
     form.address = me.address || ''
   } catch (error) {
     message.value = error?.message || '无法加载资料，请稍后重试'
   }
+}
+
+async function removeAccount(){
+  if(!window.confirm('确认注销账号？存在进行中订单时将无法注销。')) return
+  try{await deleteAccount();session.clear();router.push('/login')}catch(e){message.value=e?.message||'注销失败'}
 }
 
 async function save() {
@@ -110,6 +119,7 @@ onMounted(load)
     >
       {{ saving ? '保存中…' : '保存' }}
     </el-button>
+    <button class="delete-account" data-testid="profile-delete" @click="removeAccount">注销账号</button>
   </section>
 </template>
 
@@ -178,6 +188,7 @@ onMounted(load)
 .save-btn {
   align-self: flex-start;
 }
+.delete-account{align-self:flex-start;border:0;background:transparent;color:#c0392b;cursor:pointer}
 @media (max-width: 520px) {
   .profile-page {
     padding: 1rem;

@@ -12,3 +12,4 @@ export function updateProfile(payload) {
 export function listUsers(params = { page: 1, size: 20 }) {
   return http.get('/admin/users', { params })
 }
+export function deleteAccount() { return http.delete('/users/me') }

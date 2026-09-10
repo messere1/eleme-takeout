@@ -32,6 +32,19 @@ public class CartController {
         return ApiResponse.success(cartService.get(principal.userId()));
     }
 
+    @GetMapping("/delivery-info/{shopId}")
+    public ApiResponse<CartDeliveryInfo> getDeliveryInfo(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long shopId) {
+        return ApiResponse.success(cartService.getDeliveryInfo(principal.userId(), shopId));
+    }
+
+    @PatchMapping("/delivery-info")
+    public ApiResponse<CartDeliveryInfo> saveDeliveryInfo(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody CartDeliveryRequest request) {
+        return ApiResponse.success(cartService.saveDeliveryInfo(principal.userId(), request));
+    }
+
     @PatchMapping("/items/{itemId}")
     public ApiResponse<CartItemView> update(
             @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long itemId,

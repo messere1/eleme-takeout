@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { clearCart, getCart, removeItem, updateItem } from '@/api/cart'
+import { clearCart, getCart, removeItem, updateItem, saveDeliveryInfo } from '@/api/cart'
 import { createOrder } from '@/api/order'
 import { getProfile } from '@/api/user'
 
@@ -15,6 +15,7 @@ const checkoutAddress = ref('')
 const recipient = ref('')
 const contact = ref('')
 const drawerOpen = ref(false)
+const saveToProfile = ref(false)
 
 async function seedDefaultAddress() {
   try {
@@ -32,7 +33,9 @@ const total = computed(() =>
 )
 const empty = computed(() => items.value.length === 0)
 const hasUnavailable = computed(() => items.value.some((item) => !item.available))
-const canCheckout = computed(() => !empty.value && !hasUnavailable.value && !busy.value)
+const canCheckout = computed(() => !empty.value && !hasUnavailable.value && !busy.value
+  && recipient.value.trim() && /^[+0-9 -]{7,20}$/.test(contact.value.trim())
+  && checkoutAddress.value.trim().length >= 5)
 
 function fmt(value) {
   return (Number(value) || 0).toFixed(2)
@@ -99,8 +102,14 @@ async function checkout() {
   busy.value = true
   try {
     const order = await createOrder({
-      address: checkoutAddress.value.trim() || undefined,
+      shopId: items.value[0]?.shopId,
+      recipientName: recipient.value.trim(),
+      recipientPhone: contact.value.trim(),
+      deliveryAddress: checkoutAddress.value.trim(),
+      saveToProfile: saveToProfile.value,
     })
+    await saveDeliveryInfo({ shopId: items.value[0]?.shopId, recipientName: recipient.value.trim(),
+      recipientPhone: contact.value.trim(), deliveryAddress: checkoutAddress.value.trim(), saveToProfile: saveToProfile.value })
     router.push(`/orders/${order.id}`)
   } catch (error) {
     if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
@@ -219,6 +228,7 @@ onMounted(() => {
           <el-input v-model="contact" data-testid="cart-contact" placeholder="联系电话" maxlength="11" /></div>
         <div class="field"><label>收货地址</label>
           <el-input v-model="checkoutAddress" placeholder="收货地址" maxlength="255" /></div>
+        <label class="save-profile"><input v-model="saveToProfile" type="checkbox" /> 保存为个人默认地址</label>
         <div class="sheet-total">合计 <strong>¥{{ fmt(total) }}</strong></div>
         <button class="checkout-btn sheet-checkout" :disabled="!canCheckout" @click="checkout">提交订单</button>
       </div>

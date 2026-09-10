@@ -28,7 +28,7 @@ public interface CartMapper {
     void updateQuantity(CartItem item);
 
     @Select("""
-            SELECT ci.id, ci.product_id, p.name AS product_name, p.price,
+            SELECT ci.id, p.shop_id, ci.product_id, p.name AS product_name, p.price,
                    ci.quantity, p.stock, p.status
             FROM cart_items ci
             JOIN products p ON p.id = ci.product_id
@@ -55,4 +55,15 @@ public interface CartMapper {
             ORDER BY ci.id ASC
             """)
     List<CartCheckoutLine> findCheckoutLinesByUserId(Long userId);
+
+    @Select("SELECT * FROM cart_delivery_info WHERE user_id = #{userId} AND shop_id = #{shopId}")
+    Optional<CartDeliveryInfo> findDeliveryInfo(Long userId, Long shopId);
+
+    @Insert("""
+            INSERT INTO cart_delivery_info(user_id, shop_id, recipient_name, recipient_phone, delivery_address)
+            VALUES(#{userId}, #{shopId}, #{recipientName}, #{recipientPhone}, #{deliveryAddress})
+            ON CONFLICT (user_id, shop_id) DO UPDATE SET recipient_name = EXCLUDED.recipient_name,
+              recipient_phone = EXCLUDED.recipient_phone, delivery_address = EXCLUDED.delivery_address
+            """)
+    void upsertDeliveryInfo(CartDeliveryInfo info);
 }

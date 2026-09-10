@@ -3,19 +3,27 @@ package cn.edu.tju.takeout.cart;
 import cn.edu.tju.takeout.common.BusinessException;
 import cn.edu.tju.takeout.product.Product;
 import cn.edu.tju.takeout.product.ProductMapper;
+import cn.edu.tju.takeout.user.UserMapper;
 import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class CartService {
     private final CartMapper cartMapper;
     private final ProductMapper productMapper;
+    private final UserMapper userMapper;
     public CartService(CartMapper cartMapper, ProductMapper productMapper) {
+        this(cartMapper, productMapper, null);
+    }
+    @Autowired
+    public CartService(CartMapper cartMapper, ProductMapper productMapper, UserMapper userMapper) {
         this.cartMapper = cartMapper;
         this.productMapper = productMapper;
+        this.userMapper = userMapper;
     }
 
     @Transactional
@@ -181,6 +189,22 @@ public class CartService {
     @Transactional
     public void clear(Long userId) {
         cartMapper.deleteByUserId(userId);
+    }
+
+    public CartDeliveryInfo getDeliveryInfo(Long userId, Long shopId) {
+        return cartMapper.findDeliveryInfo(userId, shopId).orElse(null);
+    }
+
+    @Transactional
+    public CartDeliveryInfo saveDeliveryInfo(Long userId, CartDeliveryRequest request) {
+        CartDeliveryInfo info = CartDeliveryInfo.of(userId, request.shopId(),
+                request.recipientName().trim(), request.recipientPhone().trim(),
+                request.deliveryAddress().trim());
+        cartMapper.upsertDeliveryInfo(info);
+        if (Boolean.TRUE.equals(request.saveToProfile()) && userMapper != null) {
+            userMapper.updateAddress(userId, info.getDeliveryAddress());
+        }
+        return info;
     }
 
     private BusinessException notFound(

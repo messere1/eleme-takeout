@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 public record UserRegistrationRequest(
         @NotBlank(message = "用户名不能为空")
         @Size(min = 3, max = 30, message = "用户名长度必须为3到30个字符")
+        @Pattern(regexp = "^[^\\p{Cntrl}]+$", message = "用户名不能包含控制字符")
         String username,
         @NotBlank(message = "手机号不能为空")
         @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")

@@ -12,3 +12,6 @@ export function listMerchants(params = { page: 1, size: 20 }) {
 export function getMyMerchant() {
   return http.get('/merchants/me')
 }
+export function listBusinessCategories() { return http.get('/business-categories') }
+export function updateMyMerchant(payload) { return http.patch('/merchants/me', payload) }
+export function deleteMyMerchant() { return http.delete('/merchants/me') }
