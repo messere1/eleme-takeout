@@ -26,6 +26,24 @@ function fmt(value) {
   return (Number(value) || 0).toFixed(2)
 }
 
+const FOOD_EMOJI = ['🍜', '🍔', '🧋', '🍕', '🍣', '🥟', '🍗', '🍤', '🍰', '🥡']
+const FOOD_BG = ['#fff1e8', '#fff0f0', '#f4f1ff', '#eef8ff', '#fff7ed', '#fdeef7']
+
+function foodKey(name) {
+  let h = 0
+  const text = String(name || '')
+  for (let i = 0; i < text.length; i += 1) h = (h * 31 + text.charCodeAt(i)) >>> 0
+  return h
+}
+
+function foodEmoji(name) {
+  return FOOD_EMOJI[foodKey(name) % FOOD_EMOJI.length]
+}
+
+function foodBg(name) {
+  return FOOD_BG[foodKey(name) % FOOD_BG.length]
+}
+
 const productPage = ref(1)
 const productTotalPages = ref(1)
 
@@ -82,6 +100,7 @@ onMounted(async () => {
 
 <template>
   <section class="shop-page">
+    <button class="back-home" @click="router.push('/')">← 返回首页</button>
     <template v-if="shop">
       <header class="shop-head">
         <div>
@@ -117,6 +136,12 @@ onMounted(async () => {
               :data-testid="`product-card-${product.id}`"
               class="product-card"
             >
+              <img v-if="product.imageUrl" :src="product.imageUrl" class="dish-thumb" alt="菜品图" />
+              <div
+                v-else
+                class="dish-thumb"
+                :style="{ background: foodBg(product.name) }"
+              >{{ foodEmoji(product.name) }}</div>
               <div class="product-info">
                 <strong>{{ product.name }}</strong>
                 <span class="product-desc">{{ product.description }}</span>
@@ -328,11 +353,34 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0.6rem;
 }
+.back-home {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.9rem;
+}
+.back-home:hover {
+  color: #ff6a00;
+}
 .shop-head {
   flex-wrap: wrap;
 }
 .product-card {
   flex-wrap: wrap;
+}
+.dish-thumb {
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 10px;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
 }
 .product-card .add-btn {
   margin-left: auto;

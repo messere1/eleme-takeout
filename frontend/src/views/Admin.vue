@@ -3,34 +3,47 @@ import { onMounted, ref } from 'vue'
 import { listUsers } from '@/api/user'
 import { listMerchants } from '@/api/merchant'
 
-const tab = ref('users')
+const props = defineProps({ tab: { type: String, default: 'users' } })
+const tab = ref(props.tab || 'users')
 const users = ref([])
 const merchants = ref([])
 const error = ref('')
+const loading = ref(false)
+
+function describeError(err) {
+  if (err?.code === 'FORBIDDEN') return '无权限访问（403）'
+  if (err?.code === 'AUTH_INVALID' || err?.code === 'AUTH_EXPIRED') return '登录已失效，请重新登录'
+  return '服务器异常，请稍后重试'
+}
+
+async function run(loader) {
+  error.value = ''
+  loading.value = true
+  try {
+    await loader()
+  } catch (err) {
+    error.value = describeError(err)
+  } finally {
+    loading.value = false
+  }
+}
 
 async function loadUsers() {
-  try {
-    const data = await listUsers()
-    users.value = data?.items ?? []
-  } catch {
-    error.value = '管理接口暂不可用（后端待提供）'
-  }
+  const data = await listUsers()
+  users.value = data?.items ?? []
 }
 
 async function loadMerchants() {
-  try {
-    const data = await listMerchants()
-    merchants.value = data?.items ?? []
-  } catch {
-    error.value = '管理接口暂不可用（后端待提供）'
-  }
+  const data = await listMerchants()
+  merchants.value = data?.items ?? []
 }
 
-async function refresh() {
-  error.value = ''
-  if (tab.value === 'users') await loadUsers()
-  else await loadMerchants()
+function refresh() {
+  return run(tab.value === 'users' ? loadUsers : loadMerchants)
 }
+
+const isEmpty = () =>
+  !loading.value && !error.value && (tab.value === 'users' ? !users.value.length : !merchants.value.length)
 
 onMounted(refresh)
 </script>
@@ -43,7 +56,9 @@ onMounted(refresh)
       <button class="tab" :class="{ active: tab === 'users' }" @click="tab = 'users'; refresh()">用户</button>
       <button class="tab" :class="{ active: tab === 'merchants' }" @click="tab = 'merchants'; refresh()">商家</button>
     </nav>
-    <p v-if="error" class="admin-error">{{ error }}</p>
+    <p v-if="loading" data-testid="admin-loading" class="admin-tip">加载中…</p>
+    <p v-if="error" data-testid="admin-error" class="admin-error">{{ error }}</p>
+    <p v-if="isEmpty()" data-testid="admin-empty" class="admin-tip">暂无数据</p>
     <table v-if="tab === 'users' && users.length" class="admin-table">
       <thead><tr><th>ID</th><th>用户名</th><th>手机号</th><th>昵称</th></tr></thead>
       <tbody>

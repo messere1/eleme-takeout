@@ -99,7 +99,9 @@ async function checkout() {
   busy.value = true
   try {
     const order = await createOrder({
-      address: checkoutAddress.value.trim() || undefined,
+      recipientName: recipient.value.trim(),
+      recipientPhone: contact.value.trim(),
+      deliveryAddress: checkoutAddress.value.trim(),
     })
     router.push(`/orders/${order.id}`)
   } catch (error) {
@@ -166,6 +168,26 @@ onMounted(() => {
       </ul>
 
       <div class="address-row">
+        <label class="ctrl-label" for="cart-recipient-name">收货人</label>
+        <el-input
+          id="cart-recipient-name"
+          v-model="recipient"
+          data-testid="cart-recipient-name"
+          placeholder="收货人"
+          maxlength="30"
+        />
+      </div>
+      <div class="address-row">
+        <label class="ctrl-label" for="cart-recipient-phone">联系电话</label>
+        <el-input
+          id="cart-recipient-phone"
+          v-model="contact"
+          data-testid="cart-recipient-phone"
+          placeholder="联系电话"
+          maxlength="20"
+        />
+      </div>
+      <div class="address-row">
         <label class="ctrl-label" for="cart-address">收货地址</label>
         <el-input
           id="cart-address"
@@ -213,12 +235,6 @@ onMounted(() => {
             <strong>¥{{ fmt(item.subtotal) }}</strong>
           </li>
         </ul>
-        <div class="field"><label>收货人</label>
-          <el-input v-model="recipient" data-testid="cart-recipient" placeholder="收货人" maxlength="30" /></div>
-        <div class="field"><label>联系电话</label>
-          <el-input v-model="contact" data-testid="cart-contact" placeholder="联系电话" maxlength="11" /></div>
-        <div class="field"><label>收货地址</label>
-          <el-input v-model="checkoutAddress" placeholder="收货地址" maxlength="255" /></div>
         <div class="sheet-total">合计 <strong>¥{{ fmt(total) }}</strong></div>
         <button class="checkout-btn sheet-checkout" :disabled="!canCheckout" @click="checkout">提交订单</button>
       </div>

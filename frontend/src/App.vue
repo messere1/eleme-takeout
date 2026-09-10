@@ -50,7 +50,7 @@ onBeforeUnmount(() => window.removeEventListener('auth-change', refresh))
     <RouterLink to="/merchant/orders" class="tab"><span class="ico">📋</span><span>订单管理</span></RouterLink>
     <RouterLink to="/merchant/profile" class="tab"><span class="ico">👤</span><span>我的</span></RouterLink>
   </nav>
-  <nav v-else class="tabbar">
+  <nav v-else-if="role !== 'ADMIN'" class="tabbar">
     <RouterLink to="/" class="tab"><span class="ico">🏠</span><span>首页</span></RouterLink>
     <RouterLink to="/cart" class="tab"><span class="ico">🛒</span><span>购物车</span></RouterLink>
     <RouterLink to="/orders" class="tab"><span class="ico">📋</span><span>订单</span></RouterLink>

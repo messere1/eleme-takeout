@@ -54,6 +54,11 @@ onMounted(async () => {
         <h2 data-testid="order-no">{{ detail.orderNo }}</h2>
         <span data-testid="order-status" class="order-status">{{ detail.status }}</span>
       </header>
+      <RouterLink
+        v-if="detail.status === 'CREATED' || detail.status === 'PENDING'"
+        :to="`/orders/${detail.id}/pay`"
+        class="pay-link"
+      >去支付 →</RouterLink>
       <p class="order-time">{{ fmtTime(detail.createdAt) }}</p>
 
       <div class="shop-banner">

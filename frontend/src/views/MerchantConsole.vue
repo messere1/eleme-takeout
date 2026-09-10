@@ -363,6 +363,27 @@ onMounted(load)
 .console-head strong {
   font-size: 1.15rem;
 }
+.file-input {
+  display: none;
+}
+.cover-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.cover-preview,
+.cover-placeholder {
+  width: 8rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f3f5;
+  color: #999;
+  font-size: 0.85rem;
+}
 .status-pill {
   font-size: 0.85rem;
   background: #f2f3f5;

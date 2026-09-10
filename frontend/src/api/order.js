@@ -1,8 +1,8 @@
 // 订单接口（顾客下单/列表/详情，商家接单/完成，顾客取消）。契约 §8 与商家扩展动作。
 import { http } from './http'
 
-export function createOrder() {
-  return http.post('/orders')
+export function createOrder(payload) {
+  return http.post('/orders', payload)
 }
 
 export function listOrders(query) {

@@ -12,8 +12,8 @@ import MerchantConsole from '@/views/MerchantConsole.vue'
 import MerchantProducts from '@/views/MerchantProducts.vue'
 import MerchantOrders from '@/views/MerchantOrders.vue'
 import MerchantProfile from '@/views/MerchantProfile.vue'
-import Pay from '@/views/Pay.vue'
 import Admin from '@/views/Admin.vue'
+import Pay from '@/views/Pay.vue'
 import { session } from '@/utils/session'
 
 const routes = [
@@ -31,6 +31,8 @@ const routes = [
   { path: '/merchant/profile', name: 'merchant-profile', component: MerchantProfile },
   { path: '/orders/:id/pay', name: 'pay', component: Pay },
   { path: '/admin', name: 'admin', component: Admin },
+  { path: '/admin/users', name: 'admin-users', component: Admin, props: { tab: 'users' } },
+  { path: '/admin/merchants', name: 'admin-merchants', component: Admin, props: { tab: 'merchants' } },
 ]
 
 const router = createRouter({
