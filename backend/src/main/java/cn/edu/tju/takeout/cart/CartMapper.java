@@ -59,11 +59,8 @@ public interface CartMapper {
     @Select("SELECT * FROM cart_delivery_info WHERE user_id = #{userId} AND shop_id = #{shopId}")
     Optional<CartDeliveryInfo> findDeliveryInfo(Long userId, Long shopId);
 
-    @Insert("""
-            INSERT INTO cart_delivery_info(user_id, shop_id, recipient_name, recipient_phone, delivery_address)
-            VALUES(#{userId}, #{shopId}, #{recipientName}, #{recipientPhone}, #{deliveryAddress})
-            ON CONFLICT (user_id, shop_id) DO UPDATE SET recipient_name = EXCLUDED.recipient_name,
-              recipient_phone = EXCLUDED.recipient_phone, delivery_address = EXCLUDED.delivery_address
-            """)
-    void upsertDeliveryInfo(CartDeliveryInfo info);
+    @Insert("INSERT INTO cart_delivery_info(user_id,shop_id,recipient_name,recipient_phone,delivery_address) VALUES(#{userId},#{shopId},#{recipientName},#{recipientPhone},#{deliveryAddress})")
+    void insertDeliveryInfo(CartDeliveryInfo info);
+    @Update("UPDATE cart_delivery_info SET recipient_name=#{recipientName},recipient_phone=#{recipientPhone},delivery_address=#{deliveryAddress} WHERE user_id=#{userId} AND shop_id=#{shopId}")
+    int updateDeliveryInfo(CartDeliveryInfo info);
 }

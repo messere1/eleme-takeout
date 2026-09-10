@@ -200,7 +200,8 @@ public class CartService {
         CartDeliveryInfo info = CartDeliveryInfo.of(userId, request.shopId(),
                 request.recipientName().trim(), request.recipientPhone().trim(),
                 request.deliveryAddress().trim());
-        cartMapper.upsertDeliveryInfo(info);
+        if (cartMapper.findDeliveryInfo(userId, request.shopId()).isPresent()) cartMapper.updateDeliveryInfo(info);
+        else cartMapper.insertDeliveryInfo(info);
         if (Boolean.TRUE.equals(request.saveToProfile()) && userMapper != null) {
             userMapper.updateAddress(userId, info.getDeliveryAddress());
         }
