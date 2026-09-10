@@ -4,7 +4,7 @@
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/api/user', () => ({ getProfile: vi.fn(), updateProfile: vi.fn() }))
+vi.mock('@/api/user', () => ({ getProfile: vi.fn(), updateProfile: vi.fn(), deleteAccount: vi.fn() }))
 
 import { getProfile, updateProfile } from '@/api/user'
 import { mountView } from '@/test/mountView'

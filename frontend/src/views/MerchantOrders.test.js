@@ -8,6 +8,8 @@ vi.mock('@/api/order', () => ({
   listMerchantOrders: vi.fn(),
   acceptOrder: vi.fn(),
   completeOrder: vi.fn(),
+  listMerchantRefunds: vi.fn().mockResolvedValue([]),
+  decideMerchantRefund: vi.fn(),
 }))
 
 import { acceptOrder, completeOrder, listMerchantOrders } from '@/api/order'
