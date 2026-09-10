@@ -14,6 +14,7 @@ import MerchantOrders from '@/views/MerchantOrders.vue'
 import MerchantProfile from '@/views/MerchantProfile.vue'
 import Admin from '@/views/Admin.vue'
 import Pay from '@/views/Pay.vue'
+import Search from '@/views/Search.vue'
 import { session } from '@/utils/session'
 
 const routes = [
@@ -29,6 +30,7 @@ const routes = [
   { path: '/merchant/products', name: 'merchant-products', component: MerchantProducts },
   { path: '/merchant/orders', name: 'merchant-orders', component: MerchantOrders },
   { path: '/merchant/profile', name: 'merchant-profile', component: MerchantProfile },
+  { path: '/search', name: 'search', component: Search },
   { path: '/orders/:id/pay', name: 'pay', component: Pay },
   { path: '/admin', name: 'admin', component: Admin },
   { path: '/admin/users', name: 'admin-users', component: Admin, props: { tab: 'users' } },

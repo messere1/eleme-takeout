@@ -1,6 +1,13 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { listShops } from '@/api/shop'
+
+const router = useRouter()
+
+function goSearch() {
+  router.push('/search')
+}
 
 const EMOJI = ['🥞', '🌶️', '🧋', '🍣', '🍢', '🍞', '🍔', '🥡']
 const BG = ['#fff1e8', '#fff0f0', '#f4f1ff', '#eef8ff', '#fff7ed', '#fdeef7']
@@ -129,10 +136,18 @@ onUnmounted(() => window.removeEventListener('wheel', onWindowWheel))
       </div>
     </section>
 
-    <!-- 搜索框（吸顶） -->
-    <div ref="searchBox" class="search-box">
+    <!-- 搜索框（吸顶）：点击进入搜索页 -->
+    <div
+      ref="searchBox"
+      class="search-box"
+      data-testid="home-search-entry"
+      role="button"
+      tabindex="0"
+      @click="goSearch"
+      @keyup.enter="goSearch"
+    >
       <span class="search-icon">🔍</span>
-      <input class="search-input" type="search" placeholder="搜索想吃的美食" aria-label="搜索" />
+      <span class="search-placeholder">搜索想吃的美食</span>
     </div>
 
     <!-- 频道分类 + 附近店铺：搜索框触顶后作为一个整体滚动 -->
@@ -250,15 +265,9 @@ onUnmounted(() => window.removeEventListener('wheel', onWindowWheel))
   font-size: 1rem;
   line-height: 1;
 }
-.search-input {
+.search-placeholder {
   flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
   font-size: 0.95rem;
-  color: #333;
-}
-.search-input::placeholder {
   color: #bbb;
 }
 
