@@ -9,11 +9,16 @@ vi.mock('@/api/shop', () => ({
   listCategories: vi.fn(),
   listProducts: vi.fn(),
 }))
-vi.mock('@/api/cart', () => ({ addToCart: vi.fn() }))
+vi.mock('@/api/cart', () => ({ addToCart: vi.fn(), getCart: vi.fn(), saveDeliveryInfo: vi.fn() }))
+vi.mock('@/api/order', () => ({ createOrder: vi.fn() }))
+vi.mock('@/api/user', () => ({ getProfile: vi.fn() }))
 
-import { addToCart } from '@/api/cart'
+import { addToCart, getCart, saveDeliveryInfo } from '@/api/cart'
+import { createOrder } from '@/api/order'
 import { getShop, listCategories, listProducts } from '@/api/shop'
+import { getProfile } from '@/api/user'
 import { mountView } from '@/test/mountView'
+import { session } from '@/utils/session'
 import Shop from './Shop.vue'
 
 const SHOP = { id: 7, merchantId: 12, shopName: '北洋餐厅', notice: '欢迎光临', status: 'OPEN' }
@@ -43,6 +48,7 @@ async function mountShop(shop = SHOP) {
 describe('店铺页（顾客点单）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    session.clear()
   })
 
   it('展示店铺名称、公告与营业状态', async () => {
@@ -122,5 +128,33 @@ describe('店铺页（顾客点单）', () => {
 
     expect(wrapper.get('[data-testid="add-40"]').element.disabled).toBe(true)
     expect(addToCart).toHaveBeenCalledTimes(1)
+  })
+
+  it('店铺页购物车卷轴下单时携带店铺和收货快照并保存购物车收货信息', async () => {
+    session.save({ token: 'customer-token', role: 'CUSTOMER' })
+    addToCart.mockResolvedValue({ id: 50, productId: 40, quantity: 1 })
+    getCart.mockResolvedValue({
+      items: [{ id: 50, shopId: 7, productName: '煎饼果子', quantity: 1, subtotal: 8.5 }],
+      totalAmount: 8.5,
+    })
+    getProfile.mockResolvedValue({ username: '张三', phone: '13800138000', address: '天津大学北洋园校区' })
+    createOrder.mockResolvedValue({ id: 88 })
+    saveDeliveryInfo.mockResolvedValue({})
+
+    const { wrapper } = await mountShop()
+    await wrapper.get('[data-testid="add-40"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="shop-cart-bar"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="shop-checkout"]').trigger('click')
+    await flushPromises()
+
+    expect(saveDeliveryInfo).toHaveBeenCalledWith(expect.objectContaining({ shopId: 7 }))
+    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      shopId: 7,
+      recipientName: '张三',
+      recipientPhone: '13800138000',
+      deliveryAddress: '天津大学北洋园校区',
+    }))
   })
 })
