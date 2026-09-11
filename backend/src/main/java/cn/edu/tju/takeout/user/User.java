@@ -9,6 +9,9 @@ public class User {
     private String passwordHash;
     private String nickname;
     private String address;
+    private String avatarUrl;
+    private boolean enabled = true;
+    private LocalDateTime deletedAt;
     private LocalDateTime createdAt;
 
     public static User registered(String username, String phone, String passwordHash) {
@@ -29,6 +32,11 @@ public class User {
     public String getNickname() { return nickname; }
     public String getAddress() { return address; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getAvatarUrl() { return avatarUrl; }
+    public boolean isEnabled() { return enabled; }
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public void disable(LocalDateTime deletedAt) { this.enabled = false; this.deletedAt = deletedAt; }
     public void updateProfile(String nickname, String phone, String address) {
         this.nickname = nickname;
         this.phone = phone;

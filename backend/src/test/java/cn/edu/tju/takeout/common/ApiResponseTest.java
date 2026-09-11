@@ -69,6 +69,23 @@ class ApiResponseTest {
                 });
     }
 
+    @Test
+    void unexpectedExceptionReturnsSafeTraceableInternalError() throws Exception {
+        MockMvc mvc = MockMvcBuilders
+                .standaloneSetup(new FailingController())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        mvc.perform(get("/test/unexpected"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty())
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("jdbc:postgresql"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("C:\\secret"))));
+    }
+
     @RestController
     static class FailingController {
         @GetMapping("/test/failure")
@@ -89,6 +106,12 @@ class ApiResponseTest {
         @GetMapping("/test/conflict")
         String conflict() {
             throw new BusinessException(HttpStatus.CONFLICT, "BUSINESS_CONFLICT", "状态冲突");
+        }
+
+        @GetMapping("/test/unexpected")
+        String unexpected() {
+            throw new IllegalStateException(
+                    "jdbc:postgresql://db/orders at C:\\secret\\application.yml");
         }
     }
 }

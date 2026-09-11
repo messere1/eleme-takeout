@@ -97,4 +97,13 @@ public interface ProductMapper {
             ORDER BY category_id ASC, id ASC
             """)
     List<Product> findAllByShopId(Long shopId);
+
+    @Update("UPDATE products SET image_url = #{url} WHERE id = #{id} AND deleted = FALSE")
+    int updateImage(Long id, String url);
+
+    @Select("SELECT * FROM products WHERE deleted = FALSE ORDER BY id LIMIT #{limit} OFFSET #{offset}")
+    List<Product> findPageForAdmin(int limit, int offset);
+    @Select("SELECT COUNT(*) FROM products WHERE deleted = FALSE") long countForAdmin();
+    @Update("UPDATE products SET status = #{status} WHERE id = #{id} AND deleted = FALSE")
+    int setStatusForAdmin(Long id, String status);
 }

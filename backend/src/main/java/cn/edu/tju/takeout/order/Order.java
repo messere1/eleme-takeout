@@ -12,6 +12,13 @@ public class Order {
     private String status;
     private LocalDateTime createdAt;
     private String address;
+    private String recipientName;
+    private String recipientPhone;
+    private String deliveryAddress;
+    private String paymentStatus;
+    private LocalDateTime paymentDeadline;
+    private LocalDateTime paidAt;
+    private Long riderId;
 
     public static Order created(
             String orderNo, Long userId, Long shopId, BigDecimal totalAmount) {
@@ -22,6 +29,8 @@ public class Order {
         order.totalAmount = totalAmount;
         order.status = "CREATED";
         order.createdAt = LocalDateTime.now();
+        order.paymentStatus = "UNPAID";
+        order.paymentDeadline = order.createdAt.plusMinutes(15);
         return order;
     }
 
@@ -50,4 +59,17 @@ public class Order {
     public void changeStatus(String status) { this.status = status; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+    public String getRecipientName() { return recipientName; }
+    public String getRecipientPhone() { return recipientPhone; }
+    public String getDeliveryAddress() { return deliveryAddress; }
+    public String getPaymentStatus() { return paymentStatus; }
+    public LocalDateTime getPaymentDeadline() { return paymentDeadline; }
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public Long getRiderId() { return riderId; }
+    public void setRecipient(String name, String phone, String address) {
+        this.recipientName = name; this.recipientPhone = phone; this.deliveryAddress = address;
+        this.address = address;
+    }
+    public void markPaid(LocalDateTime paidAt) { this.paymentStatus = "PAID"; this.paidAt = paidAt; }
+    public void setRiderId(Long riderId) { this.riderId = riderId; }
 }

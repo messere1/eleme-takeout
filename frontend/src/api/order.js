@@ -36,3 +36,12 @@ export function confirmOrder(orderId) {
 export function payOrder(orderId) {
   return http.post(`/orders/${orderId}/pay`)
 }
+
+export function requestRefund(orderId, payload) { return http.post(`/orders/${orderId}/refunds`, payload) }
+export function listRefunds() { return http.get('/refunds') }
+export function listRiderAvailable() { return http.get('/rider/orders/available') }
+export function listRiderOrders() { return http.get('/rider/orders') }
+export function claimOrder(orderId) { return http.post(`/rider/orders/${orderId}/claim`) }
+export function deliverOrder(orderId) { return http.post(`/rider/orders/${orderId}/deliver`) }
+export function listMerchantRefunds(){return http.get('/merchant/refunds')}
+export function decideMerchantRefund(id,status){return http.patch(`/merchant/refunds/${id}`,{status})}

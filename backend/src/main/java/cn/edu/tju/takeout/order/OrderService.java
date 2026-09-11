@@ -16,6 +16,8 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.scheduling.annotation.Scheduled;
+import java.time.LocalDateTime;
 
 
 @Service
@@ -40,6 +42,15 @@ public class OrderService {
 
     @Transactional
     public OrderView create(Long userId, String address) {
+        User user = userMapper.findById(userId).orElse(null);
+        return create(userId, new CreateOrderRequest(null,
+                user != null ? user.getNickname() : "收货人",
+                user != null ? user.getPhone() : "0000000",
+                address != null ? address : (user != null ? user.getAddress() : "未填写地址"), false));
+    }
+
+    @Transactional
+    public OrderView create(Long userId, CreateOrderRequest request) {
         List<CartCheckoutLine> lines =
                 cartMapper
                         .findCheckoutLinesByUserId(
@@ -55,8 +66,12 @@ public class OrderService {
             );
         }
 
-        Long shopId =
-                lines.get(0).getShopId();
+        Long shopId = request.shopId() == null ? lines.get(0).getShopId() : request.shopId();
+        if (request.shopId() != null) {
+            final Long selectedShopId = shopId;
+            lines = lines.stream().filter(line -> selectedShopId.equals(line.getShopId())).toList();
+            if (lines.isEmpty()) throw businessConflict("所选店铺购物车为空");
+        }
 
         for (CartCheckoutLine line : lines) {
 
@@ -134,10 +149,6 @@ public class OrderService {
             }
         }
 
-        if (address == null || address.isBlank()) {
-            User buyer = userMapper.findById(userId).orElse(null);
-            address = buyer != null ? buyer.getAddress() : null;
-        }
         Order order =
                 Order.created(
                         generateOrderNo(),
@@ -145,7 +156,11 @@ public class OrderService {
                         shopId,
                         totalAmount
                 );
-        order.setAddress(address);
+        order.setRecipient(request.recipientName().trim(), request.recipientPhone().trim(),
+                request.deliveryAddress().trim());
+        if (Boolean.TRUE.equals(request.saveToProfile())) {
+            userMapper.updateAddress(userId, request.deliveryAddress().trim());
+        }
 
         orderMapper.insert(order);
 
@@ -163,7 +178,9 @@ public class OrderService {
             orderItems.add(item);
         }
 
-        cartMapper.deleteByUserId(userId);
+        if (request.shopId() == null) cartMapper.deleteByUserId(userId);
+        else for (CartCheckoutLine line : lines) cartMapper.findByUserAndProduct(userId, line.getProductId())
+                .ifPresent(item -> cartMapper.deleteByIdAndUserId(item.getId(), userId));
 
         return OrderView.from(
                 order,
@@ -391,11 +408,41 @@ public class OrderService {
         if (!order.getUserId().equals(userId)) {
             throw forbidden();
         }
-        if (orderMapper.transitionStatus(orderId, "ACCEPTED", "COMPLETED") == 0) {
-            throw businessConflict("订单状态不可确认完成");
+        if (orderMapper.transitionStatus(orderId, "ACCEPTED", "COMPLETED") == 0
+                && orderMapper.transitionStatus(orderId, "DELIVERED", "COMPLETED") == 0) {
+            throw businessConflict("订单状态不可确认收货");
         }
         Order updated = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
         return OrderView.from(updated, orderMapper.findItemsByOrderId(orderId));
+    }
+
+    @Transactional
+    public OrderView pay(Long userId, Long orderId) {
+        Order order = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+        if (!order.getUserId().equals(userId)) throw forbidden();
+        if ("PAID".equals(order.getPaymentStatus())) {
+            return OrderView.from(order, orderMapper.findItemsByOrderId(orderId));
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (orderMapper.markPaid(orderId, userId, now) == 0) {
+            cancelExpiredOrders();
+            throw businessConflict("订单已超时或当前状态不可支付");
+        }
+        Order updated = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
+        return OrderView.from(updated, orderMapper.findItemsByOrderId(orderId));
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    @Transactional
+    public void cancelExpiredOrders() {
+        LocalDateTime now = LocalDateTime.now();
+        for (Order order : orderMapper.findExpiredUnpaid(now)) {
+            if (orderMapper.cancelExpired(order.getId(), now) == 1) {
+                for (OrderItem item : orderMapper.findItemsByOrderId(order.getId())) {
+                    productMapper.increaseStock(item.getProductId(), item.getQuantity());
+                }
+            }
+        }
     }
 
     private String generateOrderNo() {

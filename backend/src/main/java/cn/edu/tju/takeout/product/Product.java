@@ -12,6 +12,7 @@ public class Product {
     private Integer stock;
     private String status;
     private boolean deleted;
+    private String imageUrl;
 
     public static Product of(
             Long id, Long shopId, Long categoryId, String name, String description,
@@ -38,6 +39,8 @@ public class Product {
     public Integer getStock() { return stock; }
     public String getStatus() { return status; }
     public boolean isDeleted() { return deleted; }
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     public void update(ProductRequest request) {
         categoryId = request.categoryId();

@@ -99,4 +99,43 @@ describe('http 适配层', () => {
     })
     expect(router.push).not.toHaveBeenCalled()
   })
+
+  it.each([
+    [403, 'FORBIDDEN'],
+    [404, 'RESOURCE_NOT_FOUND'],
+    [409, 'BUSINESS_CONFLICT'],
+    [500, 'INTERNAL_ERROR'],
+  ])('保留 HTTP %i 失败响应的业务码和 traceId', async (status, code) => {
+    respond(status, {
+      code,
+      msg: '可理解的错误提示',
+      data: null,
+      traceId: `trace-${status}`,
+    })
+
+    await expect(http.get('/protected')).rejects.toMatchObject({
+      code,
+      httpStatus: status,
+      traceId: `trace-${status}`,
+      message: '可理解的错误提示',
+    })
+  })
+
+  it('公开注册请求不携带残留令牌', async () => {
+    session.save({ token: 'stale-token', role: 'CUSTOMER' })
+    let sent
+    http.defaults.adapter = async (config) => {
+      sent = config
+      return {
+        data: { code: 0, msg: 'success', data: {}, traceId: 'x' },
+        status: 201,
+        statusText: 'Created',
+        headers: {},
+        config,
+      }
+    }
+
+    await http.post('/users', {})
+    expect(sent.headers?.Authorization).toBeUndefined()
+  })
 })

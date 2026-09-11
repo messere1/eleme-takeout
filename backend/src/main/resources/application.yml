@@ -9,3 +9,7 @@ spring:
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
+
+takeout:
+  upload-dir: ${UPLOAD_DIR:uploads}
+  order-timeout-minutes: 15

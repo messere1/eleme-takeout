@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public class CartLine {
     private Long id;
     private Long productId;
+    private Long shopId;
     private String productName;
     private BigDecimal price;
     private Integer quantity;
@@ -28,6 +29,8 @@ public class CartLine {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getProductId() { return productId; }
+    public Long getShopId() { return shopId; }
+    public void setShopId(Long shopId) { this.shopId = shopId; }
     public void setProductId(Long productId) { this.productId = productId; }
     public String getProductName() { return productName; }
     public void setProductName(String productName) { this.productName = productName; }

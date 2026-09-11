@@ -12,8 +12,10 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface OrderMapper {
     @Insert("""
-            INSERT INTO orders(order_no, user_id, shop_id, total_amount, status, address, created_at)
-            VALUES(#{orderNo}, #{userId}, #{shopId}, #{totalAmount}, #{status}, #{address}, #{createdAt})
+            INSERT INTO orders(order_no, user_id, shop_id, total_amount, status, address,
+              recipient_name, recipient_phone, delivery_address, payment_status, payment_deadline, paid_at, rider_id, created_at)
+            VALUES(#{orderNo}, #{userId}, #{shopId}, #{totalAmount}, #{status}, #{address},
+              #{recipientName}, #{recipientPhone}, #{deliveryAddress}, #{paymentStatus}, #{paymentDeadline}, #{paidAt}, #{riderId}, #{createdAt})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Order order);
@@ -93,4 +95,42 @@ public interface OrderMapper {
             WHERE id = #{id} AND status = #{from}
             """)
     int transitionStatus(Long id, String from, String to);
+
+    @Update("""
+            UPDATE orders SET payment_status = 'PAID', paid_at = #{paidAt}
+            WHERE id = #{id} AND user_id = #{userId} AND status = 'CREATED'
+              AND payment_status = 'UNPAID' AND payment_deadline > #{paidAt}
+            """)
+    int markPaid(Long id, Long userId, LocalDateTime paidAt);
+
+    @Select("SELECT * FROM orders WHERE status = 'CREATED' AND payment_status = 'UNPAID' AND payment_deadline <= #{now}")
+    List<Order> findExpiredUnpaid(LocalDateTime now);
+
+    @Update("""
+            UPDATE orders SET status = 'CANCELLED'
+            WHERE id = #{id} AND status = 'CREATED' AND payment_status = 'UNPAID' AND payment_deadline <= #{now}
+            """)
+    int cancelExpired(Long id, LocalDateTime now);
+
+    @Update("""
+            UPDATE orders SET rider_id = #{riderId}, status = 'DELIVERING'
+            WHERE id = #{orderId} AND status = 'ACCEPTED' AND rider_id IS NULL
+            """)
+    int claimForDelivery(Long orderId, Long riderId);
+
+    @Select("SELECT * FROM orders WHERE status = 'ACCEPTED' AND rider_id IS NULL ORDER BY created_at ASC, id ASC")
+    List<Order> findReadyForDelivery();
+
+    @Select("SELECT * FROM orders WHERE rider_id = #{riderId} ORDER BY created_at DESC, id DESC")
+    List<Order> findByRiderId(Long riderId);
+
+    @Update("UPDATE orders SET status = 'DELIVERED' WHERE id = #{orderId} AND rider_id = #{riderId} AND status = 'DELIVERING'")
+    int markDelivered(Long orderId, Long riderId);
+
+    @Select("SELECT * FROM orders ORDER BY created_at DESC, id DESC LIMIT #{limit} OFFSET #{offset}")
+    List<Order> findPageForAdmin(int limit, int offset);
+    @Select("SELECT COUNT(*) FROM orders") long countAll();
+    @Update("UPDATE orders SET status = #{status} WHERE id = #{id}") int setStatusForAdmin(Long id, String status);
+    @Select("SELECT COUNT(*) FROM orders WHERE user_id=#{userId} AND status NOT IN ('COMPLETED','CANCELLED')")
+    long countActiveByUser(Long userId);
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getOrder, payOrder } from '@/api/order'
 
@@ -10,6 +10,10 @@ const orderId = Number(route.params.id)
 const order = ref(null)
 const message = ref('')
 const paying = ref(false)
+const now = ref(Date.now())
+let timer
+const remaining = computed(()=>Math.max(0,Math.floor((new Date(order.value?.paymentDeadline||0).getTime()-now.value)/1000)))
+const countdown = computed(()=>`${String(Math.floor(remaining.value/60)).padStart(2,'0')}:${String(remaining.value%60).padStart(2,'0')}`)
 
 function fmt(value) {
   return (Number(value) || 0).toFixed(2)
@@ -18,10 +22,12 @@ function fmt(value) {
 onMounted(async () => {
   try {
     order.value = await getOrder(orderId)
+    timer=setInterval(()=>{now.value=Date.now();if(remaining.value===0){clearInterval(timer);order.value.status='CANCELLED'}},1000)
   } catch (error) {
     message.value = '无法加载订单：' + (error?.message || '请稍后重试')
   }
 })
+onBeforeUnmount(()=>clearInterval(timer))
 
 async function pay() {
   if (paying.value) return
@@ -50,9 +56,9 @@ async function pay() {
           <span>应付金额</span>
           <strong>¥{{ fmt(order.totalAmount) }}</strong>
         </div>
-        <p class="tip">请在下单后 15 分钟内完成支付，超时订单将自动取消</p>
+        <p class="tip">请在 {{ countdown }} 内完成支付，超时订单将自动取消并回补库存</p>
       </div>
-      <button class="pay-btn" :disabled="paying" data-testid="pay-submit" @click="pay">
+      <button class="pay-btn" :disabled="paying || remaining === 0 || order.status === 'CANCELLED'" data-testid="pay-submit" @click="pay">
         {{ paying ? '支付中…' : '立即支付' }}
       </button>
     </template>

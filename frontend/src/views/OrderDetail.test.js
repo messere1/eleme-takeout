@@ -4,7 +4,7 @@
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/api/order', () => ({ getOrder: vi.fn(), listOrders: vi.fn(), createOrder: vi.fn() }))
+vi.mock('@/api/order', () => ({ getOrder: vi.fn(), listOrders: vi.fn(), createOrder: vi.fn(), requestRefund: vi.fn() }))
 
 import { getOrder } from '@/api/order'
 import { mountView } from '@/test/mountView'

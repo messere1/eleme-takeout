@@ -15,6 +15,8 @@ import { http } from './http'
 import * as cartApi from './cart'
 import * as orderApi from './order'
 import * as shopApi from './shop'
+import * as userApi from './user'
+import * as merchantApi from './merchant'
 
 describe('SRS V1.4 前端接口契约（文件名保留以兼容历史链接）', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -75,5 +77,17 @@ describe('SRS V1.4 前端接口契约（文件名保留以兼容历史链接）'
     expect(http.post).toHaveBeenNthCalledWith(1, '/orders/60/accept')
     expect(http.post).toHaveBeenNthCalledWith(2, '/orders/60/complete')
     expect(http.post).toHaveBeenNthCalledWith(3, '/orders/60/confirm')
+  })
+
+  it('管理员账号清单使用只读接口和默认20条分页', async () => {
+    await userApi.listUsers()
+    await merchantApi.listMerchants()
+
+    expect(http.get).toHaveBeenNthCalledWith(1, '/admin/users', {
+      params: { page: 1, size: 20 },
+    })
+    expect(http.get).toHaveBeenNthCalledWith(2, '/admin/merchants', {
+      params: { page: 1, size: 20 },
+    })
   })
 })

@@ -1,8 +1,8 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { login as apiLogin, register as apiRegister } from '@/api/auth'
-import { registerMerchant } from '@/api/merchant'
+import { registerMerchant, listBusinessCategories } from '@/api/merchant'
 import { session } from '@/utils/session'
 
 const router = useRouter()
@@ -17,7 +17,9 @@ const form = reactive({
   phone: '',
   password: '',
   businessScope: '',
+  shopAddress: '',
 })
+const businessCategories = ref([])
 const errorMessage = ref('')
 const submitting = ref(false)
 
@@ -31,6 +33,7 @@ function invalidMessage() {
     const name = form.merchantName.trim()
     if (!name || name.length > 50) return '请输入商家名称（最多 50 字）'
     if (!form.businessScope.trim()) return '请输入经营范围'
+    if (form.shopAddress.trim().length < 5) return '请输入完整店铺地址'
   }
   return ''
 }
@@ -62,6 +65,7 @@ async function submit() {
         phone,
         password,
         businessScope: form.businessScope.trim(),
+        shopAddress: form.shopAddress.trim(),
       })
       session.saveShop({
         merchantId: data.id,
@@ -79,6 +83,11 @@ async function submit() {
     submitting.value = false
   }
 }
+
+onMounted(async () => {
+  try { businessCategories.value = await listBusinessCategories() }
+  catch { businessCategories.value = ['中式快餐','西式简餐','奶茶甜品','烧烤夜宵','日韩料理','地方菜系'].map(name => ({ name })) }
+})
 </script>
 
 <template>
@@ -168,13 +177,13 @@ async function submit() {
             maxlength="100"
           />
           <datalist id="merchant-scope-list">
-            <option value="中式快餐"></option>
-            <option value="西式简餐"></option>
-            <option value="奶茶甜品"></option>
-            <option value="烧烤夜宵"></option>
-            <option value="日韩料理"></option>
-            <option value="地方菜系"></option>
+            <option v-for="item in businessCategories" :key="item.id || item.name" :value="item.name"></option>
           </datalist>
+        </div>
+        <div class="field">
+          <label for="register-shop-address">店铺地址</label>
+          <el-input id="register-shop-address" v-model="form.shopAddress" data-testid="register-shop-address"
+            class="auth-input" placeholder="请输入完整店铺地址" maxlength="255" />
         </div>
       </template>
 

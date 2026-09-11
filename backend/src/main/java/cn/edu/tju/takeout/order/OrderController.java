@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -23,9 +24,11 @@ public class OrderController {
     @PostMapping
     public ApiResponse<OrderView> create(
             @AuthenticationPrincipal UserPrincipal principal,
-            @RequestBody(required = false) CreateOrderRequest request) {
-        String address = request == null ? null : request.address();
-        return ApiResponse.success(orderService.create(principal.userId(), address));
+            @Valid @RequestBody CreateOrderRequest request) {
+        if (request.shopId() == null && "收货人".equals(request.recipientName())) {
+            return ApiResponse.success(orderService.create(principal.userId(), request.deliveryAddress()));
+        }
+        return ApiResponse.success(orderService.create(principal.userId(), request));
     }
 
     @GetMapping
@@ -71,5 +74,11 @@ public class OrderController {
     public ApiResponse<OrderView> confirm(
             @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
         return ApiResponse.success(orderService.confirmReceived(principal.userId(), orderId));
+    }
+
+    @PostMapping("/{orderId}/pay")
+    public ApiResponse<OrderView> pay(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
+        return ApiResponse.success(orderService.pay(principal.userId(), orderId));
     }
 }

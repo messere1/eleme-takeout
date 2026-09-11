@@ -51,23 +51,30 @@ public class SecurityConfig {
                                 "/api/v1/auth/login", "/api/v1/users", "/api/v1/merchants")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/shops/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/business-categories", "/uploads/**").permitAll()
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/categories/*/products",
                                 "/api/v1/products/*"
                         ).permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/rider/**").hasRole("RIDER")
                         .requestMatchers("/api/v1/cart/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/v1/users/me").hasRole("CUSTOMER")
+                        .requestMatchers("/api/v1/refunds").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders/*")
                         .hasAnyRole("CUSTOMER", "MERCHANT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders")
                         .hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/orders/*/pay", "/api/v1/orders/*/refunds")
+                        .hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders/*/cancel",
                                 "/api/v1/orders/*/confirm")
                         .hasRole("CUSTOMER")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/merchant/orders",
-                                "/api/v1/merchants/me")
+                        .requestMatchers("/api/v1/merchants/me")
+                        .hasRole("MERCHANT")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/merchant/orders")
                         .hasRole("MERCHANT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders/*/accept",
                                 "/api/v1/orders/*/complete")
@@ -81,6 +88,7 @@ public class SecurityConfig {
                         .hasRole("MERCHANT")
                         .requestMatchers("/api/v1/merchant/**")
                         .hasRole("MERCHANT")
+                        .requestMatchers("/api/v1/images/**").hasAnyRole("CUSTOMER", "MERCHANT", "ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

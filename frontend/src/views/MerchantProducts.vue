@@ -10,6 +10,7 @@ import {
   updateProductPrice,
   updateProductStock,
 } from '@/api/shop'
+import { uploadImage } from '@/api/upload'
 import { session } from '@/utils/session'
 
 const stored = session.loadShop()
@@ -28,14 +29,11 @@ const message = ref('')
 const creating = ref(false)
 const imgSrc = reactive({})
 
-function handleImg(productId, event) {
+async function handleImg(productId, event) {
   const file = event.target.files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    imgSrc[productId] = String(reader.result)
-  }
-  reader.readAsDataURL(file)
+  try { const result=await uploadImage(file,'PRODUCT_IMAGE',productId);imgSrc[productId]=result.url;message.value='图片已上传' }
+  catch(error){message.value=error?.message||'图片上传失败'}
 }
 const productPage = ref(1)
 const productTotalPages = ref(1)

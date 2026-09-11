@@ -26,9 +26,10 @@ class RequestDtoBoundaryTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Test
-    void loginRejectsBlankCredentialsAndUnknownRole() {
-        assertThat(invalidFields(new LoginRequest("", "", "ADMIN")))
+    void loginAcceptsEveryBaselineRoleAndRejectsBlankCredentialsAndUnknownRole() {
+        assertThat(invalidFields(new LoginRequest("", "", "UNKNOWN")))
                 .containsExactlyInAnyOrder("account", "password", "role");
+        assertThat(invalidFields(new LoginRequest("admin01", "Secret123", "ADMIN"))).isEmpty();
     }
 
     @Test
@@ -61,6 +62,13 @@ class RequestDtoBoundaryTest {
     void merchantRegistrationRejectsEveryMalformedField() {
         assertThat(invalidFields(new MerchantRegistrationRequest("", "123", "plain", "")))
                 .containsExactlyInAnyOrder("merchantName", "phone", "password", "businessScope");
+    }
+
+    @Test
+    void customerRegistrationRejectsControlCharactersInIdentityFields() {
+        assertThat(invalidFields(new UserRegistrationRequest(
+                "user\n001", "13800138000", "Secret123")))
+                .contains("username");
     }
 
     @Test

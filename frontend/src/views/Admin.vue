@@ -2,75 +2,43 @@
 import { onMounted, ref } from 'vue'
 import { listUsers } from '@/api/user'
 import { listMerchants } from '@/api/merchant'
+import { listAdminProducts, listAdminOrders, setAdminStatus, listAdminRefunds, decideRefund } from '@/api/admin'
 
-const props = defineProps({ tab: { type: String, default: 'users' } })
-const tab = ref(props.tab || 'users')
-const users = ref([])
-const merchants = ref([])
-const error = ref('')
-const loading = ref(false)
-
-function describeError(err) {
-  if (err?.code === 'FORBIDDEN') return '无权限访问（403）'
-  if (err?.code === 'AUTH_INVALID' || err?.code === 'AUTH_EXPIRED') return '登录已失效，请重新登录'
-  return '服务器异常，请稍后重试'
-}
-
-async function run(loader) {
-  error.value = ''
-  loading.value = true
-  try {
-    await loader()
-  } catch (err) {
-    error.value = describeError(err)
-  } finally {
-    loading.value = false
-  }
-}
-
-async function loadUsers() {
-  const data = await listUsers()
-  users.value = data?.items ?? []
-}
-
-async function loadMerchants() {
-  const data = await listMerchants()
-  merchants.value = data?.items ?? []
-}
-
-function refresh() {
-  return run(tab.value === 'users' ? loadUsers : loadMerchants)
-}
-
-const isEmpty = () =>
-  !loading.value && !error.value && (tab.value === 'users' ? !users.value.length : !merchants.value.length)
-
+const props = defineProps({ initialTab: { type: String, default: 'users' } })
+const tab=ref(props.initialTab),rows=ref([]),error=ref(''),loading=ref(false)
+const loaders={users:listUsers,merchants:listMerchants,products:listAdminProducts,orders:listAdminOrders,refunds:listAdminRefunds}
+const mask=v=>!v?'':v.length>=7?`${v.slice(0,3)}****${v.slice(-4)}`:'***'
+async function refresh(){error.value='';loading.value=true;try{const data=await loaders[tab.value]();rows.value=Array.isArray(data)?data:data?.items??[]}catch(e){error.value=e?.message||'管理数据加载失败';rows.value=[]}finally{loading.value=false}}
+async function toggle(row,type){try{await setAdminStatus(type,row.id,row.enabled===false?'ENABLED':'DISABLED');row.enabled=!row.enabled}catch(e){error.value=e?.message||'操作失败'}}
+async function decide(row,status){try{const r=await decideRefund(row.id,status);row.status=r.status}catch(e){error.value=e?.message||'处理失败'}}
 onMounted(refresh)
 </script>
 
 <template>
   <section class="admin">
     <h2>系统管理</h2>
-    <p class="admin-tip">独立管理页，无顾客/商家入口（ROLE_ADMIN，后端待接入）</p>
+    <p class="admin-tip">管理员独立工作区 · 写操作记录审计日志</p>
     <nav class="tabs">
-      <button class="tab" :class="{ active: tab === 'users' }" @click="tab = 'users'; refresh()">用户</button>
-      <button class="tab" :class="{ active: tab === 'merchants' }" @click="tab = 'merchants'; refresh()">商家</button>
+      <button v-for="item in [{k:'users',t:'用户'},{k:'merchants',t:'商家'},{k:'products',t:'商品'},{k:'orders',t:'订单'},{k:'refunds',t:'退款'}]" :key="item.k" class="tab" :class="{active:tab===item.k}" @click="tab=item.k;refresh()">{{item.t}}</button>
     </nav>
-    <p v-if="loading" data-testid="admin-loading" class="admin-tip">加载中…</p>
+    <p v-if="loading" data-testid="admin-loading">加载中…</p>
     <p v-if="error" data-testid="admin-error" class="admin-error">{{ error }}</p>
-    <p v-if="isEmpty()" data-testid="admin-empty" class="admin-tip">暂无数据</p>
-    <table v-if="tab === 'users' && users.length" class="admin-table">
+    <p v-if="!loading&&!error&&!rows.length" data-testid="admin-empty">暂无数据</p>
+    <table v-if="tab === 'users' && rows.length" class="admin-table">
       <thead><tr><th>ID</th><th>用户名</th><th>手机号</th><th>昵称</th></tr></thead>
       <tbody>
-        <tr v-for="u in users" :key="u.id"><td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.phone }}</td><td>{{ u.nickname }}</td></tr>
+        <tr v-for="u in rows" :key="u.id"><td>{{u.id}}</td><td>{{u.username}}</td><td>{{mask(u.phone)}}</td><td>{{u.nickname}}</td><td><button @click="toggle(u,'users')">{{u.enabled===false?'启用':'禁用'}}</button></td></tr>
       </tbody>
     </table>
-    <table v-else-if="tab === 'merchants' && merchants.length" class="admin-table">
+    <table v-else-if="tab === 'merchants' && rows.length" class="admin-table">
       <thead><tr><th>ID</th><th>商家名称</th><th>手机号</th><th>经营范围</th></tr></thead>
       <tbody>
-        <tr v-for="m in merchants" :key="m.id"><td>{{ m.id }}</td><td>{{ m.merchantName }}</td><td>{{ m.phone }}</td><td>{{ m.businessScope }}</td></tr>
+        <tr v-for="m in rows" :key="m.id"><td>{{m.id}}</td><td>{{m.merchantName}}</td><td>{{mask(m.phone)}}</td><td>{{m.businessScope}}</td><td><button @click="toggle(m,'merchants')">{{m.enabled===false?'启用':'禁用'}}</button></td></tr>
       </tbody>
     </table>
+    <table v-else-if="tab==='products'&&rows.length" class="admin-table"><tbody><tr v-for="p in rows" :key="p.id"><td>{{p.id}}</td><td>{{p.name}}</td><td>{{p.status}}</td><td><button @click="setAdminStatus('products',p.id,p.status==='ON_SALE'?'OFF_SALE':'ON_SALE').then(refresh)">切换上下架</button></td></tr></tbody></table>
+    <table v-else-if="tab==='orders'&&rows.length" class="admin-table"><tbody><tr v-for="o in rows" :key="o.id"><td>{{o.orderNo}}</td><td>{{o.status}}</td><td>{{o.paymentStatus}}</td></tr></tbody></table>
+    <table v-else-if="tab==='refunds'&&rows.length" class="admin-table"><tbody><tr v-for="r in rows" :key="r.id"><td>{{r.orderId}}</td><td>{{r.amount}}</td><td>{{r.reason}}</td><td>{{r.status}}</td><td><button v-if="r.status==='PENDING'" @click="decide(r,'APPROVED')">批准</button><button v-if="r.status==='PENDING'" @click="decide(r,'REJECTED')">拒绝</button></td></tr></tbody></table>
   </section>
 </template>
 

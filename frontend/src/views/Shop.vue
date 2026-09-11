@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getShop, listCategories, listProducts } from '@/api/shop'
-import { addToCart, getCart } from '@/api/cart'
+import { addToCart, getCart, saveDeliveryInfo } from '@/api/cart'
 import { createOrder } from '@/api/order'
 import { getProfile } from '@/api/user'
 import { session } from '@/utils/session'
@@ -98,11 +98,15 @@ async function submitFromSheet() {
   ordering.value = true
   message.value = ''
   try {
-    const order = await createOrder({
+    const delivery = {
+      shopId: Number(route.params.id),
       recipientName: recipient.value.trim(),
       recipientPhone: contact.value.trim(),
       deliveryAddress: deliveryAddress.value.trim(),
-    })
+      saveToProfile: false,
+    }
+    await saveDeliveryInfo(delivery)
+    const order = await createOrder(delivery)
     sheetOpen.value = false
     router.push(`/orders/${order.id}`)
   } catch (error) {
@@ -252,7 +256,7 @@ onMounted(async () => {
     <p v-else class="loading-tip">{{ loadError || '店铺加载中…' }}</p>
 
     <!-- 点单页底部购物车 -->
-    <div v-if="isCustomer && cartItems.length" class="shop-cart-bar" @click="openSheet">
+    <div v-if="isCustomer && cartItems.length" data-testid="shop-cart-bar" class="shop-cart-bar" @click="openSheet">
       <span class="cart-summary">🛒 共 {{ cartCount() }} 件</span>
       <strong>合计 ¥{{ fmt(cartTotal) }}</strong>
       <span class="cart-go">{{ sheetOpen ? '收起 ▲' : '去结算' }}</span>
@@ -282,7 +286,7 @@ onMounted(async () => {
         <el-input v-model="deliveryAddress" placeholder="收货地址" maxlength="255" />
       </div>
       <div class="sheet-total">合计 <strong>¥{{ fmt(cartTotal) }}</strong></div>
-      <button class="checkout-btn" :disabled="ordering" @click="submitFromSheet">
+      <button data-testid="shop-checkout" class="checkout-btn" :disabled="ordering" @click="submitFromSheet">
         {{ ordering ? '提交中…' : '提交订单' }}
       </button>
     </div>

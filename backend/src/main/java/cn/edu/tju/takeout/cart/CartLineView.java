@@ -3,7 +3,7 @@ package cn.edu.tju.takeout.cart;
 import java.math.BigDecimal;
 
 public record CartLineView(
-        Long id, Long productId, String productName, BigDecimal price, Integer quantity,
+        Long id, Long shopId, Long productId, String productName, BigDecimal price, Integer quantity,
         BigDecimal subtotal, boolean available, String unavailableReason) {
 
     public static CartLineView from(CartLine line) {
@@ -15,7 +15,7 @@ public record CartLineView(
         }
         BigDecimal subtotal = line.getPrice().multiply(BigDecimal.valueOf(line.getQuantity()));
         return new CartLineView(
-                line.getId(), line.getProductId(), line.getProductName(), line.getPrice(),
+                line.getId(), line.getShopId(), line.getProductId(), line.getProductName(), line.getPrice(),
                 line.getQuantity(), subtotal, reason == null, reason);
     }
 }
