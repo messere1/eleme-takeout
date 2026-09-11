@@ -8,6 +8,7 @@ vi.mock('@/api/admin', () => ({ listAdminProducts: vi.fn(), listAdminOrders: vi.
 
 import { listUsers } from '@/api/user'
 import { listMerchants } from '@/api/merchant'
+import { listAdminOrders, setAdminStatus } from '@/api/admin'
 import { mountView } from '@/test/mountView'
 import Admin from './Admin.vue'
 
@@ -71,5 +72,42 @@ describe('管理员只读账号清单', () => {
       { id: 7, username: 'alice', phone: '13800138000', nickname: 'Alice' },
     ])
     expect(wrapper.text()).not.toContain('13800138000')
+  })
+
+  it('管理员可把订单状态改为配送中', async () => {
+    listAdminOrders.mockResolvedValue({
+      items: [{ id: 9, orderNo: 'NO-9', status: 'CREATED', paymentStatus: 'UNPAID' }],
+    })
+    setAdminStatus.mockResolvedValue(null)
+    const { wrapper } = await mountAdmin()
+
+    await wrapper.findAll('button')[3].trigger('click') // 订单页签
+    await flushPromises()
+    expect(wrapper.get('[data-testid="admin-order-status-9"]').text()).toContain('待处理')
+
+    await wrapper.get('select').setValue('DELIVERING')
+    await wrapper.get('[data-testid="admin-order-set-9"]').trigger('click')
+    await flushPromises()
+
+    expect(setAdminStatus).toHaveBeenCalledWith('orders', 9, 'DELIVERING')
+    expect(wrapper.get('[data-testid="admin-order-status-9"]').text()).toContain('配送中')
+  })
+
+  it('订单状态更新失败时展示后端原因且列表状态不变', async () => {
+    listAdminOrders.mockResolvedValue({
+      items: [{ id: 9, orderNo: 'NO-9', status: 'CREATED', paymentStatus: 'UNPAID' }],
+    })
+    setAdminStatus.mockRejectedValue(new Error('订单状态不合法'))
+    const { wrapper } = await mountAdmin()
+
+    await wrapper.findAll('button')[3].trigger('click')
+    await flushPromises()
+
+    await wrapper.get('select').setValue('CANCELLED')
+    await wrapper.get('[data-testid="admin-order-set-9"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="admin-error"]').text()).toContain('订单状态不合法')
+    expect(wrapper.get('[data-testid="admin-order-status-9"]').text()).toContain('待处理')
   })
 })
