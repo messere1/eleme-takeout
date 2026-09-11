@@ -1,5 +1,25 @@
 -- 外卖平台演示数据
--- 登录密码稍后统一设置为 abc123，并在此处保存 BCrypt 哈希。
+-- 顾客和商家的演示密码统一为 abc123；下列值为 cost=10 的 BCrypt 哈希。
+
+INSERT INTO users (
+    id,
+    username,
+    phone,
+    password_hash,
+    nickname,
+    address,
+    created_at
+)
+VALUES (
+    1001,
+    'customer',
+    '13800138000',
+    '$2a$10$EkQnuxhMEdZZU1fRy75TFOsuBbsstJ7uCjkEGwxaGd6EaQFjVhNkq',
+    '演示顾客',
+    '天津大学北洋园校区',
+    CURRENT_TIMESTAMP
+)
+ON CONFLICT DO NOTHING;
 
 INSERT INTO merchants (
     id,
@@ -13,7 +33,7 @@ VALUES (
     1001,
     '梅园',
     '13900139000',
-    '$2a$10$稍后替换为真实的BCrypt哈希',
+    '$2a$10$EkQnuxhMEdZZU1fRy75TFOsuBbsstJ7uCjkEGwxaGd6EaQFjVhNkq',
     '中式快餐',
     CURRENT_TIMESTAMP
 )
@@ -92,3 +112,10 @@ VALUES
         FALSE
     )
 ON CONFLICT DO NOTHING;
+
+-- 显式演示 ID 写入后同步序列，避免后续正常注册或新增数据发生主键碰撞。
+SELECT setval(pg_get_serial_sequence('users', 'id'), GREATEST((SELECT MAX(id) FROM users), 1), true);
+SELECT setval(pg_get_serial_sequence('merchants', 'id'), GREATEST((SELECT MAX(id) FROM merchants), 1), true);
+SELECT setval(pg_get_serial_sequence('shops', 'id'), GREATEST((SELECT MAX(id) FROM shops), 1), true);
+SELECT setval(pg_get_serial_sequence('categories', 'id'), GREATEST((SELECT MAX(id) FROM categories), 1), true);
+SELECT setval(pg_get_serial_sequence('products', 'id'), GREATEST((SELECT MAX(id) FROM products), 1), true);
