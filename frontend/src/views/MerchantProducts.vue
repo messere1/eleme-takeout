@@ -501,4 +501,23 @@ onMounted(load)
   font-size: 0.9rem;
   color: #666;
 }
+.prod-thumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.prod-img {
+  width: 2.6rem;
+  height: 2.6rem;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.img-label {
+  font-size: 0.8rem;
+  color: #ff6a00;
+  cursor: pointer;
+  border: 1px dashed #ffb36e;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+}
 </style>

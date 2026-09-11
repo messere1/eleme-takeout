@@ -1,8 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { listUsers } from '@/api/user';import { listMerchants } from '@/api/merchant'
-import { listAdminProducts,listAdminOrders,setAdminStatus,listAdminRefunds,decideRefund } from '@/api/admin'
-const tab=ref('users'),rows=ref([]),error=ref(''),loading=ref(false)
+import { listUsers } from '@/api/user'
+import { listMerchants } from '@/api/merchant'
+import { listAdminProducts, listAdminOrders, setAdminStatus, listAdminRefunds, decideRefund } from '@/api/admin'
+
+const props = defineProps({ initialTab: { type: String, default: 'users' } })
+const tab=ref(props.initialTab),rows=ref([]),error=ref(''),loading=ref(false)
 const loaders={users:listUsers,merchants:listMerchants,products:listAdminProducts,orders:listAdminOrders,refunds:listAdminRefunds}
 const mask=v=>!v?'':v.length>=7?`${v.slice(0,3)}****${v.slice(-4)}`:'***'
 async function refresh(){error.value='';loading.value=true;try{const data=await loaders[tab.value]();rows.value=Array.isArray(data)?data:data?.items??[]}catch(e){error.value=e?.message||'管理数据加载失败';rows.value=[]}finally{loading.value=false}}
@@ -19,7 +22,7 @@ onMounted(refresh)
       <button v-for="item in [{k:'users',t:'用户'},{k:'merchants',t:'商家'},{k:'products',t:'商品'},{k:'orders',t:'订单'},{k:'refunds',t:'退款'}]" :key="item.k" class="tab" :class="{active:tab===item.k}" @click="tab=item.k;refresh()">{{item.t}}</button>
     </nav>
     <p v-if="loading" data-testid="admin-loading">加载中…</p>
-    <p v-if="error" class="admin-error">{{ error }}</p>
+    <p v-if="error" data-testid="admin-error" class="admin-error">{{ error }}</p>
     <p v-if="!loading&&!error&&!rows.length" data-testid="admin-empty">暂无数据</p>
     <table v-if="tab === 'users' && rows.length" class="admin-table">
       <thead><tr><th>ID</th><th>用户名</th><th>手机号</th><th>昵称</th></tr></thead>

@@ -168,6 +168,31 @@ onMounted(load)
 .avatar-btn input {
   display: none;
 }
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.avatar-preview,
+.avatar-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f3f5;
+  color: #999;
+}
+.avatar-btn {
+  color: var(--el-color-primary);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.avatar-btn input {
+  display: none;
+}
 .field {
   display: flex;
   flex-direction: column;

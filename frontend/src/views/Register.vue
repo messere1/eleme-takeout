@@ -42,7 +42,7 @@ async function autoLogin(phone, password, role) {
   const data = await apiLogin({ account: phone, password, role })
   const finalRole = data.role || role
   session.save({ token: data.token, role: finalRole })
-  router.push(finalRole === 'MERCHANT' ? '/merchant' : '/')
+  router.push(finalRole === 'MERCHANT' ? '/merchant' : finalRole === 'ADMIN' ? '/admin' : '/')
 }
 
 async function submit() {

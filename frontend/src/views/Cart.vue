@@ -175,6 +175,26 @@ onMounted(() => {
       </ul>
 
       <div class="address-row">
+        <label class="ctrl-label" for="cart-recipient-name">收货人</label>
+        <el-input
+          id="cart-recipient-name"
+          v-model="recipient"
+          data-testid="cart-recipient-name"
+          placeholder="收货人"
+          maxlength="30"
+        />
+      </div>
+      <div class="address-row">
+        <label class="ctrl-label" for="cart-recipient-phone">联系电话</label>
+        <el-input
+          id="cart-recipient-phone"
+          v-model="contact"
+          data-testid="cart-recipient-phone"
+          placeholder="联系电话"
+          maxlength="20"
+        />
+      </div>
+      <div class="address-row">
         <label class="ctrl-label" for="cart-address">收货地址</label>
         <el-input
           id="cart-address"

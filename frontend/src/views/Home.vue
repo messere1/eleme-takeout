@@ -1,6 +1,13 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { listShops } from '@/api/shop'
+
+const router = useRouter()
+
+function goSearch() {
+  router.push('/search')
+}
 
 const EMOJI = ['🥞', '🌶️', '🧋', '🍣', '🍢', '🍞', '🍔', '🥡']
 const BG = ['#fff1e8', '#fff0f0', '#f4f1ff', '#eef8ff', '#fff7ed', '#fdeef7']
@@ -35,31 +42,89 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 const feedLoading = ref(false)
 
-async function load(page) {
+async function load(page, append = false) {
+  if (feedLoading.value) return
   feedLoading.value = true
   feedError.value = ''
   try {
     const data = await listShops({ page, size: 20 })
-    const items = data?.items || []
-    shops.value = items.map(decorate)
+    const items = (data?.items || []).map(decorate)
+    shops.value = append ? shops.value.concat(items) : items
     currentPage.value = data?.page ?? page
     totalPages.value = data?.totalPages ?? 1
-    if (items.length === 0) feedError.value = '暂时没有可展示的店铺'
+    if (!append && items.length === 0) feedError.value = '暂时没有可展示的店铺'
   } catch {
-    shops.value = []
-    currentPage.value = 1
-    totalPages.value = 1
-    feedError.value = '店铺列表加载失败，请稍后重试'
+    if (!append) {
+      shops.value = []
+      currentPage.value = 1
+      totalPages.value = 1
+      feedError.value = '店铺列表加载失败，请稍后重试'
+    }
   } finally {
     feedLoading.value = false
   }
 }
 
-onMounted(() => load(1))
+// 滚动接力：页面滚到店铺区标题吸顶前 → 滚整页；吸顶后 → 滚店铺列表；
+// 列表到边界再继续滚 → 自动切回整页。列表本身不接原生滚动（overflow:hidden），
+// 全部由这里的滚轮逻辑统一分配，才能做到“先滚页面再吸顶”。
+const brandHeight = ref(56) // 动态测量品牌栏高度
+const searchBox = ref(null)
+const browseBlock = ref(null)
+
+function maybeLoadMore() {
+  const block = browseBlock.value
+  if (!block) return
+  const nearBottom = block.scrollTop + block.clientHeight >= block.scrollHeight - 60
+  if (nearBottom && currentPage.value < totalPages.value) {
+    load(currentPage.value + 1, true)
+  }
+}
+
+function searchStuck() {
+  const box = searchBox.value
+  if (!box) return false
+  // 搜索框吸到品牌栏下方
+  return box.getBoundingClientRect().top <= brandHeight.value + 2
+}
+
+function onWindowWheel(event) {
+  const block = browseBlock.value
+  if (!block || event.deltaY === 0) return
+  if (!searchStuck()) return // 搜索框未触顶：整页滚动
+
+  const canDown = block.scrollTop + block.clientHeight < block.scrollHeight - 1
+  const canUp = block.scrollTop > 0
+
+  if (event.deltaY > 0) {
+    // 往下：只在列表内滚动，一律拦截（不放手给整页）
+    if (canDown) {
+      block.scrollTop += event.deltaY
+      maybeLoadMore()
+    }
+    return
+  }
+
+  // 往上：列表未到顶就滚列表；到顶（再往上滑）才交回整页滚动
+  if (canUp) {
+    block.scrollTop += event.deltaY
+    event.preventDefault()
+    // 刚触顶的瞬间也拦一下，避免同一次快速手势直接带动整页
+    if (block.scrollTop <= 0) event.preventDefault()
+  }
+}
+
+onMounted(() => {
+  const bar = document.querySelector('.brand-bar')
+  if (bar) brandHeight.value = bar.offsetHeight
+  load(1)
+  window.addEventListener('wheel', onWindowWheel, { passive: false })
+})
+onUnmounted(() => window.removeEventListener('wheel', onWindowWheel))
 </script>
 
 <template>
-  <div class="flash-home">
+  <div class="flash-home" :style="{ '--brand-h': brandHeight + 'px' }">
     <!-- 顶部促销条 -->
     <section class="flash-hero">
       <div class="hero-brand">
@@ -71,87 +136,63 @@ onMounted(() => load(1))
       </div>
     </section>
 
-    <!-- 搜索框 -->
-    <div class="search-box">
+    <!-- 搜索框（吸顶）：点击进入搜索页 -->
+    <div
+      ref="searchBox"
+      class="search-box"
+      data-testid="home-search-entry"
+      role="button"
+      tabindex="0"
+      @click="goSearch"
+      @keyup.enter="goSearch"
+    >
       <span class="search-icon">🔍</span>
-      <input class="search-input" type="search" placeholder="搜索想吃的美食" aria-label="搜索" />
+      <span class="search-placeholder">搜索想吃的美食</span>
     </div>
 
-    <!-- 频道条 -->
-    <section class="channel">
-      <div v-for="item in CATEGORIES" :key="item.name" class="channel-chip">
-        <span class="chip-emoji">{{ item.emoji }}</span>
-        <span>{{ item.name }}</span>
-      </div>
-    </section>
+    <!-- 频道分类 + 附近店铺：搜索框触顶后作为一个整体滚动 -->
+    <div ref="browseBlock" class="browse-block">
+      <section class="channel">
+        <div v-for="item in CATEGORIES" :key="item.name" class="channel-chip">
+          <span class="chip-emoji">{{ item.emoji }}</span>
+          <span>{{ item.name }}</span>
+        </div>
+      </section>
 
-    <!-- 附近店铺流 -->
-    <section class="shop-feed">
-      <header class="section-head">
-        <span class="section-title">🏪 附近店铺</span>
-        <span class="feed-count">共 {{ shops.length }} 家</span>
-      </header>
-      <p v-if="feedError" data-testid="home-feed-note" class="feed-note">{{ feedError }}</p>
+      <section class="shop-feed">
+        <p v-if="feedError" data-testid="home-feed-note" class="feed-note">{{ feedError }}</p>
 
-      <div class="shop-stream">
-        <RouterLink
-          v-for="shop in shops"
-          :key="shop.id"
-          :to="`/shops/${shop.id}`"
-          :data-testid="`home-shop-${shop.id}`"
-          class="shop-card"
-        >
-          <div class="shop-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>
-          <div class="shop-body">
-            <div class="shop-line">
-              <strong>{{ shop.shopName }}</strong>
-              <span
-                class="shop-status"
-                :class="{ open: shop.status === 'OPEN' }"
-              >{{ statusText(shop.status) }}</span>
+        <div class="shop-stream">
+          <RouterLink
+            v-for="shop in shops"
+            :key="shop.id"
+            :to="`/shops/${shop.id}`"
+            :data-testid="`home-shop-${shop.id}`"
+            class="shop-card"
+          >
+            <div class="shop-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>
+            <div class="shop-body">
+              <div class="shop-line">
+                <strong>{{ shop.shopName }}</strong>
+                <span
+                  class="shop-status"
+                  :class="{ open: shop.status === 'OPEN' }"
+                >{{ statusText(shop.status) }}</span>
+              </div>
+              <p class="shop-notice">{{ shop.notice }}</p>
+              <div class="shop-tags">
+                <span class="tag">外卖专送</span>
+                <span class="tag">满减优惠</span>
+              </div>
             </div>
-            <p class="shop-notice">{{ shop.notice }}</p>
-            <div class="shop-tags">
-              <span class="tag">外卖专送</span>
-              <span class="tag">满减优惠</span>
-            </div>
-          </div>
-          <span class="enter">进店 ›</span>
-        </RouterLink>
-      </div>
+            <span class="enter">进店 ›</span>
+          </RouterLink>
+        </div>
 
-      <div v-if="shops.length" class="feed-pager">
-        <button
-          class="page-btn"
-          data-testid="home-prev"
-          :disabled="currentPage <= 1 || feedLoading"
-          @click="load(currentPage - 1)"
-        >上一页</button>
-        <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
-        <button
-          class="page-btn"
-          data-testid="home-next"
-          :disabled="currentPage >= totalPages || feedLoading"
-          @click="load(currentPage + 1)"
-        >下一页</button>
-      </div>
-    </section>
+        <p v-if="feedLoading" class="feed-loading">加载中…</p>
+      </section>
+    </div>
 
-    <!-- 热卖推荐（示例） -->
-    <section class="deal-section">
-      <header class="section-head">
-        <span class="section-title">🔥 热卖推荐</span>
-      </header>
-      <div class="deal-grid">
-        <RouterLink v-for="(deal, i) in ['煎饼果子', '珍珠奶茶', '照烧鸡排饭', '生煎包']" :key="deal" to="/shops/1" class="deal-card">
-          <div class="deal-thumb">{{ ['🍜', '🧋', '🍱', '🥟'][i] }}</div>
-          <div class="deal-info">
-            <span class="deal-name">{{ deal }}</span>
-            <span class="deal-price">到店尝鲜</span>
-          </div>
-        </RouterLink>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -193,6 +234,9 @@ onMounted(() => load(1))
 
 /* 搜索框 */
 .search-box {
+  position: sticky;
+  top: var(--brand-h, 3.6rem); /* 吸在品牌栏下方（动态高度） */
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -203,6 +247,16 @@ onMounted(() => load(1))
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+
+/* 分类 + 店铺：搜索框触顶后作为整体滚动 */
+.browse-block {
+  /* 可滚动范围比原值多 100px */
+  height: calc(100vh - 14rem + 100px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 .search-box:focus-within {
   border-color: #ff5000;
   box-shadow: 0 0 0 3px rgba(255, 80, 0, 0.12);
@@ -211,15 +265,9 @@ onMounted(() => load(1))
   font-size: 1rem;
   line-height: 1;
 }
-.search-input {
+.search-placeholder {
   flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
   font-size: 0.95rem;
-  color: #333;
-}
-.search-input::placeholder {
   color: #bbb;
 }
 
@@ -276,23 +324,39 @@ onMounted(() => load(1))
 .shop-stream {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.9rem;
+  padding-right: 0.25rem;
+}
+.shop-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.feed-loading {
+  text-align: center;
+  color: #b0b0b0;
+  font-size: 0.8rem;
+  margin: 0;
 }
 .shop-card {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
+  gap: 1.15rem;
   background: #fff;
   border-radius: var(--card-radius);
-  padding: 0.8rem;
+  padding: 1.4rem 1.3rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   text-decoration: none;
   color: inherit;
+  transition: box-shadow 0.12s ease;
+}
+.shop-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 .shop-thumb {
   flex-shrink: 0;
-  width: 3.9rem;
-  height: 3.9rem;
+  width: 5.4rem;
+  height: 5.4rem;
   border-radius: 10px;
   display: flex;
   align-items: center;

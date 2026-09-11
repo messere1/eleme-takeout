@@ -12,9 +12,10 @@ import MerchantConsole from '@/views/MerchantConsole.vue'
 import MerchantProducts from '@/views/MerchantProducts.vue'
 import MerchantOrders from '@/views/MerchantOrders.vue'
 import MerchantProfile from '@/views/MerchantProfile.vue'
-import Pay from '@/views/Pay.vue'
 import Admin from '@/views/Admin.vue'
 import Rider from '@/views/Rider.vue'
+import Pay from '@/views/Pay.vue'
+import Search from '@/views/Search.vue'
 import { session } from '@/utils/session'
 
 const routes = [
@@ -30,8 +31,11 @@ const routes = [
   { path: '/merchant/products', name: 'merchant-products', component: MerchantProducts },
   { path: '/merchant/orders', name: 'merchant-orders', component: MerchantOrders },
   { path: '/merchant/profile', name: 'merchant-profile', component: MerchantProfile },
+  { path: '/search', name: 'search', component: Search },
   { path: '/orders/:id/pay', name: 'pay', component: Pay },
   { path: '/admin', name: 'admin', component: Admin },
+  { path: '/admin/users', name: 'admin-users', component: Admin, props: { initialTab: 'users' } },
+  { path: '/admin/merchants', name: 'admin-merchants', component: Admin, props: { initialTab: 'merchants' } },
   { path: '/rider', name: 'rider', component: Rider },
 ]
 
@@ -51,7 +55,7 @@ router.beforeEach((to) => {
   if (to.path.startsWith('/merchant')) {
     if (role !== 'MERCHANT') return { path: '/login' }
   }
-  if (to.path === '/admin') {
+  if (to.path.startsWith('/admin')) {
     if (role !== 'ADMIN') return { path: '/login' }
   }
   if (to.path.startsWith('/rider')) {

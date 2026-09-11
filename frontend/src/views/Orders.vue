@@ -217,6 +217,17 @@ onMounted(() => load(1))
 .order-row {
   flex-wrap: wrap;
 }
+.order-shop-thumb {
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 8px;
+  background: #fff4ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
 .order-main {
   flex: 1;
   min-width: 0;
