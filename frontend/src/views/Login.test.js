@@ -114,4 +114,21 @@ describe('FR-002 登录页', () => {
     expect(session.load()?.role).toBe('MERCHANT')
     expect(router.currentRoute.value.path).toBe('/merchant')
   })
+
+  it.each([
+    ['ADMIN', '/admin'],
+    ['RIDER', '/rider'],
+  ])('选择 %s 角色登录后进入对应独立工作区', async (role, expectedPath) => {
+    login.mockResolvedValue({ token: `${role.toLowerCase()}-token`, role, expiresIn: 7200 })
+    const { wrapper, router } = await mountLogin()
+    await wrapper.get('[data-testid="login-role"]').setValue(role)
+    await setField(wrapper, 'login-account', ACCOUNT)
+    await setField(wrapper, 'login-password', PASSWORD)
+    await clickSubmit(wrapper)
+    await flushPromises()
+
+    expect(login).toHaveBeenCalledWith({ account: ACCOUNT, password: PASSWORD, role })
+    expect(session.load()?.role).toBe(role)
+    expect(router.currentRoute.value.path).toBe(expectedPath)
+  })
 })

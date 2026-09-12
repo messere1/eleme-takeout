@@ -115,6 +115,42 @@ class SecurityIntegrationTest {
                 .andExpect(jsonPath("$.code").value(0));
     }
 
+    @Test
+    void riderTokenCannotUseCustomerMerchantOrAdministratorEndpoints() throws Exception {
+        String rider = bearer(88L, "RIDER");
+
+        for (String path : new String[] {
+                "/api/v1/cart", "/api/v1/merchant/shop", "/api/v1/admin/users"}) {
+            mockMvc.perform(get(path).header("Authorization", rider))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                    .andExpect(jsonPath("$.traceId").isNotEmpty());
+        }
+    }
+
+    @Test
+    void customerMerchantAndAdministratorTokensCannotUseRiderEndpoints() throws Exception {
+        for (String token : new String[] {
+                bearer(7L, "CUSTOMER"), bearer(12L, "MERCHANT"), bearer(99L, "ADMIN")}) {
+            mockMvc.perform(get("/api/v1/rider/orders").header("Authorization", token))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                    .andExpect(jsonPath("$.traceId").isNotEmpty());
+        }
+    }
+
+    @Test
+    void riderTokenCanReadRiderOrderQueues() throws Exception {
+        String rider = bearer(88L, "RIDER");
+
+        mockMvc.perform(get("/api/v1/rider/orders/available").header("Authorization", rider))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+        mockMvc.perform(get("/api/v1/rider/orders").header("Authorization", rider))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+
     private String bearer(Long userId, String role) {
         return "Bearer " + jwtService.issue(String.valueOf(userId), role);
     }
