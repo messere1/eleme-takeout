@@ -19,14 +19,6 @@ public record UserRegistrationRequest(
     @Override
     public String toString() {
         return "UserRegistrationRequest[username=" + username
-                + ", phone=" + mask(phone)
-                + ", password=***]";
-    }
-
-    private static String mask(String value) {
-        if (value == null || value.length() < 7) {
-            return "***";
-        }
-        return value.substring(0, 3) + "****" + value.substring(value.length() - 4);
+                + ", phone=***, password=***]";
     }
 }

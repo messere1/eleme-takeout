@@ -127,10 +127,10 @@ class OrderWorkflowServiceTest {
     }
 
     @Test
-    void merchantAcceptsOwnCreatedOrder() {
+    void merchantAcceptsOnlyOwnPaidCreatedOrder() {
         when(shopMapper.findByMerchantId(12L)).thenReturn(Optional.of(shop(12L, 20L)));
         when(orderMapper.findById(60L)).thenReturn(
-                Optional.of(order(60L, 7L, 20L, "CREATED")),
+                Optional.of(paidOrder(60L, 7L, 20L, "CREATED")),
                 Optional.of(order(60L, 7L, 20L, "ACCEPTED")));
         when(orderMapper.transitionStatus(60L, "CREATED", "ACCEPTED")).thenReturn(1);
         when(orderMapper.findItemsByOrderId(60L)).thenReturn(List.of());
@@ -144,29 +144,27 @@ class OrderWorkflowServiceTest {
         when(orderMapper.findById(61L)).thenReturn(Optional.of(order(61L, 7L, 21L, "CREATED")));
         assertCode(() -> service.accept(12L, 61L), "FORBIDDEN");
 
-        when(orderMapper.findById(62L)).thenReturn(Optional.of(order(62L, 7L, 20L, "CREATED")));
+        when(orderMapper.findById(62L)).thenReturn(
+                Optional.of(paidOrder(62L, 7L, 20L, "CREATED")));
         when(orderMapper.transitionStatus(62L, "CREATED", "ACCEPTED")).thenReturn(0);
         assertCode(() -> service.accept(12L, 62L), "BUSINESS_CONFLICT");
     }
 
     @Test
-    void merchantCompletesAcceptedOrder() {
+    void merchantCannotAcceptAnUnpaidOrder() {
         when(shopMapper.findByMerchantId(12L)).thenReturn(Optional.of(shop(12L, 20L)));
-        when(orderMapper.findById(60L)).thenReturn(
-                Optional.of(order(60L, 7L, 20L, "ACCEPTED")),
-                Optional.of(order(60L, 7L, 20L, "COMPLETED")));
-        when(orderMapper.transitionStatus(60L, "ACCEPTED", "COMPLETED")).thenReturn(1);
-        when(orderMapper.findItemsByOrderId(60L)).thenReturn(List.of());
+        when(orderMapper.findById(60L)).thenReturn(Optional.of(order(60L, 7L, 20L, "CREATED")));
 
-        assertThat(service.complete(12L, 60L).status()).isEqualTo("COMPLETED");
+        assertCode(() -> service.accept(12L, 60L), "BUSINESS_CONFLICT");
+        verify(orderMapper, never()).transitionStatus(60L, "CREATED", "ACCEPTED");
     }
 
     @Test
-    void customerConfirmsOwnAcceptedOrder() {
+    void customerConfirmsOwnDeliveredOrder() {
         when(orderMapper.findById(60L)).thenReturn(
-                Optional.of(order(60L, 7L, 20L, "ACCEPTED")),
+                Optional.of(order(60L, 7L, 20L, "DELIVERED")),
                 Optional.of(order(60L, 7L, 20L, "COMPLETED")));
-        when(orderMapper.transitionStatus(60L, "ACCEPTED", "COMPLETED")).thenReturn(1);
+        when(orderMapper.transitionStatus(60L, "DELIVERED", "COMPLETED")).thenReturn(1);
         when(orderMapper.findItemsByOrderId(60L)).thenReturn(List.of());
 
         assertThat(service.confirmReceived(7L, 60L).status()).isEqualTo("COMPLETED");
@@ -178,7 +176,6 @@ class OrderWorkflowServiceTest {
         assertCode(() -> service.confirmReceived(7L, 61L), "FORBIDDEN");
 
         when(orderMapper.findById(62L)).thenReturn(Optional.of(order(62L, 7L, 20L, "ACCEPTED")));
-        when(orderMapper.transitionStatus(62L, "ACCEPTED", "COMPLETED")).thenReturn(0);
         assertCode(() -> service.confirmReceived(7L, 62L), "BUSINESS_CONFLICT");
     }
 
@@ -219,24 +216,15 @@ class OrderWorkflowServiceTest {
         assertCode(() -> service.accept(12L, 72L), "RESOURCE_NOT_FOUND");
 
         when(orderMapper.findById(73L)).thenReturn(
-                Optional.of(order(73L, 7L, 20L, "CREATED")), Optional.empty());
+                Optional.of(paidOrder(73L, 7L, 20L, "CREATED")), Optional.empty());
         when(orderMapper.transitionStatus(73L, "CREATED", "ACCEPTED")).thenReturn(1);
         assertCode(() -> service.accept(12L, 73L), "RESOURCE_NOT_FOUND");
-
-        when(orderMapper.findById(74L)).thenReturn(Optional.empty());
-        assertCode(() -> service.complete(12L, 74L), "RESOURCE_NOT_FOUND");
-
-        when(orderMapper.findById(75L)).thenReturn(
-                Optional.of(order(75L, 7L, 20L, "ACCEPTED")), Optional.empty());
-        when(orderMapper.transitionStatus(75L, "ACCEPTED", "COMPLETED")).thenReturn(1);
-        assertCode(() -> service.complete(12L, 75L), "RESOURCE_NOT_FOUND");
 
         when(orderMapper.findById(76L)).thenReturn(Optional.empty());
         assertCode(() -> service.confirmReceived(7L, 76L), "RESOURCE_NOT_FOUND");
 
-        when(orderMapper.findById(77L)).thenReturn(
-                Optional.of(order(77L, 7L, 20L, "ACCEPTED")), Optional.empty());
-        when(orderMapper.transitionStatus(77L, "ACCEPTED", "COMPLETED")).thenReturn(1);
+        when(orderMapper.findById(77L)).thenReturn(Optional.of(order(77L, 7L, 20L, "DELIVERED")), Optional.empty());
+        when(orderMapper.transitionStatus(77L, "DELIVERED", "COMPLETED")).thenReturn(1);
         assertCode(() -> service.confirmReceived(7L, 77L), "RESOURCE_NOT_FOUND");
     }
 
@@ -249,6 +237,12 @@ class OrderWorkflowServiceTest {
     private static Order order(Long id, Long userId, Long shopId, String status) {
         return Order.restore(id, "NO-" + id, userId, shopId, new BigDecimal("17.00"),
                 status, LocalDateTime.of(2026, 9, 8, 12, 0));
+    }
+
+    private static Order paidOrder(Long id, Long userId, Long shopId, String status) {
+        Order order = order(id, userId, shopId, status);
+        order.markPaid(LocalDateTime.of(2026, 9, 8, 12, 1));
+        return order;
     }
 
     private static OrderItem item(Long orderId, Long productId, int quantity) {

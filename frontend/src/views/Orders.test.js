@@ -116,15 +116,38 @@ describe('订单列表页', () => {
     expect(wrapper.get('[data-testid="orders-empty"]').text()).toContain('暂无订单')
   })
 
-  it('已接单订单允许顾客确认收货并更新为已完成', async () => {
-    const accepted = { ...ORDER_A, status: 'ACCEPTED' }
-    confirmOrder.mockResolvedValue({ ...accepted, status: 'COMPLETED' })
-    const { wrapper } = await mountOrders({ ...PAGE1, items: [accepted] })
+  it('已送达订单允许顾客确认收货并更新为已完成', async () => {
+    const delivered = { ...ORDER_A, status: 'DELIVERED' }
+    confirmOrder.mockResolvedValue({ ...delivered, status: 'COMPLETED' })
+    const { wrapper } = await mountOrders({ ...PAGE1, items: [delivered] })
 
     await wrapper.get('[data-testid="order-confirm-11"]').trigger('click')
     await flushPromises()
 
     expect(confirmOrder).toHaveBeenCalledWith(11)
     expect(wrapper.get('[data-testid="order-row-11"]').text()).toContain('已完成')
+  })
+
+  it('已接单但骑手未送达时，确认按钮保留但禁用且不发请求', async () => {
+    const accepted = { ...ORDER_A, status: 'ACCEPTED' }
+    const { wrapper } = await mountOrders({ ...PAGE1, items: [accepted] })
+
+    const button = wrapper.get('[data-testid="order-confirm-11"]')
+    expect(button.element.disabled).toBe(true)
+    expect(wrapper.get('[data-testid="order-row-11"]').text()).toContain('骑手送达后可确认')
+
+    await button.trigger('click')
+    await flushPromises()
+    expect(confirmOrder).not.toHaveBeenCalled()
+  })
+
+  it('配送中／已送达订单展示中文状态', async () => {
+    const rows = [
+      { ...ORDER_A, id: 21, status: 'DELIVERING' },
+      { ...ORDER_B, id: 22, status: 'DELIVERED' },
+    ]
+    const { wrapper } = await mountOrders({ ...PAGE1, items: rows })
+    expect(wrapper.get('[data-testid="order-row-21"]').text()).toContain('配送中')
+    expect(wrapper.get('[data-testid="order-row-22"]').text()).toContain('已送达')
   })
 })

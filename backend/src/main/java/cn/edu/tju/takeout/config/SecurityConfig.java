@@ -39,7 +39,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, exception) ->
                                 SecurityErrorWriter.write(
                                         response, objectMapper, 401,
-                                        "AUTH_INVALID", "请先登录"))
+                                        "AUTH_REQUIRED", "请先登录"))
                         .accessDeniedHandler((request, response, exception) ->
                                 SecurityErrorWriter.write(
                                         response, objectMapper, 403,
@@ -64,7 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/refunds").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders/*")
-                        .hasAnyRole("CUSTOMER", "MERCHANT")
+                        .hasAnyRole("CUSTOMER", "MERCHANT", "RIDER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders")
                         .hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders/*/pay", "/api/v1/orders/*/refunds")
@@ -76,8 +76,7 @@ public class SecurityConfig {
                         .hasRole("MERCHANT")
                         .requestMatchers(HttpMethod.GET, "/api/v1/merchant/orders")
                         .hasRole("MERCHANT")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/orders/*/accept",
-                                "/api/v1/orders/*/complete")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/orders/*/accept")
                         .hasRole("MERCHANT")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/shops/**")
                         .hasRole("MERCHANT")

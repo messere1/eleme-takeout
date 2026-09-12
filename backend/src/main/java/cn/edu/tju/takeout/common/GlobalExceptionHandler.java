@@ -2,6 +2,7 @@ package cn.edu.tju.takeout.common;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -40,6 +41,6 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception exception) {
         ApiResponse<Void> body =
                 ApiResponse.failure("INTERNAL_ERROR", "服务器内部错误，请稍后重试", null);
-        return ResponseEntity.status(500).body(body);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }

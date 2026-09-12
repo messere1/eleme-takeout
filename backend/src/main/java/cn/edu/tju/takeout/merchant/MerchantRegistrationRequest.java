@@ -18,15 +18,6 @@ public record MerchantRegistrationRequest(
     @Override
     public String toString() {
         return "MerchantRegistrationRequest[merchantName=" + merchantName
-                + ", phone=" + mask(phone)
-                + ", password=***"
-                + ", businessScope=" + businessScope + "]";
-    }
-
-    private static String mask(String value) {
-        if (value == null || value.length() < 7) {
-            return "***";
-        }
-        return value.substring(0, 3) + "****" + value.substring(value.length() - 4);
+                + ", phone=***, password=***, businessScope=" + businessScope + "]";
     }
 }

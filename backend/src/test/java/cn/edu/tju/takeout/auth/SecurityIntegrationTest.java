@@ -24,7 +24,7 @@ class SecurityIntegrationTest {
     void protectedEndpointWithoutTokenReturnsUnifiedUnauthorizedResponse() throws Exception {
         mockMvc.perform(get("/api/v1/cart"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("AUTH_INVALID"))
+                .andExpect(jsonPath("$.code").value("AUTH_REQUIRED"))
                 .andExpect(jsonPath("$.traceId").isNotEmpty())
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("Exception"))));
@@ -76,24 +76,25 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    void adminCannotUseCustomerOrMerchantBusinessEndpoints() throws Exception {
-        String admin = bearer(99L, "ADMIN");
+    void adminAndRiderCannotUseCustomerOrMerchantBusinessEndpoints() throws Exception {
+        for (String token : new String[] {bearer(99L, "ADMIN"), bearer(31L, "RIDER")}) {
 
-        mockMvc.perform(get("/api/v1/cart").header("Authorization", admin))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.traceId").isNotEmpty());
-        mockMvc.perform(patch("/api/v1/shops/20/status")
-                        .header("Authorization", admin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\":\"OPEN\"}"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.traceId").isNotEmpty());
+            mockMvc.perform(get("/api/v1/cart").header("Authorization", token))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.traceId").isNotEmpty());
+            mockMvc.perform(patch("/api/v1/shops/20/status")
+                            .header("Authorization", token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"OPEN\"}"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.traceId").isNotEmpty());
+        }
     }
 
     @Test
     void nonAdminCannotReadAdministratorAccountLists() throws Exception {
         for (String token : new String[] {
-                bearer(7L, "CUSTOMER"), bearer(12L, "MERCHANT")}) {
+                bearer(7L, "CUSTOMER"), bearer(12L, "MERCHANT"), bearer(31L, "RIDER")}) {
             mockMvc.perform(get("/api/v1/admin/users").header("Authorization", token))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.traceId").isNotEmpty());
@@ -104,15 +105,16 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    void adminCanReadBothAccountLists() throws Exception {
+    void adminCanReadAllPlatformResourceLists() throws Exception {
         String admin = bearer(99L, "ADMIN");
 
-        mockMvc.perform(get("/api/v1/admin/users").header("Authorization", admin))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0));
-        mockMvc.perform(get("/api/v1/admin/merchants").header("Authorization", admin))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0));
+        for (String path : new String[] {
+                "/api/v1/admin/users", "/api/v1/admin/merchants", "/api/v1/admin/products",
+                "/api/v1/admin/orders", "/api/v1/admin/refunds"}) {
+            mockMvc.perform(get(path).header("Authorization", admin))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0));
+        }
     }
 
     @Test

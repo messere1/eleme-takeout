@@ -197,15 +197,33 @@ public class CartService {
 
     @Transactional
     public CartDeliveryInfo saveDeliveryInfo(Long userId, CartDeliveryRequest request) {
+        String normalizedPhone = normalizePhone(request.recipientPhone());
         CartDeliveryInfo info = CartDeliveryInfo.of(userId, request.shopId(),
-                request.recipientName().trim(), request.recipientPhone().trim(),
+                request.recipientName().trim(), normalizedPhone,
                 request.deliveryAddress().trim());
         if (cartMapper.findDeliveryInfo(userId, request.shopId()).isPresent()) cartMapper.updateDeliveryInfo(info);
         else cartMapper.insertDeliveryInfo(info);
         if (Boolean.TRUE.equals(request.saveToProfile()) && userMapper != null) {
-            userMapper.updateAddress(userId, info.getDeliveryAddress());
+            if (userMapper.updateAddress(userId, info.getDeliveryAddress()) == 0) {
+                throw notFound("顾客不存在");
+            }
         }
         return info;
+    }
+
+    private String normalizePhone(String phone) {
+        String normalized = phone.replaceAll("[\\s-]", "");
+        if (normalized.startsWith("+")) {
+            normalized = normalized.substring(1);
+        }
+        if (!normalized.matches("\\d{7,15}")) {
+            throw new BusinessException(
+                    HttpStatus.BAD_REQUEST,
+                    "VALIDATION_ERROR",
+                    "联系电话格式不正确"
+            );
+        }
+        return normalized;
     }
 
     private BusinessException notFound(

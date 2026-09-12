@@ -7,6 +7,12 @@ export function listShops(params = { page: 1, size: 20 }) {
   return http.get('/shops', { params })
 }
 
+// 店铺搜索：keyword 匹配 店铺名 / 经营类别 / 菜品名。
+// 契约（后端待提供）：GET /api/v1/shops/search?keyword= → 分页结构 { items, page, size, total, totalPages }
+export function searchShops(keyword, params = { page: 1, size: 20 }) {
+  return http.get('/shops/search', { params: { keyword, ...params } })
+}
+
 export function getShop(shopId) {
   return http.get(`/shops/${shopId}`)
 }

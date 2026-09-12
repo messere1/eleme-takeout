@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listShops } from '@/api/shop'
 
@@ -69,8 +69,26 @@ async function load(page, append = false) {
 // 列表到边界再继续滚 → 自动切回整页。列表本身不接原生滚动（overflow:hidden），
 // 全部由这里的滚轮逻辑统一分配，才能做到“先滚页面再吸顶”。
 const brandHeight = ref(56) // 动态测量品牌栏高度
+const browseHeight = ref(0) // 店铺区可视高度：视口扣掉顶栏、吸顶搜索框和底栏
 const searchBox = ref(null)
 const browseBlock = ref(null)
+
+// 店铺区高度按真实测量值算，不再写死 rem：写死会在字号/缩放/安全区变化时
+// 比可用空间高出一截，底部被固定 Tab 挡住，最后一张卡片滚不出来。
+function measureShell() {
+  const bar = document.querySelector('.brand-bar')
+  if (bar) brandHeight.value = bar.offsetHeight
+  const tabbar = document.querySelector('.tabbar')
+  const searchHeight = searchBox.value ? searchBox.value.offsetHeight : 0
+  const reserved =
+    brandHeight.value + searchHeight + (tabbar ? tabbar.offsetHeight : 0) + 12 // 12 = 店铺区与搜索框的间距
+  browseHeight.value = Math.max(240, window.innerHeight - reserved)
+}
+
+const shellStyle = computed(() => ({
+  '--brand-h': `${brandHeight.value}px`,
+  ...(browseHeight.value ? { '--browse-h': `${browseHeight.value}px` } : {}),
+}))
 
 function maybeLoadMore() {
   const block = browseBlock.value
@@ -97,34 +115,35 @@ function onWindowWheel(event) {
   const canUp = block.scrollTop > 0
 
   if (event.deltaY > 0) {
-    // 往下：只在列表内滚动，一律拦截（不放手给整页）
-    if (canDown) {
-      block.scrollTop += event.deltaY
-      maybeLoadMore()
-    }
-    return
+    // 往下：列表还能滚就滚列表，到底了才交回整页
+    if (!canDown) return
+    block.scrollTop += event.deltaY
+    maybeLoadMore()
+  } else {
+    // 往上：列表没到顶就滚列表，到顶了才交回整页
+    if (!canUp) return
+    block.scrollTop += event.deltaY
   }
 
-  // 往上：列表未到顶就滚列表；到顶（再往上滑）才交回整页滚动
-  if (canUp) {
-    block.scrollTop += event.deltaY
-    event.preventDefault()
-    // 刚触顶的瞬间也拦一下，避免同一次快速手势直接带动整页
-    if (block.scrollTop <= 0) event.preventDefault()
-  }
+  // 列表吃掉这次滚动后必须拦掉默认行为：否则整页会跟着一起滚，店铺区被顶到
+  // 吸顶搜索框下面，表现为滚动错位、顶部/底部被截断。
+  event.preventDefault()
 }
 
 onMounted(() => {
-  const bar = document.querySelector('.brand-bar')
-  if (bar) brandHeight.value = bar.offsetHeight
+  measureShell()
   load(1)
   window.addEventListener('wheel', onWindowWheel, { passive: false })
+  window.addEventListener('resize', measureShell)
 })
-onUnmounted(() => window.removeEventListener('wheel', onWindowWheel))
+onUnmounted(() => {
+  window.removeEventListener('wheel', onWindowWheel)
+  window.removeEventListener('resize', measureShell)
+})
 </script>
 
 <template>
-  <div class="flash-home" :style="{ '--brand-h': brandHeight + 'px' }">
+  <div class="flash-home" :style="shellStyle">
     <!-- 顶部促销条 -->
     <section class="flash-hero">
       <div class="hero-brand">
@@ -250,8 +269,9 @@ onUnmounted(() => window.removeEventListener('wheel', onWindowWheel))
 
 /* 分类 + 店铺：搜索框触顶后作为整体滚动 */
 .browse-block {
-  /* 可滚动范围比原值多 100px */
-  height: calc(100vh - 14rem + 100px);
+  /* 高度由 measureShell() 测量后通过 --browse-h 注入：正好等于吸顶搜索框
+     与底部 Tab 之间的空间，避免列表底部被 Tab 挡住 */
+  height: var(--browse-h, calc(100vh - 14rem));
   overflow: hidden;
   display: flex;
   flex-direction: column;

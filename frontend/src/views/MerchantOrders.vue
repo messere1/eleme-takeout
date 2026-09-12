@@ -1,11 +1,13 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { acceptOrder, completeOrder, listMerchantOrders, listMerchantRefunds, decideMerchantRefund } from '@/api/order'
+import { acceptOrder, listMerchantOrders, listMerchantRefunds, decideMerchantRefund } from '@/api/order'
 
 const STATUS_TEXT = {
   CREATED: '待接单',
   PENDING: '待接单',
   ACCEPTED: '已接单',
+  DELIVERING: '配送中',
+  DELIVERED: '已送达',
   COMPLETED: '已完成',
   CANCELLED: '已取消',
 }
@@ -40,14 +42,10 @@ async function accept(order) {
   }
 }
 
-async function complete(order) {
-  message.value = ''
-  try {
-    const res = await completeOrder(order.id)
-    order.status = res?.status || 'COMPLETED'
-  } catch (error) {
-    message.value = error?.message || '操作失败，请稍后重试'
-  }
+// 订单完成不再由商家直接触发：SRS V2 的完成路径是「骑手送达 → 顾客确认收货」，
+// 后端已移除 POST /orders/{id}/complete。按钮保留，点击时说明新流程，不再打这个死接口。
+function complete(order) {
+  message.value = `订单 ${order.orderNo} 需骑手送达后由顾客确认收货才能完成`
 }
 
 onMounted(load)
@@ -85,6 +83,7 @@ async function decideRefund(r,status){try{const x=await decideMerchantRefund(r.i
               :data-testid="`order-mgmt-complete-${order.id}`"
               @click="complete(order)"
             >完成</button>
+            <span v-if="order.status === 'ACCEPTED'" class="order-hint">送达后由顾客确认收货</span>
           </div>
         </li>
       </ul>
@@ -158,7 +157,12 @@ async function decideRefund(r,status){try{const x=await decideMerchantRefund(r.i
 }
 .order-actions {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
+}
+.order-hint {
+  color: #aaa;
+  font-size: 0.78rem;
 }
 .primary-btn {
   border: none;

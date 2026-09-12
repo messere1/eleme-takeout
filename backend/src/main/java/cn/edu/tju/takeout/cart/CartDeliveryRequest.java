@@ -8,6 +8,6 @@ import jakarta.validation.constraints.Size;
 public record CartDeliveryRequest(
         @NotNull Long shopId,
         @NotBlank @Size(max = 50) String recipientName,
-        @NotBlank @Pattern(regexp = "[+0-9 -]{7,20}") String recipientPhone,
+        @NotBlank @Pattern(regexp = "\\+?[0-9 -]{7,20}") String recipientPhone,
         @NotBlank @Size(min = 5, max = 255) String deliveryAddress,
         Boolean saveToProfile) {}

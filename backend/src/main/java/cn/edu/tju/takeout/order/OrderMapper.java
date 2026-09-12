@@ -81,12 +81,15 @@ public interface OrderMapper {
     @Select("SELECT * FROM orders WHERE id = #{id}")
     Optional<Order> findById(Long id);
 
+    @Select("SELECT * FROM orders WHERE id = #{id} FOR UPDATE")
+    Optional<Order> findByIdForUpdate(Long id);
+
     @Select("SELECT * FROM order_items WHERE order_id = #{orderId} ORDER BY id ASC")
     List<OrderItem> findItemsByOrderId(Long orderId);
 
     @Update("""
             UPDATE orders SET status = 'CANCELLED'
-            WHERE id = #{orderId} AND status = 'CREATED'
+            WHERE id = #{orderId} AND status = 'CREATED' AND payment_status = 'UNPAID'
             """)
     int markCancelledIfAllowed(Long orderId);
 

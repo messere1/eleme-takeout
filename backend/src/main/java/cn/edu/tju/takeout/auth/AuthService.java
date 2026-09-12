@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import cn.edu.tju.takeout.user.User;
 import java.util.Optional;
 import cn.edu.tju.takeout.admin.AdminMapper;
+import cn.edu.tju.takeout.admin.Admin;
 import cn.edu.tju.takeout.rider.RiderMapper;
+import cn.edu.tju.takeout.rider.Rider;
 import org.springframework.http.HttpStatus;
 @Service
 public class AuthService {
@@ -50,32 +52,19 @@ public class AuthService {
         String role = request.role();
 
         if ("CUSTOMER".equals(role)) {
-
             User user = userMapper
                     .findByAccount(account)
                     .orElseThrow(this::invalidCredentials);
 
-            if (!passwordEncoder.matches(
-                    password,
-                    user.getPasswordHash())) {
-
+            if (!user.isEnabled()
+                    || !passwordEncoder.matches(password, user.getPasswordHash())) {
                 throw invalidCredentials();
             }
 
-            String token = jwtService.issue(
-                    String.valueOf(user.getId()),
-                    "CUSTOMER"
-            );
-
-            return new LoginView(
-                    token,
-                    "CUSTOMER",
-                    EXPIRES_IN_SECONDS
-            );
+            return loginView(user.getId(), "CUSTOMER");
         }
 
         if ("MERCHANT".equals(role)) {
-
             if (merchantMapper == null) {
                 throw invalidCredentials();
             }
@@ -92,37 +81,36 @@ public class AuthService {
                             this::invalidCredentials
                     );
 
-            if (!passwordEncoder.matches(
-                    password,
-                    currentMerchant.getPasswordHash())) {
-
+            if (!currentMerchant.isEnabled()
+                    || !passwordEncoder.matches(password, currentMerchant.getPasswordHash())) {
                 throw invalidCredentials();
             }
 
-            String token = jwtService.issue(
-                    String.valueOf(
-                            currentMerchant.getId()
-                    ),
-                    "MERCHANT"
-            );
-
-            return new LoginView(
-                    token,
-                    "MERCHANT",
-                    EXPIRES_IN_SECONDS
-            );
+            return loginView(currentMerchant.getId(), "MERCHANT");
         }
 
-        if ("ADMIN".equals(role) && adminMapper != null) {
-            var admin = adminMapper.findByAccount(account).orElseThrow(this::invalidCredentials);
-            if (!passwordEncoder.matches(password, admin.getPasswordHash())) throw invalidCredentials();
-            return new LoginView(jwtService.issue(String.valueOf(admin.getId()), "ADMIN"), "ADMIN", EXPIRES_IN_SECONDS);
+        if ("ADMIN".equals(role)) {
+            if (adminMapper == null) {
+                throw invalidCredentials();
+            }
+            Admin admin = adminMapper.findByAccount(account).orElseThrow(this::invalidCredentials);
+            if (!admin.isEnabled()
+                    || !passwordEncoder.matches(password, admin.getPasswordHash())) {
+                throw invalidCredentials();
+            }
+            return loginView(admin.getId(), "ADMIN");
         }
 
-        if ("RIDER".equals(role) && riderMapper != null) {
-            var rider = riderMapper.findByAccount(account).orElseThrow(this::invalidCredentials);
-            if (!passwordEncoder.matches(password, rider.getPasswordHash())) throw invalidCredentials();
-            return new LoginView(jwtService.issue(String.valueOf(rider.getId()), "RIDER"), "RIDER", EXPIRES_IN_SECONDS);
+        if ("RIDER".equals(role)) {
+            if (riderMapper == null) {
+                throw invalidCredentials();
+            }
+            Rider rider = riderMapper.findByAccount(account).orElseThrow(this::invalidCredentials);
+            if (!rider.isEnabled()
+                    || !passwordEncoder.matches(password, rider.getPasswordHash())) {
+                throw invalidCredentials();
+            }
+            return loginView(rider.getId(), "RIDER");
         }
 
         throw new BusinessException(
@@ -134,6 +122,14 @@ public class AuthService {
 
     public JwtClaims parse(String token) {
         return jwtService.parse(token);
+    }
+
+    private LoginView loginView(Long id, String role) {
+        return new LoginView(
+                jwtService.issue(String.valueOf(id), role),
+                role,
+                EXPIRES_IN_SECONDS
+        );
     }
 
     private BusinessException invalidCredentials() {

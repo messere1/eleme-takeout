@@ -11,6 +11,7 @@ import cn.edu.tju.takeout.merchant.MerchantController;
 import cn.edu.tju.takeout.merchant.MerchantRegistrationRequest;
 import cn.edu.tju.takeout.user.UserController;
 import cn.edu.tju.takeout.admin.AdminController;
+import cn.edu.tju.takeout.cart.CartController;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Set;
@@ -20,18 +21,24 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import cn.edu.tju.takeout.refund.RefundController;
+import cn.edu.tju.takeout.rider.RiderController;
 
 /** SRS V2.0 第二阶段新增与变更需求的接口红灯基线。文件名保留以兼容历史链接。 */
 class SrsV14ApiContractTest {
 
     @Test
-    void exposesOrderAcceptCompleteAndCustomerConfirmationActions() {
+    void exposesV20OrderAndRiderFulfilmentActionsWithoutObsoleteMerchantCompletion() {
         assertMapping(OrderController.class, RequestMethod.POST,
                 "/api/v1/orders/{orderId}/accept");
         assertMapping(OrderController.class, RequestMethod.POST,
-                "/api/v1/orders/{orderId}/complete");
-        assertMapping(OrderController.class, RequestMethod.POST,
                 "/api/v1/orders/{orderId}/confirm");
+        assertMapping(RiderController.class, RequestMethod.POST,
+                "/api/v1/rider/orders/{id}/claim");
+        assertMapping(RiderController.class, RequestMethod.POST,
+                "/api/v1/rider/orders/{id}/deliver");
+        assertThat(allMappings(OrderController.class).map(Mapping::path))
+                .doesNotContain("/api/v1/orders/{orderId}/complete");
     }
 
     @Test
@@ -46,14 +53,16 @@ class SrsV14ApiContractTest {
     }
 
     @Test
-    void exposesAdministratorAccountLists() {
-        Stream<Mapping> adminMappings = Stream.of(AdminController.class)
+    void exposesAllAdministratorResourceRoutes() {
+        Stream<Mapping> adminMappings = Stream.of(AdminController.class, RefundController.class)
                 .flatMap(SrsV14ApiContractTest::allMappings)
                 .filter(mapping -> mapping.path().startsWith("/api/v1/admin/"));
 
         assertThat(adminMappings)
                 .extracting(Mapping::path)
-                .contains("/api/v1/admin/users", "/api/v1/admin/merchants");
+                .contains("/api/v1/admin/users", "/api/v1/admin/merchants",
+                        "/api/v1/admin/products", "/api/v1/admin/orders",
+                        "/api/v1/admin/refunds");
     }
 
     @Test
@@ -83,6 +92,14 @@ class SrsV14ApiContractTest {
     void exposesPaymentEndpoint() {
         assertThat(allMappings(OrderController.class).map(Mapping::path))
                 .contains("/api/v1/orders/{orderId}/pay");
+    }
+
+    @Test
+    void exposesCustomerCartDeliveryInformationEndpoints() {
+        assertMapping(CartController.class, RequestMethod.GET,
+                "/api/v1/cart/delivery-info/{shopId}");
+        assertMapping(CartController.class, RequestMethod.PATCH,
+                "/api/v1/cart/delivery-info");
     }
 
     private static void assertMapping(

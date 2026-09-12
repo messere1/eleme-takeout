@@ -1,5 +1,6 @@
 package cn.edu.tju.takeout.order;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -98,9 +99,11 @@ class OrderBoundaryServiceTest {
     }
 
     @Test
-    void unsupportedRoleCannotReadOrderDetail() {
+    void administratorCanReadOrderDetailUnderThePlatformGovernancePermission() {
         when(orderMapper.findById(60L)).thenReturn(Optional.of(order()));
-        assertCode(() -> service.getDetail(7L, "ADMIN", 60L), "FORBIDDEN");
+        when(orderMapper.findItemsByOrderId(60L)).thenReturn(List.of());
+
+        assertThat(service.getDetail(7L, "ADMIN", 60L).orderNo()).isEqualTo("T20260907001");
     }
 
     private static CartCheckoutLine line(Long itemId, Long shopId, String status) {
@@ -118,7 +121,7 @@ class OrderBoundaryServiceTest {
     private static Order order() {
         return Order.restore(
                 60L, "T20260907001", 7L, 20L, new BigDecimal("8.50"),
-                "PENDING", LocalDateTime.of(2026, 9, 7, 12, 0));
+                "CREATED", LocalDateTime.of(2026, 9, 7, 12, 0));
     }
 
     private static void assertCode(

@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { listShops } from '@/api/shop'
+import { listShops, searchShops } from '@/api/shop'
 
 const router = useRouter()
 
@@ -10,6 +10,7 @@ const results = ref([])
 const searched = ref(false)
 const searching = ref(false)
 const message = ref('')
+const localOnly = ref(false)
 
 const HOT = ['煎饼果子', '奶茶', '汉堡', '拉面', '烧烤', '甜品']
 
@@ -22,19 +23,26 @@ async function search(text) {
   }
   message.value = ''
   searching.value = true
+  localOnly.value = false
   try {
-    // 后端整体搜索接口待提供；目前按店铺名本地过滤已有店铺列表
-    const data = await listShops({ page: 1, size: 100 })
-    const items = data?.items ?? []
-    results.value = items.filter((shop) =>
-      String(shop.shopName || '').toLowerCase().includes(q.toLowerCase()),
-    )
-    searched.value = true
-  } catch (error) {
-    results.value = []
-    searched.value = true
-    message.value = '搜索失败：' + (error?.message || '请稍后重试')
+    // 优先走后端搜索：可按 店铺名 / 经营类别 / 菜品名 匹配
+    const data = await searchShops(q)
+    results.value = data?.items ?? []
+  } catch {
+    // 后端搜索接口尚未提供时，退回本地按店名过滤
+    localOnly.value = true
+    try {
+      const data = await listShops({ page: 1, size: 100 })
+      const items = data?.items ?? []
+      results.value = items.filter((shop) =>
+        String(shop.shopName || '').toLowerCase().includes(q.toLowerCase()),
+      )
+    } catch (error) {
+      results.value = []
+      message.value = '搜索失败：' + (error?.message || '请稍后重试')
+    }
   } finally {
+    searched.value = true
     searching.value = false
   }
 }
@@ -58,7 +66,7 @@ onMounted(() => {
         class="search-input"
         type="search"
         data-testid="search-input"
-        placeholder="搜索店铺或美食"
+        placeholder="搜索店铺 / 经营类别 / 菜品"
         @keyup.enter="search()"
       />
       <button class="search-btn" data-testid="search-submit" @click="search()">搜索</button>
@@ -79,6 +87,9 @@ onMounted(() => {
     </template>
 
     <template v-else>
+      <p v-if="localOnly" data-testid="search-local-note" class="local-note">
+        当前仅按店铺名匹配（经营类别 / 菜品搜索待后端接口）
+      </p>
       <ul v-if="results.length" class="result-list">
         <li
           v-for="shop in results"
@@ -213,6 +224,11 @@ onMounted(() => {
 .result-enter {
   color: #ff5000;
   font-weight: 700;
+}
+.local-note {
+  margin: 0;
+  color: #b0b0b0;
+  font-size: 0.82rem;
 }
 .search-empty {
   text-align: center;
