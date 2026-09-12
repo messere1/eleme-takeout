@@ -46,6 +46,13 @@ public interface CartMapper {
     @Delete("DELETE FROM cart_items WHERE user_id = #{userId}")
     int deleteByUserId(Long userId);
 
+    @Delete("""
+            DELETE FROM cart_items
+            WHERE user_id = #{userId}
+              AND product_id IN (SELECT id FROM products WHERE shop_id = #{shopId})
+            """)
+    int deleteByUserIdAndShopId(Long userId, Long shopId);
+
     @Select("""
             SELECT ci.id AS cart_item_id, p.shop_id, p.id AS product_id,
                    p.name AS product_name, p.price, ci.quantity, p.stock, p.status

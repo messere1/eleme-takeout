@@ -64,12 +64,6 @@ public class OrderController {
         return ApiResponse.success(orderService.accept(principal.userId(), orderId));
     }
 
-    @PostMapping("/{orderId}/complete")
-    public ApiResponse<OrderView> complete(
-            @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {
-        return ApiResponse.success(orderService.complete(principal.userId(), orderId));
-    }
-
     @PostMapping("/{orderId}/confirm")
     public ApiResponse<OrderView> confirm(
             @AuthenticationPrincipal UserPrincipal principal, @PathVariable Long orderId) {

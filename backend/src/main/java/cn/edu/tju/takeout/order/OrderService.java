@@ -178,9 +178,11 @@ public class OrderService {
             orderItems.add(item);
         }
 
-        if (request.shopId() == null) cartMapper.deleteByUserId(userId);
-        else for (CartCheckoutLine line : lines) cartMapper.findByUserAndProduct(userId, line.getProductId())
-                .ifPresent(item -> cartMapper.deleteByIdAndUserId(item.getId(), userId));
+        if (request.shopId() == null) {
+            cartMapper.deleteByUserId(userId);
+        } else {
+            cartMapper.deleteByUserIdAndShopId(userId, shopId);
+        }
 
         return OrderView.from(
                 order,
@@ -279,6 +281,9 @@ public class OrderService {
         if (!order.getUserId().equals(userId)) {
             throw forbidden();
         }
+        if ("PAID".equals(order.getPaymentStatus())) {
+            throw businessConflict("已支付订单不可取消");
+        }
         if ("CANCELLED".equals(order.getStatus())) {
             throw alreadyCancelled();
         }
@@ -331,8 +336,11 @@ public class OrderService {
                 throw forbidden();
             }
 
-        } else {
-
+        } else if ("RIDER".equals(role)) {
+            if (order.getRiderId() == null || !order.getRiderId().equals(actorId)) {
+                throw forbidden();
+            }
+        } else if (!"ADMIN".equals(role)) {
             throw forbidden();
         }
 
@@ -350,13 +358,18 @@ public class OrderService {
             merchantMapper.findById(shopForPhone.getMerchantId())
                     .ifPresent(merchant -> shopPhoneHolder[0] = merchant.getPhone());
         }
-        String deliveryAddress = order.getAddress() != null
-                ? order.getAddress()
-                : (buyer != null ? buyer.getAddress() : null);
+        String recipientPhone = order.getRecipientPhone() != null
+                ? order.getRecipientPhone()
+                : (buyer != null ? buyer.getPhone() : null);
+        String deliveryAddress = order.getDeliveryAddress() != null
+                ? order.getDeliveryAddress()
+                : (order.getAddress() != null
+                        ? order.getAddress()
+                        : (buyer != null ? buyer.getAddress() : null));
         return OrderView.from(order, items)
                 .withContacts(
                         shopPhoneHolder[0],
-                        maskPhone(buyer != null ? buyer.getPhone() : null),
+                        maskPhone(recipientPhone),
                         maskAddress(deliveryAddress));
     }
 
@@ -381,22 +394,11 @@ public class OrderService {
         if (!shop.getId().equals(order.getShopId())) {
             throw forbidden();
         }
+        if (!"PAID".equals(order.getPaymentStatus())) {
+            throw businessConflict("订单尚未支付，不能接单");
+        }
         if (orderMapper.transitionStatus(orderId, "CREATED", "ACCEPTED") == 0) {
             throw businessConflict("订单状态不可接单");
-        }
-        Order updated = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
-        return OrderView.from(updated, orderMapper.findItemsByOrderId(orderId));
-    }
-
-    @Transactional
-    public OrderView complete(Long merchantId, Long orderId) {
-        Shop shop = shopMapper.findByMerchantId(merchantId).orElseThrow(this::forbidden);
-        Order order = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
-        if (!shop.getId().equals(order.getShopId())) {
-            throw forbidden();
-        }
-        if (orderMapper.transitionStatus(orderId, "ACCEPTED", "COMPLETED") == 0) {
-            throw businessConflict("订单状态不可完成");
         }
         Order updated = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
         return OrderView.from(updated, orderMapper.findItemsByOrderId(orderId));
@@ -408,8 +410,7 @@ public class OrderService {
         if (!order.getUserId().equals(userId)) {
             throw forbidden();
         }
-        if (orderMapper.transitionStatus(orderId, "ACCEPTED", "COMPLETED") == 0
-                && orderMapper.transitionStatus(orderId, "DELIVERED", "COMPLETED") == 0) {
+        if (orderMapper.transitionStatus(orderId, "DELIVERED", "COMPLETED") == 0) {
             throw businessConflict("订单状态不可确认收货");
         }
         Order updated = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));
@@ -425,7 +426,6 @@ public class OrderService {
         }
         LocalDateTime now = LocalDateTime.now();
         if (orderMapper.markPaid(orderId, userId, now) == 0) {
-            cancelExpiredOrders();
             throw businessConflict("订单已超时或当前状态不可支付");
         }
         Order updated = orderMapper.findById(orderId).orElseThrow(() -> notFound("订单不存在"));

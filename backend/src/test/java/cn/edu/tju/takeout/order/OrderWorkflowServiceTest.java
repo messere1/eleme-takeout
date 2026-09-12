@@ -216,7 +216,7 @@ class OrderWorkflowServiceTest {
         assertCode(() -> service.accept(12L, 72L), "RESOURCE_NOT_FOUND");
 
         when(orderMapper.findById(73L)).thenReturn(
-                Optional.of(order(73L, 7L, 20L, "CREATED")), Optional.empty());
+                Optional.of(paidOrder(73L, 7L, 20L, "CREATED")), Optional.empty());
         when(orderMapper.transitionStatus(73L, "CREATED", "ACCEPTED")).thenReturn(1);
         assertCode(() -> service.accept(12L, 73L), "RESOURCE_NOT_FOUND");
 
