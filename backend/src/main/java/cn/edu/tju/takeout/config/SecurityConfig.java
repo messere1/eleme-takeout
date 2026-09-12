@@ -39,7 +39,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, exception) ->
                                 SecurityErrorWriter.write(
                                         response, objectMapper, 401,
-                                        "AUTH_INVALID", "请先登录"))
+                                        "AUTH_REQUIRED", "请先登录"))
                         .accessDeniedHandler((request, response, exception) ->
                                 SecurityErrorWriter.write(
                                         response, objectMapper, 403,

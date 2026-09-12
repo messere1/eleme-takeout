@@ -24,7 +24,7 @@ class OrderControllerContractTest {
         LocalDateTime end = start.plusDays(1);
         OrderView order = new OrderView(
                 30L, "T20260901001", 20L, new BigDecimal("19.80"),
-                "PENDING", start, List.of());
+                "CREATED", start, List.of());
         OrderPage page = new OrderPage(List.of(), 2, 5, 0, 0);
         when(service.create(7L, "天津大学")).thenReturn(order);
         when(service.list(org.mockito.ArgumentMatchers.eq(7L), any())).thenReturn(page);
@@ -32,11 +32,11 @@ class OrderControllerContractTest {
 
         assertThat(controller.create(customer, new CreateOrderRequest("天津大学")).data())
                 .isEqualTo(order);
-        assertThat(controller.list(customer, "PENDING", start, end, 2, 5).data()).isEqualTo(page);
+        assertThat(controller.list(customer, "CREATED", start, end, 2, 5).data()).isEqualTo(page);
         assertThat(controller.getDetail(customer, 30L).data()).isEqualTo(order);
 
         ArgumentCaptor<OrderQuery> query = ArgumentCaptor.forClass(OrderQuery.class);
         verify(service).list(org.mockito.ArgumentMatchers.eq(7L), query.capture());
-        assertThat(query.getValue()).isEqualTo(new OrderQuery("PENDING", start, end, 2, 5));
+        assertThat(query.getValue()).isEqualTo(new OrderQuery("CREATED", start, end, 2, 5));
     }
 }
