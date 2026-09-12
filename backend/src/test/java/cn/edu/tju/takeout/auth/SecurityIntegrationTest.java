@@ -24,7 +24,7 @@ class SecurityIntegrationTest {
     void protectedEndpointWithoutTokenReturnsUnifiedUnauthorizedResponse() throws Exception {
         mockMvc.perform(get("/api/v1/cart"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("AUTH_INVALID"))
+                .andExpect(jsonPath("$.code").value("AUTH_REQUIRED"))
                 .andExpect(jsonPath("$.traceId").isNotEmpty())
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("Exception"))));

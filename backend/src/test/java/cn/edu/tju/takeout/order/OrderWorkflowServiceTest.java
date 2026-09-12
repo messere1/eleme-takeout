@@ -144,7 +144,8 @@ class OrderWorkflowServiceTest {
         when(orderMapper.findById(61L)).thenReturn(Optional.of(order(61L, 7L, 21L, "CREATED")));
         assertCode(() -> service.accept(12L, 61L), "FORBIDDEN");
 
-        when(orderMapper.findById(62L)).thenReturn(Optional.of(order(62L, 7L, 20L, "CREATED")));
+        when(orderMapper.findById(62L)).thenReturn(
+                Optional.of(paidOrder(62L, 7L, 20L, "CREATED")));
         when(orderMapper.transitionStatus(62L, "CREATED", "ACCEPTED")).thenReturn(0);
         assertCode(() -> service.accept(12L, 62L), "BUSINESS_CONFLICT");
     }
