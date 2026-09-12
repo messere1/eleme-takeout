@@ -19,7 +19,7 @@ function fmtTime(value) {
   return value ? String(value).replace('T', ' ').slice(0, 16) : ''
 }
 
-const STATUS_TEXT = { CREATED: '待处理', CANCELLED: '已取消', ACCEPTED: '已接单', COMPLETED: '已完成', PENDING: '待处理' }
+const STATUS_TEXT = { CREATED: '待处理', CANCELLED: '已取消', ACCEPTED: '已接单', DELIVERING: '配送中', DELIVERED: '已送达', COMPLETED: '已完成', PENDING: '待处理' }
 
 function statusText(status) {
   return STATUS_TEXT[status] || status
@@ -36,6 +36,8 @@ async function cancelRow(order) {
 }
 
 async function confirmRow(order) {
+  // 后端确认收货只接受 DELIVERED → COMPLETED，状态不对时不发请求，避免无意义的 409
+  if (order.status !== 'DELIVERED') return
   loadError.value = ''
   try {
     const res = await confirmOrder(order.id)
@@ -149,12 +151,15 @@ onMounted(() => load(1))
               @click.stop="cancelRow(order)"
             >取消订单</button>
           </div>
-          <div v-else-if="order.status === 'ACCEPTED'" class="order-confirm">
+          <!-- 确认收货只认 DELIVERED → COMPLETED：已接单但骑手还没送达时，按钮保留但不可点 -->
+          <div v-else-if="order.status === 'ACCEPTED' || order.status === 'DELIVERED'" class="order-confirm">
             <button
               class="confirm-btn"
               :data-testid="`order-confirm-${order.id}`"
+              :disabled="order.status !== 'DELIVERED'"
               @click.stop="confirmRow(order)"
             >确认完成</button>
+            <span v-if="order.status !== 'DELIVERED'" class="confirm-hint">骑手送达后可确认</span>
           </div>
         </li>
       </ul>
@@ -332,6 +337,21 @@ onMounted(() => load(1))
   padding: 0.32rem 0.9rem;
   cursor: pointer;
   font-size: 0.85rem;
+  white-space: nowrap;
+}
+.confirm-btn:disabled {
+  background: #ececec;
+  color: #999;
+  cursor: not-allowed;
+}
+.order-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.confirm-hint {
+  color: #aaa;
+  font-size: 0.78rem;
   white-space: nowrap;
 }
 .order-shop-thumb {

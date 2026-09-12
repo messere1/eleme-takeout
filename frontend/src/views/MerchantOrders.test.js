@@ -57,13 +57,23 @@ describe('商家订单管理', () => {
     expect(wrapper.get('[data-testid="order-mgmt-item-60"]').text()).toContain('已接单')
   })
 
-  it('商家完成订单调用 completeOrder 并更新为已完成', async () => {
-    completeOrder.mockResolvedValue({ ...ORDERS[1], status: 'COMPLETED' })
+  it('商家不能直接完成订单：点击只说明新流程，不调用已移除的 complete 接口', async () => {
     const { wrapper } = await mountOrders()
     await wrapper.get('[data-testid="order-mgmt-complete-61"]').trigger('click')
     await flushPromises()
-    expect(completeOrder).toHaveBeenCalledWith(61)
-    expect(wrapper.get('[data-testid="order-mgmt-item-61"]').text()).toContain('已完成')
+    // SRS V2 完成路径为「骑手送达 → 顾客确认收货」，POST /orders/{id}/complete 已从后端移除
+    expect(completeOrder).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('顾客确认收货')
+    expect(wrapper.get('[data-testid="order-mgmt-item-61"]').text()).toContain('已接单')
+  })
+
+  it('配送中／已送达订单展示中文状态', async () => {
+    const { wrapper } = await mountOrders([
+      { id: 62, orderNo: 'T20260903003', shopId: 7, totalAmount: 9.0, status: 'DELIVERING', createdAt: '2026-09-03T10:00:00' },
+      { id: 63, orderNo: 'T20260903004', shopId: 7, totalAmount: 12.0, status: 'DELIVERED', createdAt: '2026-09-03T11:00:00' },
+    ])
+    expect(wrapper.get('[data-testid="order-mgmt-item-62"]').text()).toContain('配送中')
+    expect(wrapper.get('[data-testid="order-mgmt-item-63"]').text()).toContain('已送达')
   })
 
   it('没有订单时展示空状态', async () => {

@@ -21,6 +21,8 @@ export function acceptOrder(orderId) {
   return http.post(`/orders/${orderId}/accept`)
 }
 
+// 已失效：后端在 SRS V2 中移除了 POST /orders/{id}/complete（完成路径改为「骑手送达 → 顾客确认收货」）。
+// 保留导出以兼容既有引用，但 UI 不得再调用，调用只会拿到 404/405。
 export function completeOrder(orderId) {
   return http.post(`/orders/${orderId}/complete`)
 }
