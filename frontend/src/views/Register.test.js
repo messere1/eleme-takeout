@@ -14,8 +14,8 @@ import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import Register from './Register.vue'
 
-const CUSTOMER = { username: 'beiyang_user', phone: '13800138000', password: 'abc123' }
-const MERCHANT = { merchantName: '北洋餐厅', phone: '13900139000', password: 'abc123', businessScope: '中式快餐', shopAddress: '天津大学北洋园校区' }
+const CUSTOMER = { username: 'beiyang_user', phone: '13800138000', password: 'abc12345' }
+const MERCHANT = { merchantName: '北洋餐厅', phone: '13900139000', password: 'abc12345', businessScope: '中式快餐', shopAddress: '天津大学北洋园校区' }
 
 async function mountRegister() {
   return mountView(Register, { path: '/register' })

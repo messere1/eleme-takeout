@@ -13,7 +13,6 @@ public class ShopService {
     private final ShopMapper shopMapper;
 
     public ShopService(ShopMapper shopMapper) {
-        // 仅保留依赖签名，等待功能开发人员实现。
         this.shopMapper=shopMapper;
     }
 
@@ -123,8 +122,5 @@ public class ShopService {
             total,
             totalPages
         );
-    }
-    private UnsupportedOperationException pending() {
-        return new UnsupportedOperationException("待功能开发：店铺业务尚未实现");
     }
 }

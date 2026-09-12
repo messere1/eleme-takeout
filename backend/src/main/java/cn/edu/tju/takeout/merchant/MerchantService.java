@@ -105,5 +105,8 @@ public class MerchantService {
         shopMapper.updateProfile(shop.getId(),r.shopName().trim(),r.shopAddress().trim());return getMe(merchantId);
     }
 
-    @Transactional public void deleteMe(Long merchantId){if(merchantMapper.softDelete(merchantId)==0)throw new BusinessException(HttpStatus.NOT_FOUND,"RESOURCE_NOT_FOUND","商家不存在或已注销");}
+    @Transactional public void deleteMe(Long merchantId){
+        if(merchantMapper.softDelete(merchantId)==0)throw new BusinessException(HttpStatus.NOT_FOUND,"RESOURCE_NOT_FOUND","商家不存在或已注销");
+        shopMapper.closeByMerchantId(merchantId);
+    }
 }

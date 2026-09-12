@@ -8,7 +8,7 @@ import { session } from '@/utils/session'
 const router = useRouter()
 
 const PHONE_RE = /^1[3-9]\d{9}$/
-const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{6,64}$/
+const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/
 
 const form = reactive({
   role: 'CUSTOMER',
@@ -25,7 +25,7 @@ const submitting = ref(false)
 
 function invalidMessage() {
   if (!PHONE_RE.test(form.phone.trim())) return '手机号格式不正确'
-  if (!PASSWORD_RE.test(form.password)) return '密码需 6~64 位且包含字母和数字'
+  if (!PASSWORD_RE.test(form.password)) return '密码需 8~64 位且包含字母和数字'
   if (form.role === 'CUSTOMER') {
     const username = form.username.trim()
     if (username.length < 3 || username.length > 30) return '用户名需 3~30 个字符'
@@ -159,7 +159,7 @@ onMounted(async () => {
           type="password"
           data-testid="register-password"
           class="auth-input"
-          placeholder="6~64 位，含字母和数字"
+          placeholder="8~64 位，含字母和数字"
           show-password
         />
       </div>

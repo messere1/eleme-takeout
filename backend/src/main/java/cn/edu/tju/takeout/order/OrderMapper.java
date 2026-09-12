@@ -117,11 +117,11 @@ public interface OrderMapper {
 
     @Update("""
             UPDATE orders SET rider_id = #{riderId}, status = 'DELIVERING'
-            WHERE id = #{orderId} AND status = 'ACCEPTED' AND rider_id IS NULL
+            WHERE id = #{orderId} AND status = 'ACCEPTED' AND payment_status = 'PAID' AND rider_id IS NULL
             """)
     int claimForDelivery(Long orderId, Long riderId);
 
-    @Select("SELECT * FROM orders WHERE status = 'ACCEPTED' AND rider_id IS NULL ORDER BY created_at ASC, id ASC")
+    @Select("SELECT * FROM orders WHERE status = 'ACCEPTED' AND payment_status = 'PAID' AND rider_id IS NULL ORDER BY created_at ASC, id ASC")
     List<Order> findReadyForDelivery();
 
     @Select("SELECT * FROM orders WHERE rider_id = #{riderId} ORDER BY created_at DESC, id DESC")

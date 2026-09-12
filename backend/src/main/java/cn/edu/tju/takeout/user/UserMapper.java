@@ -9,17 +9,20 @@ import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface UserMapper {
-    @Select("SELECT * FROM users WHERE username = #{username}")
+    @Select("SELECT * FROM users WHERE enabled = TRUE AND username = #{username}")
     Optional<User> findByUsername(String username);
 
-    @Select("SELECT * FROM users WHERE phone = #{phone}")
+    @Select("SELECT * FROM users WHERE enabled = TRUE AND phone = #{phone}")
     Optional<User> findByPhone(String phone);
 
     @Select("SELECT * FROM users WHERE enabled = TRUE AND (username = #{account} OR phone = #{account})")
     Optional<User> findByAccount(String account);
 
-    @Select("SELECT * FROM users WHERE id = #{id}")
+    @Select("SELECT * FROM users WHERE id = #{id} AND enabled = TRUE")
     Optional<User> findById(Long id);
+
+    @Select("SELECT * FROM users WHERE id = #{id}")
+    Optional<User> findAnyById(Long id);
 
     @Insert("""
             INSERT INTO users(username, phone, password_hash, nickname, created_at)
@@ -52,6 +55,8 @@ public interface UserMapper {
 
     @Update("UPDATE users SET enabled = #{enabled} WHERE id = #{id}")
     int setEnabled(Long id, boolean enabled);
+    @Select("SELECT COUNT(*) FROM users WHERE id = #{id} AND enabled = TRUE")
+    int countEnabledById(Long id);
     @Update("UPDATE users SET address = #{address} WHERE id = #{id} AND enabled = TRUE")
     int updateAddress(Long id, String address);
 }

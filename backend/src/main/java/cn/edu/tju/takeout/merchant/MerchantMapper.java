@@ -29,4 +29,5 @@ public interface MerchantMapper {
     @Update("UPDATE merchants SET enabled = #{enabled} WHERE id = #{id}") int setEnabled(Long id, boolean enabled);
     @Update("UPDATE merchants SET business_scope=#{scope} WHERE id=#{id} AND enabled=TRUE") int updateScope(Long id,String scope);
     @Update("UPDATE merchants SET enabled=FALSE, phone=CONCAT('DELETED-',id), merchant_name=CONCAT('deleted-',id) WHERE id=#{id} AND enabled=TRUE") int softDelete(Long id);
+    @Select("SELECT COUNT(*) FROM merchants WHERE id = #{id} AND enabled = TRUE") int countEnabledById(Long id);
 }

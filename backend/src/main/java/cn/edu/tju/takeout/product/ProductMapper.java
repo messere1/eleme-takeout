@@ -20,6 +20,7 @@ public interface ProductMapper {
             SELECT * FROM products
             WHERE shop_id = #{shopId} AND category_id = #{categoryId}
               AND status = 'ON_SALE' AND deleted = FALSE
+              AND EXISTS (SELECT 1 FROM shops s WHERE s.id = products.shop_id AND s.status = 'OPEN')
             ORDER BY id ASC
             """)
     List<Product> findVisibleByShopAndCategory(Long shopId, Long categoryId);
@@ -62,7 +63,9 @@ public interface ProductMapper {
     //用于分页查询
     @Select("""
         SELECT * FROM products WHERE category_id = #{categoryId} AND status = 'ON_SALE'
-        AND deleted = FALSE ORDER BY id ASC LIMIT #{limit} OFFSET #{offset}
+        AND deleted = FALSE
+        AND EXISTS (SELECT 1 FROM shops s WHERE s.id = products.shop_id AND s.status = 'OPEN')
+        ORDER BY id ASC LIMIT #{limit} OFFSET #{offset}
         """)
     List<Product> findVisiblePageByCategoryId(
                 Long categoryId,
@@ -76,6 +79,7 @@ public interface ProductMapper {
                 WHERE category_id = #{categoryId}
                 AND status = 'ON_SALE'
                 AND deleted = FALSE
+                AND EXISTS (SELECT 1 FROM shops s WHERE s.id = products.shop_id AND s.status = 'OPEN')
         """)
     long countVisibleByCategoryId(Long categoryId);
 
@@ -86,6 +90,7 @@ public interface ProductMapper {
         WHERE id=#{productId}
         AND status='ON_SALE'
         AND deleted=FALSE
+        AND EXISTS (SELECT 1 FROM shops s WHERE s.id = products.shop_id AND s.status = 'OPEN')
         """)
     Optional<Product> findVisibleById(Long productId);
 

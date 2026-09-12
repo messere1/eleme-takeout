@@ -17,7 +17,6 @@ public class CategoryService {
     private final ShopMapper shopMapper;
     public CategoryService(
             CategoryMapper categoryMapper, ProductMapper productMapper, ShopMapper shopMapper) {
-        // 仅保留依赖签名，等待功能开发人员实现。
         this.categoryMapper=categoryMapper;
         this.productMapper=productMapper;
         this.shopMapper=shopMapper;
@@ -168,7 +167,4 @@ public class CategoryService {
         
     }
 
-    private UnsupportedOperationException pending() {
-        return new UnsupportedOperationException("待功能开发：分类业务尚未实现");
-    }
 }
