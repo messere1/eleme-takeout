@@ -11,6 +11,18 @@ const mask=v=>!v?'':v.length>=7?`${v.slice(0,3)}****${v.slice(-4)}`:'***'
 async function refresh(){error.value='';loading.value=true;try{const data=await loaders[tab.value]();rows.value=Array.isArray(data)?data:data?.items??[]}catch(e){error.value=e?.message||'管理数据加载失败';rows.value=[]}finally{loading.value=false}}
 async function toggle(row,type){try{await setAdminStatus(type,row.id,row.enabled===false?'ENABLED':'DISABLED');row.enabled=!row.enabled}catch(e){error.value=e?.message||'操作失败'}}
 async function decide(row,status){try{const r=await decideRefund(row.id,status);row.status=r.status}catch(e){error.value=e?.message||'处理失败'}}
+// 订单状态：取值与 PATCH /admin/orders/{id}/status 允许集合保持一致，前端不自己发明状态。
+const ORDER_STATUS=['CREATED','ACCEPTED','DELIVERING','DELIVERED','COMPLETED','CANCELLED']
+const ORDER_STATUS_TEXT={CREATED:'待处理',ACCEPTED:'已接单',DELIVERING:'配送中',DELIVERED:'已送达',COMPLETED:'已完成',CANCELLED:'已取消'}
+const orderDraft=ref({}),orderSaving=ref({})
+async function changeOrderStatus(row){
+  const next=orderDraft.value[row.id]
+  if(!next||next===row.status||orderSaving.value[row.id])return
+  error.value='';orderSaving.value[row.id]=true
+  try{await setAdminStatus('orders',row.id,next);row.status=next}
+  catch(e){error.value=e?.message||'订单状态更新失败'}
+  finally{orderSaving.value[row.id]=false}
+}
 onMounted(refresh)
 </script>
 
@@ -37,7 +49,32 @@ onMounted(refresh)
       </tbody>
     </table>
     <table v-else-if="tab==='products'&&rows.length" class="admin-table"><tbody><tr v-for="p in rows" :key="p.id"><td>{{p.id}}</td><td>{{p.name}}</td><td>{{p.status}}</td><td><button @click="setAdminStatus('products',p.id,p.status==='ON_SALE'?'OFF_SALE':'ON_SALE').then(refresh)">切换上下架</button></td></tr></tbody></table>
-    <table v-else-if="tab==='orders'&&rows.length" class="admin-table"><tbody><tr v-for="o in rows" :key="o.id"><td>{{o.orderNo}}</td><td>{{o.status}}</td><td>{{o.paymentStatus}}</td></tr></tbody></table>
+    <table v-else-if="tab==='orders'&&rows.length" class="admin-table">
+      <thead><tr><th>订单号</th><th>订单状态</th><th>支付状态</th><th>改为</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr v-for="o in rows" :key="o.id">
+          <td>{{o.orderNo}}</td>
+          <td :data-testid="`admin-order-status-${o.id}`">{{ORDER_STATUS_TEXT[o.status]||o.status}}</td>
+          <td>{{o.paymentStatus}}</td>
+          <td>
+            <select
+              class="status-select"
+              :value="orderDraft[o.id]||o.status"
+              @change="orderDraft[o.id]=$event.target.value"
+            >
+              <option v-for="s in ORDER_STATUS" :key="s" :value="s">{{ORDER_STATUS_TEXT[s]}}</option>
+            </select>
+          </td>
+          <td>
+            <button
+              :data-testid="`admin-order-set-${o.id}`"
+              :disabled="(orderDraft[o.id]||o.status)===o.status||orderSaving[o.id]"
+              @click="changeOrderStatus(o)"
+            >{{orderSaving[o.id]?'提交中…':'更新状态'}}</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
     <table v-else-if="tab==='refunds'&&rows.length" class="admin-table"><tbody><tr v-for="r in rows" :key="r.id"><td>{{r.orderId}}</td><td>{{r.amount}}</td><td>{{r.reason}}</td><td>{{r.status}}</td><td><button v-if="r.status==='PENDING'" @click="decide(r,'APPROVED')">批准</button><button v-if="r.status==='PENDING'" @click="decide(r,'REJECTED')">拒绝</button></td></tr></tbody></table>
   </section>
 </template>
@@ -60,4 +97,5 @@ onMounted(refresh)
 .admin-table { width: 100%; border-collapse: collapse; }
 .admin-table th, .admin-table td { border: 1px solid #eee; padding: 0.5rem 0.75rem; text-align: left; }
 .admin-table th { background: #fafafa; }
+.status-select { border: 1px solid #eee; border-radius: 6px; padding: 0.3rem 0.5rem; background: #fff; color: #444; }
 </style>

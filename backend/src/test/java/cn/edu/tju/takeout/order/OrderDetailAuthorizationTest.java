@@ -46,7 +46,7 @@ class OrderDetailAuthorizationTest {
 
         OrderView result = orderService.getDetail(7L, "CUSTOMER", 60L);
 
-        assertThat(result.status()).isEqualTo("PENDING");
+        assertThat(result.status()).isEqualTo("CREATED");
         assertThat(result.items()).singleElement()
                 .extracting(OrderItemView::productName)
                 .isEqualTo("煎饼果子");
@@ -90,7 +90,7 @@ class OrderDetailAuthorizationTest {
     private static Order order(Long userId) {
         return Order.restore(
                 60L, "NO-60", userId, 20L, new BigDecimal("17.00"),
-                "PENDING", LocalDateTime.of(2026, 9, 1, 12, 0));
+                "CREATED", LocalDateTime.of(2026, 9, 1, 12, 0));
     }
 
     private static OrderItem item() {
