@@ -89,6 +89,15 @@ assert(filtered.items.some(item => item.id === shopA.id), 'category filter omitt
 const secondaryCategoryName = defaults[1].name
 const categorySearch = await call('search shops by secondary linked category', 'GET', `/shops/search?keyword=${encodeURIComponent(secondaryCategoryName)}`)
 assert(categorySearch.items.some(item => item.id === shopA.id), 'search omitted shop linked to secondary business category')
+const productCategory = await call('create product category for search', 'POST', `/shops/${shopA.id}/categories`, {
+  role: 'MERCHANT', body: { name: `联调菜品${suffix}`, sort: 1 },
+})
+const productName = `联调特色餐${suffix}`
+await call('create product for search', 'POST', `/shops/${shopA.id}/products`, {
+  role: 'MERCHANT', body: { name: productName, categoryId: productCategory.id, description: '隔离测试商品', price: '18.50', stock: 10 },
+})
+const productSearch = await call('search shops by product name', 'GET', `/shops/search?keyword=${encodeURIComponent(productName)}`)
+assert(productSearch.items.some(item => item.id === shopA.id), 'search omitted shop with matching product name')
 await call('PUT unknown category', 'PUT', '/merchant/shop/business-categories', {
   role: 'MERCHANT', body: { categoryIds: [categoryIds[0], 999999] }, expected: 400,
 })
