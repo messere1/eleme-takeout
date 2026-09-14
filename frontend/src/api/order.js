@@ -1,5 +1,4 @@
-// 订单接口。SRS V2.0 §9 外部接口表、§5.1 状态机。
-// 完成路径只有「骑手送达 → 顾客确认收货」（FR-022），不存在商家直接完成的接口。
+// 订单接口。
 import { http } from './http'
 
 export function createOrder(payload) {
@@ -14,7 +13,7 @@ export function getOrder(orderId) {
   return http.get(`/orders/${orderId}`)
 }
 
-// FR-016：商家订单同样按分页、状态、时间查询（后端 MerchantOrderController 支持这组参数）。
+// 商家订单：分页、状态、时间查询。
 export function listMerchantOrders(query) {
   return http.get('/merchant/orders', { params: query })
 }
@@ -23,8 +22,7 @@ export function acceptOrder(orderId) {
   return http.post(`/orders/${orderId}/accept`)
 }
 
-// POST /orders/{id}/complete 不在 SRS V2.0 §9 接口表内，§5.1 也没有这条迁移，
-// 故不提供封装（调用只会打到不存在的映射）。
+// 后端没有商家直接完成的接口，故不提供封装。
 export function cancelOrder(orderId) {
   return http.post(`/orders/${orderId}/cancel`)
 }

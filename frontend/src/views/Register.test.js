@@ -17,9 +17,9 @@ import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import Register from './Register.vue'
 
-const CUSTOMER = { username: 'beiyang_user', phone: '13800138000', password: 'abc123' }
-const MERCHANT = { merchantName: '北洋餐厅', phone: '13900139000', password: 'abc123', businessScope: '中式快餐', shopAddress: '天津大学北洋园校区' }
-const RIDER = { riderName: '李骑手', phone: '13700137000', password: 'abc123' }
+const CUSTOMER = { username: 'beiyang_user', phone: '13800138000', password: 'abc12345' }
+const MERCHANT = { merchantName: '北洋餐厅', phone: '13900139000', password: 'abc12345', businessScope: '中式快餐', shopAddress: '天津大学北洋园校区' }
+const RIDER = { riderName: '李骑手', phone: '13700137000', password: 'abc12345' }
 
 async function mountRegister() {
   return mountView(Register, { path: '/register' })
@@ -153,6 +153,29 @@ describe('注册页（角色化）', () => {
     await submit(wrapper)
 
     expect(wrapper.get('[data-testid="register-error"]').text()).toContain('手机号已被注册')
+  })
+
+  it('密码不足 8 位时不调用注册接口', async () => {
+    const { wrapper } = await mountRegister()
+    await setField(wrapper, 'register-username', CUSTOMER.username)
+    await setField(wrapper, 'register-phone', CUSTOMER.phone)
+    await setField(wrapper, 'register-password', 'abc123')
+    await submit(wrapper)
+
+    expect(register).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-testid="register-error"]').text()).toContain('密码需 8~64 位')
+  })
+
+  it('骑手姓名不足 2 个字符时不调用注册接口', async () => {
+    const { wrapper } = await mountRegister()
+    await wrapper.get('[data-testid="register-role"]').setValue('RIDER')
+    await setField(wrapper, 'register-rider-name', '李')
+    await setField(wrapper, 'register-phone', RIDER.phone)
+    await setField(wrapper, 'register-password', RIDER.password)
+    await submit(wrapper)
+
+    expect(registerRider).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-testid="register-error"]').text()).toContain('骑手姓名需 2~50')
   })
 
   it('顾客手机号格式不合法时不调用注册接口并提示', async () => {

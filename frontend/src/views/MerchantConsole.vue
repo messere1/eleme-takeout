@@ -79,8 +79,7 @@ async function load() {
     const mine = await getMyShop()
     if (mine?.id) {
       shopId.value = Number(mine.id)
-      // 顺手把本地缓存补回来：登录接口不返回 shopId，而 takeout-shop 只在注册时写过、
-      // 退出登录或 401 会被清掉。不刷新的话，商家退出再登录就只剩这一个页面能用。
+      // 顺手把本地缓存补回来，否则缓存失效后只有这一个页面能用。
       session.saveShop({
         merchantId: mine.merchantId ?? stored?.merchantId,
         shopId: shopId.value,

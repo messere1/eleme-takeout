@@ -14,8 +14,7 @@ import {
 import ImageUploader from '@/components/ImageUploader.vue'
 import { isPositiveMoney } from '@/utils/money'
 
-// 店铺一律以服务端为准：登录接口不返回 shopId，本地缓存（takeout-shop）只在注册时写过，
-// 退出登录或任意 401 都会清掉它，靠缓存就会让商家退出再登录后进不了商品管理。
+// 店铺以服务端为准：登录接口不返回 shopId，本地缓存在退出登录或 401 时会被清掉。
 const shopId = ref(null)
 const missingShop = ref(false)
 const loadingShop = ref(true)
@@ -30,8 +29,7 @@ const editingNameId = ref(null)
 const nameEdit = reactive({})
 const message = ref('')
 const creating = ref(false)
-// 上传成功后写入这里；预览优先取它，其次回退到已保存的 product.imageUrl，
-// 这样刷新后已上传的菜品图不会消失。
+// 上传成功后写入这里；预览优先取它，其次回退到已保存的 product.imageUrl。
 const imgSrc = reactive({})
 
 const productPage = ref(1)
@@ -104,8 +102,7 @@ async function saveProduct(product) {
 
 async function savePrice(product) {
   message.value = ''
-  // FR-010 / EX-029：价格必须严格校验，不接受指数形式、三位小数，也不得先舍入再接受。
-  // Number() 会放过 1.234、1e-7 这类写法，所以先按 §9.1 的金额格式判一次。
+  // Number() 会放过 1.234、1e-7 这类写法，所以先按金额格式判一次。
   const raw = String(priceEdit[product.id] ?? '').trim()
   if (!isPositiveMoney(raw)) {
     message.value = '价格需为 0.01～99999999.99 且最多两位小数'
@@ -169,7 +166,7 @@ async function createNew() {
     message.value = '请输入商品名称'
     return
   }
-  // FR-010 / EX-029：同上，先按金额格式判，不靠 Number() 的隐式转换。
+  // 同上，先按金额格式判。
   if (!isPositiveMoney(form.price)) {
     message.value = '价格需为 0.01～99999999.99 且最多两位小数'
     return

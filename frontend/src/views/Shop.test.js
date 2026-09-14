@@ -58,6 +58,27 @@ describe('店铺页（顾客点单）', () => {
     expect(wrapper.get('[data-testid="shop-status"]').text()).toContain('营业中')
   })
 
+  it('展示商家设置的营业时间', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, openingTime: '08:00', closingTime: '21:30' })
+
+    expect(wrapper.get('[data-testid="shop-hours"]').text()).toContain('08:00')
+    expect(wrapper.get('[data-testid="shop-hours"]').text()).toContain('21:30')
+  })
+
+  it('后端返回带秒的时间也按 HH:mm 展示', async () => {
+    const { wrapper } = await mountShop({
+      ...SHOP, openingTime: '08:00:00', closingTime: '21:30:00',
+    })
+
+    expect(wrapper.get('[data-testid="shop-hours"]').text()).toContain('08:00–21:30')
+  })
+
+  it('商家没设置营业时间时不展示这一行', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, openingTime: null, closingTime: null })
+
+    expect(wrapper.find('[data-testid="shop-hours"]').exists()).toBe(false)
+  })
+
   it('默认选中第一个分类并展示其商品', async () => {
     const { wrapper } = await mountShop()
     expect(listProducts).toHaveBeenCalledWith(30, { page: 1, size: 20 })

@@ -1,9 +1,9 @@
-// EX-007：含空格、连字符或国际前缀的电话规范化后 7–15 位可接受，其他必须被拒。
+// 含空格、连字符或国际前缀的电话，规范化后 7–15 位可接受，其他必须被拒。
 import { describe, expect, it } from 'vitest'
 
 import { isValidRecipientPhone, normalizeRecipientPhone } from './recipientPhone'
 
-describe('收货联系电话规则（EX-007）', () => {
+describe('收货联系电话规则', () => {
   it('去掉空格、连字符与前导 +', () => {
     expect(normalizeRecipientPhone('+86 138-0013-8000')).toBe('8613800138000')
     expect(normalizeRecipientPhone('022 8535 6000')).toBe('02285356000')

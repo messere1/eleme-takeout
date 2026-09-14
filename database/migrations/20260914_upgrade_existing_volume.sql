@@ -70,4 +70,14 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
     created_at TIMESTAMP NOT NULL
 );
 
+-- 店铺营业时间与店铺经营品类关联；已有数据卷不会重跑 schema.sql 的 CREATE TABLE，故在此补。
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS opening_time TIME;
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS closing_time TIME;
+
+CREATE TABLE IF NOT EXISTS shop_business_categories (
+    shop_id BIGINT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+    business_category_id BIGINT NOT NULL REFERENCES business_categories(id),
+    PRIMARY KEY (shop_id, business_category_id)
+);
+
 COMMIT;

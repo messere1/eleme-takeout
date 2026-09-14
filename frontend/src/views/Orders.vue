@@ -21,7 +21,7 @@ function fmtTime(value) {
   return value ? String(value).replace('T', ' ').slice(0, 16) : ''
 }
 
-// §5.1 状态机的全部取值。原来的 PENDING 不在状态机里，后端从不产生。
+// 订单状态取值，后端不产生 PENDING。
 const STATUS_TEXT = { CREATED: '待处理', CANCELLED: '已取消', ACCEPTED: '已接单', DELIVERING: '配送中', DELIVERED: '已送达', COMPLETED: '已完成' }
 
 function statusText(status) {
@@ -52,7 +52,7 @@ async function confirmRow(order) {
 
 async function load(page) {
   try {
-    // FR-016：顾客订单按分页、状态、时间查询。
+    // 分页、状态、时间查询。
     const params = { page, size: 20 }
     if (selectedStatus.value) params.status = selectedStatus.value
     if (startTime.value) params.startTime = startTime.value
@@ -98,8 +98,7 @@ function pad(n) {
   return String(n).padStart(2, '0')
 }
 
-// §5.1 只有 CREATED+UNPAID 会被自动取消；§9.1 / FR-019 要求倒计时以服务器 paymentDeadline 为准，
-// 不能用 createdAt 自己加 15 分钟推算（那样已支付订单也会显示"已超时"，客户端时钟偏了还全错）。
+// 倒计时以服务器给的 paymentDeadline 为准；只有未支付订单会被自动取消。
 function countdownText(order) {
   if (order.status !== 'CREATED' || order.paymentStatus === 'PAID') return ''
   if (!order.paymentDeadline) return ''
@@ -110,7 +109,7 @@ function countdownText(order) {
   return `距自动取消 ${pad(Math.floor(s / 60))}:${pad(s % 60)}`
 }
 
-// §5.1：CREATED+UNPAID 才允许顾客取消。
+// 只有未支付的 CREATED 订单可以取消。
 function canCancel(order) {
   return order.status === 'CREATED' && order.paymentStatus !== 'PAID'
 }
