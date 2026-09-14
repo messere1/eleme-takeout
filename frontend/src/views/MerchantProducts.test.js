@@ -7,6 +7,7 @@ import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/api/shop', () => ({
+  getMyShop: vi.fn(),
   listMerchantProducts: vi.fn(),
   listCategories: vi.fn(),
   createProduct: vi.fn(),
@@ -15,7 +16,7 @@ vi.mock('@/api/shop', () => ({
   deleteProduct: vi.fn(),
 }))
 
-import { changeProductStatus, createProduct, deleteProduct, listCategories, listMerchantProducts, updateProductStock } from '@/api/shop'
+import { changeProductStatus, createProduct, deleteProduct, getMyShop, listCategories, listMerchantProducts, updateProductStock } from '@/api/shop'
 import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import MerchantProducts from './MerchantProducts.vue'
@@ -49,6 +50,33 @@ describe('商家商品管理', () => {
   beforeEach(() => {
     session.clear()
     vi.clearAllMocks()
+    getMyShop.mockResolvedValue({ id: 7, shopName: '北洋餐厅' })
+  })
+
+  it('直接登录后即使没有本地店铺缓存也能按本人店铺加载商品', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
+    listMerchantProducts.mockResolvedValue(PRODUCTS)
+    listCategories.mockResolvedValue(CATEGORIES)
+
+    const { wrapper } = await mountView(MerchantProducts, { path: '/merchant/products' })
+    await flushPromises()
+
+    expect(getMyShop).toHaveBeenCalledTimes(1)
+    expect(listCategories).toHaveBeenCalledWith(7)
+    expect(wrapper.find('[data-testid="product-mgmt-item-40"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('还没有店铺')
+  })
+
+  it('本地店铺缓存过期时优先使用服务端的本人店铺', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
+    session.saveShop({ merchantId: 99, shopId: 99, shopName: '旧店铺' })
+    listMerchantProducts.mockResolvedValue(PRODUCTS)
+    listCategories.mockResolvedValue(CATEGORIES)
+
+    await mountView(MerchantProducts, { path: '/merchant/products' })
+    await flushPromises()
+
+    expect(listCategories).toHaveBeenCalledWith(7)
   })
 
   it('列出在售与下架的全部商品', async () => {
