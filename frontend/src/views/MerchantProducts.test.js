@@ -53,24 +53,37 @@ describe('商家商品管理', () => {
   beforeEach(() => {
     session.clear()
     vi.clearAllMocks()
+    getMyShop.mockResolvedValue({ id: 7, shopName: '北洋餐厅' })
   })
 
-  // 登录接口不返回 shopId，本地缓存只在注册时写过，退出登录/401 会清掉它。
-  // 商家退出再登录后不能因此进不了商品管理。
-  it('本地没有店铺缓存时按登录身份找回店铺并加载商品', async () => {
-    session.save({ token: 'mt-1', role: 'MERCHANT' }) // 有登录态，但没有 takeout-shop
-    getMyShop.mockResolvedValue({ id: 7, shopName: '北洋餐厅' })
+  it('直接登录后即使没有本地店铺缓存也能按本人店铺加载商品', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
     listMerchantProducts.mockResolvedValue(PRODUCTS)
     listCategories.mockResolvedValue(CATEGORIES)
 
     const { wrapper } = await mountView(MerchantProducts, { path: '/merchant/products' })
     await flushPromises()
 
-    expect(wrapper.find('.console-missing').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="product-mgmt-item-40"]').exists()).toBe(true)
+    expect(getMyShop).toHaveBeenCalledTimes(1)
+    expect(listCategories).toHaveBeenCalledWith(7)
+    expect(wrapper.find('[data-testid="product-mgmt-item-40"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('还没有店铺')
   })
 
-  it('缓存和接口都拿不到店铺时才提示去注册', async () => {
+  it('本地店铺缓存过期时优先使用服务端的本人店铺', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
+    session.saveShop({ merchantId: 99, shopId: 99, shopName: '旧店铺' })
+    listMerchantProducts.mockResolvedValue(PRODUCTS)
+    listCategories.mockResolvedValue(CATEGORIES)
+
+    await mountView(MerchantProducts, { path: '/merchant/products' })
+    await flushPromises()
+
+    expect(listCategories).toHaveBeenCalledWith(7)
+  })
+
+  // 拿不到「我的店铺」时不能只丢一行错误，要给出去注册/登录的可操作提示（NFR-006）。
+  it('接口拿不到本人店铺时提示去注册而不是静默失败', async () => {
     session.save({ token: 'mt-1', role: 'MERCHANT' })
     getMyShop.mockRejectedValue(new Error('未绑定店铺'))
 

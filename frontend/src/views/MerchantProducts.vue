@@ -13,28 +13,12 @@ import {
 } from '@/api/shop'
 import { uploadImage } from '@/api/upload'
 import { isPositiveMoney } from '@/utils/money'
-import { session } from '@/utils/session'
 
-// 登录接口不返回 shopId，本地缓存（takeout-shop）只在注册成功时写过一次，
-// 而退出登录或任意 401 都会清掉它。所以不能只读缓存：缓存没了就按登录身份
-// 把「我的店铺」取回来，否则商家一旦退出再登录就进不了商品管理。
-const shopId = ref(session.loadShop()?.shopId ?? null)
+// 店铺一律以服务端为准：登录接口不返回 shopId，本地缓存（takeout-shop）只在注册时写过，
+// 退出登录或任意 401 都会清掉它，靠缓存就会让商家退出再登录后进不了商品管理。
+const shopId = ref(null)
 const missingShop = ref(false)
-
-async function resolveShop() {
-  try {
-    const mine = await getMyShop()
-    if (mine?.id) shopId.value = Number(mine.id)
-  } catch {
-    /* ignore：回退本地缓存 */
-  }
-  if (!shopId.value) {
-    missingShop.value = true
-    return false
-  }
-  missingShop.value = false
-  return true
-}
+const loadingShop = ref(true)
 
 const STATUS_TEXT = { ON_SALE: '在售', OFF_SALE: '已下架' }
 
@@ -63,8 +47,19 @@ function fmt(value) {
 }
 
 async function load(page = 1) {
-  if (!shopId.value) return
   try {
+    const mine = await getMyShop()
+    shopId.value = mine?.id ? Number(mine.id) : null
+  } catch {
+    // 拿不到「我的店铺」等价于这个账号没有绑定店铺，下面统一走注册/登录提示。
+    shopId.value = null
+  }
+  try {
+    if (!shopId.value) {
+      missingShop.value = true
+      return
+    }
+    missingShop.value = false
     const [cats, res] = await Promise.all([
       listCategories(shopId.value),
       listMerchantProducts({ page, size: 20 }),
@@ -84,6 +79,8 @@ async function load(page = 1) {
     })
   } catch (error) {
     message.value = error?.message || '商品加载失败，请稍后重试'
+  } finally {
+    loadingShop.value = false
   }
 }
 
@@ -207,15 +204,14 @@ async function createNew() {
   }
 }
 
-onMounted(async () => {
-  if (await resolveShop()) await load()
-})
+onMounted(load)
 </script>
 
 <template>
   <section class="console">
     <h2>商品管理</h2>
-    <p v-if="missingShop" class="console-missing">
+    <p v-if="loadingShop">店铺加载中…</p>
+    <p v-else-if="missingShop" class="console-missing">
       还没有店铺？<RouterLink to="/register">去注册开店</RouterLink>，或
       <RouterLink to="/login">用账号登录</RouterLink>。
     </p>

@@ -33,6 +33,20 @@ describe('管理员只读账号清单', () => {
     expect(wrapper.text()).toContain('138****8000')
   })
 
+  it('窄屏用户列表为每个字段和操作提供卡片标签', async () => {
+    const { wrapper } = await mountAdmin([
+      { id: 7, username: 'alice', phone: '138****8000', nickname: 'Alice' },
+    ])
+
+    const cells = wrapper.findAll('.admin-table tbody tr td')
+    expect(cells.map(cell => cell.attributes('data-label'))).toEqual([
+      'ID', '用户名', '手机号', '昵称', '操作',
+    ])
+    expect(wrapper.findAll('.admin-table thead th').map(th => th.text())).toEqual([
+      'ID', '用户名', '手机号', '昵称', '操作',
+    ])
+  })
+
   it('切换商家页签后加载商家清单', async () => {
     listMerchants.mockResolvedValueOnce({
       items: [{ id: 12, merchantName: '北洋餐厅', phone: '139****9000', businessScope: '快餐' }],
