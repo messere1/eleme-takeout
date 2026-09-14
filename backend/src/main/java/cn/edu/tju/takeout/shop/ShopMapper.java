@@ -32,6 +32,10 @@ public interface ShopMapper {
         WHERE s.status = 'OPEN' AND m.enabled = TRUE
           AND (s.shop_name ILIKE '%' || #{keyword} || '%'
                OR m.business_scope ILIKE '%' || #{keyword} || '%'
+               OR EXISTS (SELECT 1 FROM shop_business_categories sbc
+                          JOIN business_categories bc ON bc.id = sbc.business_category_id
+                          WHERE sbc.shop_id = s.id AND bc.enabled = TRUE
+                            AND bc.name ILIKE '%' || #{keyword} || '%')
                OR p.name ILIKE '%' || #{keyword} || '%')
         ORDER BY s.id DESC
         LIMIT #{limit} OFFSET #{offset}
@@ -48,6 +52,10 @@ public interface ShopMapper {
         WHERE s.status = 'OPEN' AND m.enabled = TRUE
           AND (s.shop_name ILIKE '%' || #{keyword} || '%'
                OR m.business_scope ILIKE '%' || #{keyword} || '%'
+               OR EXISTS (SELECT 1 FROM shop_business_categories sbc
+                          JOIN business_categories bc ON bc.id = sbc.business_category_id
+                          WHERE sbc.shop_id = s.id AND bc.enabled = TRUE
+                            AND bc.name ILIKE '%' || #{keyword} || '%')
                OR p.name ILIKE '%' || #{keyword} || '%')
     """)
     long countByKeyword(@Param("keyword") String keyword);
