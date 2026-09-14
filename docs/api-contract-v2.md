@@ -73,7 +73,7 @@
 
 - `GET /refunds`：顾客查看本人退款。
 - `GET /merchant/refunds`、`PATCH /merchant/refunds/{id}`：本店商家查询并提交 `APPROVED` 或 `REJECTED`。
-- `GET /admin/refunds`、`PATCH /admin/refunds/{id}`：管理员查询和处理。
+- `GET /admin/refunds`、`PATCH /admin/refunds/{id}`：管理员查询和处理。查询为分页，响应 `data` 是 `{items, page, size, total, totalPages}` 信封（与其他 admin 列表一致），不再是裸数组。
 
 状态为 `PENDING → APPROVED | REJECTED`，终态不可重复处理。
 
@@ -92,6 +92,10 @@
 - `GET /admin/users|merchants|products|orders|refunds`
 - `PATCH /admin/users|merchants|products|orders/{id}/status`
 - `PATCH /admin/refunds/{id}`
+
+五个列表接口统一分页（默认 `page=1&size=20`，最大 100），响应 `data` 均为 `{items, page, size, total, totalPages}`。订单列表另支持 `status`、`startTime`、`endTime` 筛选（FR-016），且 `startTime` 不得晚于 `endTime`。
+
+订单列表项不含收货地址，手机号仅以 `recipientPhoneMasked` 脱敏下发（NFR-004）。
 
 账号状态为 `ENABLED|DISABLED`，商品为 `ON_SALE|OFF_SALE`，订单状态必须属于 SRS 状态机。写操作记录管理员、动作、目标和时间；列表手机号脱敏，不返回密码摘要或 Token。
 

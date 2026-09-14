@@ -232,7 +232,8 @@ public class AdminController {
     }
 
     private void validateStatus(String status, Set<String> allowedStatuses) {
-        if (!allowedStatuses.contains(status)) {
+        // allowedStatuses 由 Set.of 构造，是不可变集合：contains(null) 会抛 NPE 而不是返回 false。
+        if (status == null || !allowedStatuses.contains(status)) {
             throw validationError("资源状态不合法");
         }
     }

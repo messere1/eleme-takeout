@@ -34,9 +34,6 @@ public interface RefundMapper {
     @Select("SELECT * FROM refund_requests WHERE id = #{id}")
     Optional<RefundRequest> findById(@Param("id") Long id);
 
-    @Select("SELECT * FROM refund_requests ORDER BY id DESC")
-    List<RefundRequest> findAll();
-
     @Select("""
             SELECT * FROM refund_requests
             ORDER BY id DESC

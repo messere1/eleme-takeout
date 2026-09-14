@@ -34,10 +34,6 @@ public class RefundController {
     private final OrderMapper orders;
     private final AdminMapper admins;
 
-    public RefundController(RefundMapper refunds, OrderMapper orders) {
-        this(refunds, orders, null);
-    }
-
     @Autowired
     public RefundController(RefundMapper refunds, OrderMapper orders, AdminMapper admins) {
         this.refunds = refunds;
@@ -94,13 +90,7 @@ public class RefundController {
         return ApiResponse.success(refunds.findByUser(principal.userId()));
     }
 
-    /**
-     * Backward-compatible service entry for callers compiled against the original controller.
-     */
-    public ApiResponse<List<RefundRequest>> all() {
-        return ApiResponse.success(refunds.findAll());
-    }
-
+    // FR-016：管理员退款列表同样按分页查询，与其他 admin 列表保持一致。
     @GetMapping("/admin/refunds")
     public ApiResponse<Map<String, Object>> all(
             @RequestParam(defaultValue = "1") int page,
@@ -111,13 +101,6 @@ public class RefundController {
                 page,
                 size,
                 refunds.countAll()));
-    }
-
-    /**
-     * Backward-compatible service entry for callers compiled without an authenticated principal.
-     */
-    public ApiResponse<RefundRequest> decide(Long id, RefundDecisionRequest body) {
-        return decide(null, id, body);
     }
 
     @PatchMapping("/admin/refunds/{id}")
@@ -135,9 +118,8 @@ public class RefundController {
         if (refunds.decide(id, body.status()) == 0) {
             throw conflict("退款已处理");
         }
-        if (admins != null && principal != null) {
-            admins.audit(principal.userId(), "SET_STATUS", "REFUND", id);
-        }
+        // SRS §7：管理员写操作必须留痕（该端点由 SecurityConfig 限制为 ADMIN，principal 非空）。
+        admins.audit(principal.userId(), "SET_STATUS", "REFUND", id);
         return ApiResponse.success(refunds.findById(id)
                 .orElseThrow(() -> notFound("退款申请不存在")));
     }
@@ -168,7 +150,8 @@ public class RefundController {
     }
 
     private void validateDecision(String status) {
-        if (!DECISION_STATUSES.contains(status)) {
+        // DECISION_STATUSES 由 Set.of 构造，是不可变集合：contains(null) 会抛 NPE 而不是返回 false。
+        if (status == null || !DECISION_STATUSES.contains(status)) {
             throw validation("退款处理状态不合法");
         }
     }
