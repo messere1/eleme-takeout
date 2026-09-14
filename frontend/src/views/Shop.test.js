@@ -73,6 +73,16 @@ describe('店铺页（顾客点单）', () => {
     expect(wrapper.get('[data-testid="shop-hours"]').text()).toContain('08:00–21:30')
   })
 
+  it('零点营业时间按 00:00 展示，不误当作未设置', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, openingTime: '00:00:00', closingTime: '06:00:00' })
+    expect(wrapper.get('[data-testid="shop-hours"]').text()).toContain('00:00–06:00')
+  })
+
+  it('只有一个时间字段时不显示不完整的营业时段', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, openingTime: '08:00:00', closingTime: null })
+    expect(wrapper.find('[data-testid="shop-hours"]').exists()).toBe(false)
+  })
+
   it('展示商家上传的店铺封面与店铺照片', async () => {
     const { wrapper } = await mountShop({
       ...SHOP, imageUrl: '/uploads/shop.png', coverImageUrl: '/uploads/cover.png',

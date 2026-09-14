@@ -90,4 +90,29 @@ describe('首页店铺流（分页）', () => {
     await flushPromises()
     expect(listShops).toHaveBeenLastCalledWith({ page: 1, size: 20, businessCategoryId: 2 })
   })
+
+  it('快速切换经营品类时只显示最后选中的店铺列表', async () => {
+    let resolveFirstCategory
+    listBusinessCategories.mockResolvedValue([
+      { id: 2, name: '奶茶饮品', enabled: true },
+      { id: 3, name: '日韩料理', enabled: true },
+    ])
+    listShops.mockImplementation((params) => {
+      if (params.businessCategoryId === 2) {
+        return new Promise(resolve => { resolveFirstCategory = resolve })
+      }
+      if (params.businessCategoryId === 3) return Promise.resolve(PAGE2)
+      return Promise.resolve(PAGE1)
+    })
+
+    const { wrapper } = await mountHome()
+    await wrapper.get('[data-testid="home-category-2"]').trigger('click')
+    await wrapper.get('[data-testid="home-category-3"]').trigger('click')
+    resolveFirstCategory(PAGE1)
+    await flushPromises()
+
+    expect(listShops).toHaveBeenCalledWith({ page: 1, size: 20, businessCategoryId: 3 })
+    expect(wrapper.get('[data-testid="home-shop-3"]').text()).toContain('深夜烧烤')
+    expect(wrapper.find('[data-testid="home-shop-1"]').exists()).toBe(false)
+  })
 })
