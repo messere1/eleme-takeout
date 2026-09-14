@@ -95,6 +95,58 @@ describe('店铺页（顾客点单）', () => {
     expect(wrapper.find('[data-testid="shop-hours"]').exists()).toBe(false)
   })
 
+  // 浏览器里 vue-router 会在 history.state.back 记下上一页；有它就历史返回，
+  // 这样不会多压一条历史（否则搜索页自己的返回按钮会弹回店铺）。
+  it('有上一页时返回按钮走历史返回而不是新压一条', async () => {
+    const original = window.history.state
+    window.history.replaceState({ back: '/search?q=奶茶' }, '')
+    try {
+      const { wrapper, router } = await mountView(Shop, { path: '/shops/7' })
+      const back = vi.spyOn(router, 'back').mockImplementation(() => {})
+      await flushPromises()
+
+      await wrapper.get('[data-testid="shop-back"]').trigger('click')
+
+      expect(back).toHaveBeenCalledTimes(1)
+    } finally {
+      window.history.replaceState(original, '')
+    }
+  })
+
+  it('从搜索页进店后，返回按钮回到搜索结果页并带上原关键词', async () => {
+    const { wrapper, router } = await mountView(Shop, { path: '/shops/7?from=search&q=奶茶' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="shop-back"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/search')
+    expect(router.currentRoute.value.query.q).toBe('奶茶')
+  })
+
+  it('从首页进店后，返回按钮回首页', async () => {
+    const { wrapper, router } = await mountView(Shop, { path: '/shops/7' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="shop-back"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('直接打开店铺页（没有上一页）时返回按钮回首页', async () => {
+    getShop.mockResolvedValue(SHOP)
+    listCategories.mockResolvedValue(CATEGORIES)
+    listProducts.mockResolvedValue({ items: [], page: 1, size: 20, totalPages: 1 })
+    const { wrapper, router } = await mountView(Shop, { path: '/shops/7' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="shop-back"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/')
+  })
+
   it('默认选中第一个分类并展示其商品', async () => {
     const { wrapper } = await mountShop()
     expect(listProducts).toHaveBeenCalledWith(30, { page: 1, size: 20 })

@@ -22,6 +22,10 @@ async function search(text) {
     return
   }
   message.value = ''
+  // 关键词写进 URL：从店铺页返回时靠它恢复搜索结果
+  if (String(router.currentRoute.value.query.q || '') !== q) {
+    router.replace({ path: '/search', query: { q } })
+  }
   searching.value = true
   localOnly.value = false
   try {
@@ -96,7 +100,7 @@ onMounted(() => {
           :key="shop.id"
           :data-testid="`search-result-${shop.id}`"
           class="result-card"
-          @click="router.push(`/shops/${shop.id}`)"
+          @click="router.push({ path: `/shops/${shop.id}`, query: { from: 'search', q: keyword } })"
         >
           <div class="result-thumb">🏪</div>
           <div class="result-body">

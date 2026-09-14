@@ -26,6 +26,16 @@ const STATUS_TEXT = {
   TEMP_CLOSED: '临时打烊',
 }
 
+function goBack() {
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  const { from, q } = route.query
+  if (from === 'search') router.push({ path: '/search', query: q ? { q: String(q) } : {} })
+  else router.push('/')
+}
+
 function fmt(value) {
   return (Number(value) || 0).toFixed(2)
 }
@@ -216,7 +226,7 @@ onMounted(async () => {
 
 <template>
   <section class="shop-page">
-    <button class="back-home" @click="router.push('/')">← 返回首页</button>
+    <button class="back-home" data-testid="shop-back" @click="goBack">← 返回</button>
     <template v-if="shop">
       <img
         v-if="shop.coverImageUrl"

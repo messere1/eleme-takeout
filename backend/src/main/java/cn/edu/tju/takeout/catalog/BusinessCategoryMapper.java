@@ -11,7 +11,11 @@ import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface BusinessCategoryMapper {
-    @Select("SELECT * FROM business_categories WHERE enabled = TRUE ORDER BY id")
+    @Select("""
+        SELECT * FROM business_categories
+        WHERE enabled = TRUE AND default_category = TRUE
+        ORDER BY id
+    """)
     List<BusinessCategory> findEnabled();
     @Select("SELECT * FROM business_categories WHERE name = #{name}") Optional<BusinessCategory> findByName(String name);
     @Insert("INSERT INTO business_categories(name, default_category, enabled) VALUES(#{name}, FALSE, TRUE)")
