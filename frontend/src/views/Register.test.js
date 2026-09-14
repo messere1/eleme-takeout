@@ -7,15 +7,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/api/auth', () => ({ register: vi.fn(), login: vi.fn() }))
 vi.mock('@/api/merchant', () => ({ registerMerchant: vi.fn(), listBusinessCategories: vi.fn().mockResolvedValue([]) }))
+vi.mock('@/api/rider', () => ({ registerRider: vi.fn() }))
 
 import { login, register } from '@/api/auth'
 import { registerMerchant } from '@/api/merchant'
+import { registerRider } from '@/api/rider'
 import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import Register from './Register.vue'
 
 const CUSTOMER = { username: 'beiyang_user', phone: '13800138000', password: 'abc12345' }
 const MERCHANT = { merchantName: '北洋餐厅', phone: '13900139000', password: 'abc12345', businessScope: '中式快餐', shopAddress: '天津大学北洋园校区' }
+const RIDER = { riderName: '骑手小王', phone: '13700137000', password: 'abc12345' }
 
 async function mountRegister() {
   return mountView(Register, { path: '/register' })
@@ -92,6 +95,21 @@ describe('注册页（角色化）', () => {
     expect(session.loadShop()?.shopId).toBe(7)
     expect(session.load()?.role).toBe('MERCHANT')
     expect(router.currentRoute.value.path).toBe('/merchant')
+  })
+
+  it('骑手注册成功自动登录并进入配送台', async () => {
+    registerRider.mockResolvedValue({ id: 21, riderName: RIDER.riderName, phone: RIDER.phone })
+    login.mockResolvedValue({ token: 'rd-1', role: 'RIDER', expiresIn: 7200 })
+    const { wrapper, router } = await mountRegister()
+    await wrapper.get('[data-testid="register-role"]').setValue('RIDER')
+    await setField(wrapper, 'register-rider-name', RIDER.riderName)
+    await setField(wrapper, 'register-phone', RIDER.phone)
+    await setField(wrapper, 'register-password', RIDER.password)
+    await submit(wrapper)
+    expect(registerRider).toHaveBeenCalledWith(RIDER)
+    expect(login).toHaveBeenCalledWith({ account: RIDER.phone, password: RIDER.password, role: 'RIDER' })
+    expect(session.load()?.role).toBe('RIDER')
+    expect(router.currentRoute.value.path).toBe('/rider')
   })
 
   it('顾客手机号格式不合法时不调用注册接口并提示', async () => {

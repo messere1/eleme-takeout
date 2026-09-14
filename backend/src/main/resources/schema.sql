@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS shops (
     shop_address VARCHAR(255),
     image_url VARCHAR(255),
     cover_image_url VARCHAR(255),
+    opening_time TIME,
+    closing_time TIME,
     status VARCHAR(20) NOT NULL CHECK (status IN ('OPEN', 'CLOSED', 'TEMP_CLOSED'))
 );
 
@@ -59,6 +61,12 @@ CREATE TABLE IF NOT EXISTS business_categories (
     name VARCHAR(50) NOT NULL UNIQUE,
     default_category BOOLEAN NOT NULL DEFAULT FALSE,
     enabled BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS shop_business_categories (
+    shop_id BIGINT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+    business_category_id BIGINT NOT NULL REFERENCES business_categories(id),
+    PRIMARY KEY (shop_id, business_category_id)
 );
 
 CREATE TABLE IF NOT EXISTS cart_delivery_info (

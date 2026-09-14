@@ -10,6 +10,7 @@ import {
   listCategories,
   updateCategory,
   updateShop,
+  updateBusinessHours,
 } from '@/api/shop'
 import { session } from '@/utils/session'
 
@@ -45,6 +46,13 @@ const catNameEdit = reactive({})
 const catSortEdit = reactive({})
 const message = ref('')
 const savingShop = ref(false)
+const openingTime = ref('')
+const closingTime = ref('')
+const savingBusinessHours = ref(false)
+
+function normalizeTime(value) {
+  return value ? String(value).slice(0, 5) : ''
+}
 
 function startEditCategory(category) {
   editingCatId.value = category.id
@@ -90,6 +98,8 @@ async function load() {
     shop.value = await getShop(shopId)
     editName.value = shop.value.shopName || ''
     editNotice.value = shop.value.notice || ''
+    openingTime.value = normalizeTime(shop.value.openingTime)
+    closingTime.value = normalizeTime(shop.value.closingTime)
     categories.value = await listCategories(shopId)
   } catch (error) {
     message.value = error?.message || '店铺加载失败，请稍后重试'
@@ -121,6 +131,32 @@ async function onStatusChange() {
     message.value = '营业状态已更新'
   } catch (error) {
     message.value = error?.message || '更新失败，请稍后重试'
+  }
+}
+
+async function saveBusinessHours() {
+  message.value = ''
+  if (!openingTime.value || !closingTime.value) {
+    message.value = '请选择开始和结束营业时间'
+    return
+  }
+  if (closingTime.value <= openingTime.value) {
+    message.value = '结束营业时间必须晚于开始营业时间'
+    return
+  }
+
+  savingBusinessHours.value = true
+  try {
+    const data = await updateBusinessHours(shopId, openingTime.value, closingTime.value)
+    shop.value.openingTime = data.openingTime
+    shop.value.closingTime = data.closingTime
+    openingTime.value = normalizeTime(data.openingTime)
+    closingTime.value = normalizeTime(data.closingTime)
+    message.value = '营业时间已保存'
+  } catch (error) {
+    message.value = error?.message || '营业时间保存失败，请稍后重试'
+  } finally {
+    savingBusinessHours.value = false
   }
 }
 
@@ -222,6 +258,30 @@ onMounted(load)
             <option value="CLOSED">休息中</option>
             <option value="TEMP_CLOSED">临时闭店</option>
           </select>
+        </div>
+
+        <div class="business-hours">
+          <label class="ctrl-label" for="opening-time">开始营业时间</label>
+          <input
+            id="opening-time"
+            v-model="openingTime"
+            data-testid="opening-time-input"
+            type="time"
+          />
+          <label class="ctrl-label" for="closing-time">结束营业时间</label>
+          <input
+            id="closing-time"
+            v-model="closingTime"
+            data-testid="closing-time-input"
+            type="time"
+          />
+          <button
+            type="button"
+            class="primary-btn business-hours-save"
+            data-testid="business-hours-save"
+            :disabled="savingBusinessHours"
+            @click="saveBusinessHours"
+          >{{ savingBusinessHours ? '保存中…' : '保存营业时间' }}</button>
         </div>
 
         <button
@@ -403,6 +463,24 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+.business-hours {
+  display: grid;
+  grid-template-columns: auto minmax(8rem, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.35rem 0;
+}
+.business-hours input[type='time'] {
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  background: #fff;
+  color: #2b2b2b;
+}
+.business-hours-save {
+  grid-column: 1 / -1;
 }
 .select {
   border: 1px solid #dcdfe6;

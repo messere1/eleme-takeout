@@ -6,25 +6,45 @@ import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/api/shop', () => ({
+  getMyShop: vi.fn(),
   getShop: vi.fn(),
   updateShop: vi.fn(),
   changeStatus: vi.fn(),
+  updateBusinessHours: vi.fn(),
   listCategories: vi.fn(),
   createCategory: vi.fn(),
   deleteCategory: vi.fn(),
 }))
 
-import { changeStatus, createCategory, deleteCategory, getShop, listCategories, updateShop } from '@/api/shop'
+import {
+  changeStatus,
+  createCategory,
+  deleteCategory,
+  getMyShop,
+  getShop,
+  listCategories,
+  updateBusinessHours,
+  updateShop,
+} from '@/api/shop'
 import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import MerchantConsole from './MerchantConsole.vue'
 
-const SHOP = { id: 7, merchantId: 12, shopName: '北洋餐厅', notice: '欢迎光临', status: 'OPEN' }
+const SHOP = {
+  id: 7,
+  merchantId: 12,
+  shopName: '北洋餐厅',
+  notice: '欢迎光临',
+  status: 'OPEN',
+  openingTime: '08:00:00',
+  closingTime: '21:00:00',
+}
 const CATEGORIES = [{ id: 30, shopId: 7, name: '热销', sort: 1 }]
 
 async function mountConsole() {
   session.save({ token: 'mt-1', role: 'MERCHANT' })
   session.saveShop({ merchantId: 12, shopId: 7, shopName: '北洋餐厅' })
+  getMyShop.mockResolvedValue(SHOP)
   getShop.mockResolvedValue(SHOP)
   listCategories.mockResolvedValue(CATEGORIES)
   const ctx = await mountView(MerchantConsole, { path: '/merchant' })
@@ -73,6 +93,39 @@ describe('商家后台', () => {
       notice: '营业 08:00-21:00',
     })
     expect(wrapper.get('[data-testid="console-message"]').text()).toContain('已保存')
+  })
+
+  it('加载并保存营业时间', async () => {
+    updateBusinessHours.mockResolvedValue({
+      ...SHOP,
+      openingTime: '09:00:00',
+      closingTime: '22:30:00',
+    })
+    const { wrapper } = await mountConsole()
+
+    expect(wrapper.get('[data-testid="opening-time-input"]').element.value).toBe('08:00')
+    expect(wrapper.get('[data-testid="closing-time-input"]').element.value).toBe('21:00')
+    await wrapper.get('[data-testid="opening-time-input"]').setValue('09:00')
+    await wrapper.get('[data-testid="closing-time-input"]').setValue('22:30')
+    await wrapper.get('[data-testid="business-hours-save"]').trigger('click')
+    await flushPromises()
+
+    expect(updateBusinessHours).toHaveBeenCalledWith(7, '09:00', '22:30')
+    expect(wrapper.get('[data-testid="console-message"]').text()).toContain('营业时间已保存')
+  })
+
+  it('营业时间不完整或结束时间不晚于开始时间时不发送请求', async () => {
+    const { wrapper } = await mountConsole()
+
+    await wrapper.get('[data-testid="closing-time-input"]').setValue('')
+    await wrapper.get('[data-testid="business-hours-save"]').trigger('click')
+    expect(wrapper.get('[data-testid="console-message"]').text()).toContain('请选择')
+
+    await wrapper.get('[data-testid="opening-time-input"]').setValue('20:00')
+    await wrapper.get('[data-testid="closing-time-input"]').setValue('08:00')
+    await wrapper.get('[data-testid="business-hours-save"]').trigger('click')
+    expect(wrapper.get('[data-testid="console-message"]').text()).toContain('必须晚于')
+    expect(updateBusinessHours).not.toHaveBeenCalled()
   })
 
   it('新增分类调用 createCategory 并追加展示', async () => {

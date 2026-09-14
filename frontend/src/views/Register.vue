@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { login as apiLogin, register as apiRegister } from '@/api/auth'
 import { registerMerchant, listBusinessCategories } from '@/api/merchant'
+import { registerRider } from '@/api/rider'
 import { session } from '@/utils/session'
 
 const router = useRouter()
@@ -14,6 +15,7 @@ const form = reactive({
   role: 'CUSTOMER',
   username: '',
   merchantName: '',
+  riderName: '',
   phone: '',
   password: '',
   businessScope: '',
@@ -29,11 +31,14 @@ function invalidMessage() {
   if (form.role === 'CUSTOMER') {
     const username = form.username.trim()
     if (username.length < 3 || username.length > 30) return '用户名需 3~30 个字符'
-  } else {
+  } else if (form.role === 'MERCHANT') {
     const name = form.merchantName.trim()
     if (!name || name.length > 50) return '请输入商家名称（最多 50 字）'
     if (!form.businessScope.trim()) return '请输入经营范围'
     if (form.shopAddress.trim().length < 5) return '请输入完整店铺地址'
+  } else {
+    const name = form.riderName.trim()
+    if (name.length < 2 || name.length > 50) return '骑手名称需2~50个字符'
   }
   return ''
 }
@@ -42,7 +47,7 @@ async function autoLogin(phone, password, role) {
   const data = await apiLogin({ account: phone, password, role })
   const finalRole = data.role || role
   session.save({ token: data.token, role: finalRole })
-  router.push(finalRole === 'MERCHANT' ? '/merchant' : finalRole === 'ADMIN' ? '/admin' : '/')
+  router.push(finalRole === 'MERCHANT' ? '/merchant' : finalRole === 'ADMIN' ? '/admin' : finalRole === 'RIDER' ? '/rider' : '/')
 }
 
 async function submit() {
@@ -59,7 +64,7 @@ async function submit() {
   try {
     if (form.role === 'CUSTOMER') {
       await apiRegister({ username: form.username.trim(), phone, password })
-    } else {
+    } else if (form.role === 'MERCHANT') {
       const data = await registerMerchant({
         merchantName: form.merchantName.trim(),
         phone,
@@ -74,6 +79,8 @@ async function submit() {
         merchantPhone: form.phone,
         businessScope: form.businessScope.trim(),
       })
+    } else {
+      await registerRider({ riderName: form.riderName.trim(), phone, password })
     }
     // 注册成功后自动登录，并按角色进入对应主页面
     await autoLogin(phone, password, form.role)
@@ -94,7 +101,7 @@ onMounted(async () => {
   <div class="auth-page">
     <section class="auth-card">
       <header class="card-head">
-        <span class="card-emoji">{{ form.role === 'MERCHANT' ? '🏪' : '🍜' }}</span>
+        <span class="card-emoji">{{ form.role === 'MERCHANT' ? '🏪' : form.role === 'RIDER' ? '🛵' : '🍜' }}</span>
         <h2>注册</h2>
         <p class="card-tip">注册成功后将自动登录</p>
       </header>
@@ -109,6 +116,7 @@ onMounted(async () => {
         >
           <option value="CUSTOMER">我是顾客</option>
           <option value="MERCHANT">我是商家</option>
+          <option value="RIDER">我是骑手</option>
         </select>
       </div>
 
@@ -125,7 +133,7 @@ onMounted(async () => {
           />
         </div>
       </template>
-      <template v-else>
+      <template v-else-if="form.role === 'MERCHANT'">
         <div class="field">
           <label for="register-merchant-name">商家名称</label>
           <el-input
@@ -136,6 +144,14 @@ onMounted(async () => {
             placeholder="最多 50 字"
             maxlength="50"
           />
+        </div>
+      </template>
+      <template v-else>
+        <div class="field">
+          <label for="register-rider-name">骑手名称</label>
+          <el-input id="register-rider-name" v-model="form.riderName"
+            data-testid="register-rider-name" class="auth-input"
+            placeholder="2~50 个字符" maxlength="50" />
         </div>
       </template>
 

@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listShops } from '@/api/shop'
+import { listBusinessCategories } from '@/api/merchant'
 
 const router = useRouter()
 
@@ -15,16 +16,9 @@ const BG = ['#fff1e8', '#fff0f0', '#f4f1ff', '#eef8ff', '#fff7ed', '#fdeef7']
 const shops = ref([])
 const feedError = ref('')
 
-const CATEGORIES = [
-  { emoji: '🍜', name: '快餐' },
-  { emoji: '🧋', name: '奶茶' },
-  { emoji: '🥡', name: '小吃' },
-  { emoji: '🍔', name: '汉堡' },
-  { emoji: '🍣', name: '日料' },
-  { emoji: '🍢', name: '烧烤' },
-  { emoji: '🍰', name: '甜品' },
-  { emoji: '🥗', name: '轻食' },
-]
+const CATEGORY_META = { 快餐便当:['🍜','快餐'],奶茶饮品:['🧋','奶茶'],小吃炸物:['🥡','小吃'],汉堡披萨:['🍔','汉堡'],日韩料理:['🍣','日料'],烧烤夜宵:['🍢','烧烤'],甜品烘焙:['🍰','甜品'],健康轻食:['🥗','轻食'] }
+const categories = ref([])
+const activeCategoryId = ref(null)
 
 function decorate(shop, index) {
   return {
@@ -42,12 +36,14 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 const feedLoading = ref(false)
 
-async function load(page, append = false) {
+async function load(page, append = false, categoryId = activeCategoryId.value) {
   if (feedLoading.value) return
   feedLoading.value = true
   feedError.value = ''
   try {
-    const data = await listShops({ page, size: 20 })
+    const params = { page, size: 20 }
+    if (categoryId) params.businessCategoryId = categoryId
+    const data = await listShops(params)
     const items = (data?.items || []).map(decorate)
     shops.value = append ? shops.value.concat(items) : items
     currentPage.value = data?.page ?? page
@@ -64,6 +60,8 @@ async function load(page, append = false) {
     feedLoading.value = false
   }
 }
+
+async function selectCategory(id) { activeCategoryId.value = activeCategoryId.value === id ? null : id; await load(1,false,activeCategoryId.value) }
 
 // 滚动接力：页面滚到店铺区标题吸顶前 → 滚整页；吸顶后 → 滚店铺列表；
 // 列表到边界再继续滚 → 自动切回整页。列表本身不接原生滚动（overflow:hidden），
@@ -133,6 +131,7 @@ function onWindowWheel(event) {
 onMounted(() => {
   measureShell()
   load(1)
+  listBusinessCategories().then(items=>{categories.value=(items||[]).map(c=>{const meta=CATEGORY_META[c.name]||['🍽️',c.name];return {...c,emoji:meta[0],displayName:meta[1]}})}).catch(()=>{categories.value=[]})
   window.addEventListener('wheel', onWindowWheel, { passive: false })
   window.addEventListener('resize', measureShell)
 })
@@ -172,10 +171,10 @@ onUnmounted(() => {
     <!-- 频道分类 + 附近店铺：搜索框触顶后作为一个整体滚动 -->
     <div ref="browseBlock" class="browse-block">
       <section class="channel">
-        <div v-for="item in CATEGORIES" :key="item.name" class="channel-chip">
+        <button v-for="item in categories" :key="item.id" class="channel-chip" :class="{ active: activeCategoryId === item.id }" :data-testid="`home-category-${item.id}`" @click="selectCategory(item.id)">
           <span class="chip-emoji">{{ item.emoji }}</span>
-          <span>{{ item.name }}</span>
-        </div>
+          <span>{{ item.displayName }}</span>
+        </button>
       </section>
 
       <section class="shop-feed">
@@ -308,6 +307,15 @@ onUnmounted(() => {
   gap: 0.3rem;
   font-size: 0.78rem;
   color: #444;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.35rem 0.2rem;
+  background: transparent;
+  cursor: pointer;
+}
+.channel-chip.active {
+  color: #ff5000;
+  background: #fff1e8;
 }
 .chip-emoji {
   font-size: 1.4rem;

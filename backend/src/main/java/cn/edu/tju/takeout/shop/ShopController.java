@@ -42,8 +42,24 @@ public class ShopController {
     @GetMapping
     public ApiResponse<ShopPage> listShops(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer size) {
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String businessScope,
+            @RequestParam(required = false) Long businessCategoryId) {
 
-        return ApiResponse.success(shopService.listShops(page, size));
+        return ApiResponse.success(shopService.listShops(page, size, businessScope, businessCategoryId));
     }
+
+    @PatchMapping("/{shopId}/business-hours")
+    public ApiResponse<ShopView> updateBusinessHours(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long shopId,
+            @Valid @RequestBody ShopBusinessHoursRequest request){
+        return ApiResponse.success(
+            shopService.updateBusinessHours(
+                    principal.userId(),
+                    shopId,
+                    request          
+                )
+            );
+        }
 }

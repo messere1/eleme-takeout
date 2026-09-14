@@ -5,8 +5,14 @@ import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/api/shop', () => ({ listShops: vi.fn() }))
+vi.mock('@/api/merchant', () => ({
+  listBusinessCategories: vi.fn().mockResolvedValue([
+    { id: 2, name: '奶茶饮品', enabled: true },
+  ]),
+}))
 
 import { listShops } from '@/api/shop'
+import { listBusinessCategories } from '@/api/merchant'
 import { mountView } from '@/test/mountView'
 import Home from './Home.vue'
 
@@ -30,6 +36,7 @@ async function mountHome() {
 describe('首页店铺流（分页）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    listBusinessCategories.mockResolvedValue([{ id: 2, name: '奶茶饮品', enabled: true }])
   })
 
   it('按分页参数取店铺并渲染', async () => {
@@ -54,5 +61,13 @@ describe('首页店铺流（分页）', () => {
     const note = wrapper.get('[data-testid="home-feed-note"]')
     expect(note.text()).toContain('加载失败')
     expect(wrapper.find('[data-testid="home-shop-1"]').exists()).toBe(false)
+  })
+
+  it('点击经营品类后按品类ID重新查询店铺', async () => {
+    listShops.mockResolvedValue(PAGE1)
+    const { wrapper } = await mountHome()
+    await wrapper.get('[data-testid="home-category-2"]').trigger('click')
+    await flushPromises()
+    expect(listShops).toHaveBeenLastCalledWith({ page: 1, size: 20, businessCategoryId: 2 })
   })
 })
