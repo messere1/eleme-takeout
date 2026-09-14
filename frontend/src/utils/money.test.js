@@ -1,9 +1,9 @@
-// §9.1 / EX-029 / UC-06：金额只接受普通十进制、最多两位小数，拒绝指数形式、三位小数、零与负值。
+// 金额只接受普通十进制、最多两位小数，拒绝指数形式、三位小数、零与负值。
 import { describe, expect, it } from 'vitest'
 
 import { isMoneyFormat, isPositiveMoney } from './money'
 
-describe('金额格式（§9.1 / EX-029）', () => {
+describe('金额格式', () => {
   it('接受普通十进制且最多两位小数', () => {
     expect(isMoneyFormat('0.01')).toBe(true)
     expect(isMoneyFormat('12.5')).toBe(true)

@@ -16,7 +16,7 @@ const refundEvidence = ref('')
 const refundMessage = ref('')
 const refundSubmitting = ref(false)
 
-// UC-06 / §5.2：金额零、负、三位小数、指数形式，以及原因空、证据超过 3 个，都在提交前拦下。
+// 提交前的退款校验：金额格式、原因非空、证据不超过 3 个。
 const EVIDENCE_MAX = 3
 const refundEvidenceUrls = computed(() =>
   refundEvidence.value.split('\n').map((url) => url.trim()).filter(Boolean),
@@ -27,15 +27,15 @@ const refundBlockedReason = computed(() => {
   if (refundEvidenceUrls.value.length > EVIDENCE_MAX) return `退款证据最多 ${EVIDENCE_MAX} 个图片 URL`
   return ''
 })
-// NFR-006：提交期间禁用，防重复提交（EX-012）。
+// 提交期间禁用，防止重复提交。
 const canSubmitRefund = computed(() => !refundBlockedReason.value && !refundSubmitting.value)
 const showRefundHint = computed(
   () => !!refundBlockedReason.value
     && (!!refundAmount.value.trim() || !!refundReason.value.trim() || !!refundEvidence.value.trim()),
 )
 
-// §5.1：CREATED+UNPAID 才允许顾客支付；支付成功后 status 仍是 CREATED，只改 paymentStatus，
-// 所以支付入口必须同时看 paymentStatus，否则已支付但商家未接单的订单会被再次引导去付款。
+// 支付只对未支付订单开放。支付成功后 status 仍是 CREATED，只改 paymentStatus，
+// 所以要同时看 paymentStatus，否则已支付但尚未接单的订单会被再次引导去付款。
 const canPay = computed(
   () => !!detail.value
     && detail.value.paymentStatus !== 'PAID'
@@ -86,7 +86,7 @@ async function submitRefund() {
   refundMessage.value = ''
   try {
     await requestRefund(orderId, {
-      // 已按 §9.1 校验过格式，此处 Number 不会产生指数形式或多余小数位。
+      // 上面已校验过格式，这里的 Number 不会产生指数形式或多于两位的小数。
       amount: Number(refundAmount.value.trim()),
       reason: refundReason.value.trim(),
       evidenceUrls: refundEvidenceUrls.value,

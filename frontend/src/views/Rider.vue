@@ -2,8 +2,7 @@
 import {onMounted,ref} from 'vue';import {claimOrder,deliverOrder,listRiderAvailable,listRiderOrders} from '@/api/order'
 const available=ref([]),mine=ref([]),message=ref(''),loading=ref(true)
 async function load(){loading.value=true;try{[available.value,mine.value]=await Promise.all([listRiderAvailable(),listRiderOrders()])}catch(e){message.value=e?.message||'加载失败'}finally{loading.value=false}}
-// EX-017：两名骑手同时领取时仅一名成功，另一名 409「并刷新列表」。
-// EX-018：越级送达或操作他单返回 403/409，同样刷新，避免界面停在过期状态。
+// 领取/送达失败（被他人抢单、越权操作）时也刷新列表，避免界面停在过期状态。
 async function claim(o){try{await claimOrder(o.id)}catch(e){message.value=e?.message||'接单失败'}finally{await load()}}
 async function deliver(o){try{await deliverOrder(o.id)}catch(e){message.value=e?.message||'更新失败'}finally{await load()}}
 onMounted(load)

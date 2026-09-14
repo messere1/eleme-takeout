@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -47,6 +48,13 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiResponse<Void>> handleNoResourceFound(Exception exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.failure(
                 "RESOURCE_NOT_FOUND", "请求的接口不存在", null));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(
+            MaxUploadSizeExceededException exception) {
+        return ResponseEntity.badRequest().body(ApiResponse.failure(
+                "VALIDATION_ERROR", "图片不能超过 5MiB", null));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

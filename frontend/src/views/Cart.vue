@@ -34,10 +34,7 @@ const total = computed(() =>
 )
 const empty = computed(() => items.value.length === 0)
 const hasUnavailable = computed(() => items.value.some((item) => !item.available))
-// UC-02 异常流程「字段非法不提交」+ EX-007：电话按规范化后 7–15 位判断，
-// 与后端 CartService.normalizePhone 同一套规则。
-// NFR-006「错误说明可操作」：按钮灰掉时必须说清是哪一项不满足，
-// 否则用户只看到「按钮变白、点了没反应」。
+// 与后端 CartService.normalizePhone 同一套电话规则；按钮不可提交时要说清是哪一项不满足。
 const checkoutBlockedReason = computed(() => {
   if (empty.value) return '购物车是空的，先去挑点东西吧'
   if (hasUnavailable.value) return '购物车里有已下架或缺货的商品，请先移除'
@@ -116,8 +113,7 @@ async function checkout() {
   message.value = ''
   busy.value = true
   try {
-    // EX-007 要求电话含空格/连字符/国际前缀时可接受，后端会规范化后落库。
-    // 前端先做同一次规范化，保证下单快照与购物车收货信息一致。
+    // 先做一次与后端相同的规范化，保证下单快照与购物车收货信息一致。
     const delivery = {
       shopId: items.value[0]?.shopId,
       recipientName: recipient.value.trim(),
@@ -243,7 +239,7 @@ onMounted(() => {
         </div>
       </footer>
 
-      <!-- NFR-006：按钮灰掉时把原因写在旁边，而不是让用户对着一个没反应的按钮猜 -->
+      <!-- 按钮不可提交时把原因显示在旁边 -->
       <p
         v-if="checkoutBlockedReason"
         data-testid="cart-checkout-hint"
@@ -269,8 +265,7 @@ onMounted(() => {
         <div class="field"><label>收货人</label>
           <el-input v-model="recipient" data-testid="cart-recipient" placeholder="收货人" maxlength="30" /></div>
         <div class="field"><label>联系电话</label>
-          <!-- EX-007 明确允许国际前缀与分隔符，上限须与后端 @Pattern 的 20 字符对齐，
-               否则 +86 138-0013-8000 会被 maxlength 静默截断成错号码 -->
+          <!-- 上限与后端 @Pattern 的 20 字符对齐，否则长号码会被 maxlength 静默截断 -->
           <el-input v-model="contact" data-testid="cart-contact" placeholder="联系电话" maxlength="20" /></div>
         <div class="field"><label>收货地址</label>
           <el-input v-model="checkoutAddress" placeholder="收货地址" maxlength="255" /></div>

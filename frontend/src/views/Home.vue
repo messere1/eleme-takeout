@@ -16,7 +16,9 @@ const BG = ['#fff1e8', '#fff0f0', '#f4f1ff', '#eef8ff', '#fff7ed', '#fdeef7']
 const shops = ref([])
 const feedError = ref('')
 
-const CATEGORY_META = { 快餐便当:['🍜','快餐'],奶茶饮品:['🧋','奶茶'],小吃炸物:['🥡','小吃'],汉堡披萨:['🍔','汉堡'],日韩料理:['🍣','日料'],烧烤夜宵:['🍢','烧烤'],甜品烘焙:['🍰','甜品'],健康轻食:['🥗','轻食'] }
+// 短标签只给不与其它品类重名的用；奶茶甜品/甜品烘焙、中式快餐/快餐便当这类
+// 名字相近的品类保留全名，否则两个 chip 会显示成同一个词。
+const CATEGORY_META = { 快餐便当:['🍜','快餐'],奶茶饮品:['🧋','奶茶'],小吃炸物:['🥡','小吃'],汉堡披萨:['🍔','汉堡'],日韩料理:['🍣','日料'],烧烤夜宵:['🍢','烧烤'],甜品烘焙:['🍰','甜品'],健康轻食:['🥗','轻食'],中式快餐:['🍚','中式快餐'],西式简餐:['🍝','西式简餐'],奶茶甜品:['🍮','奶茶甜品'],地方菜系:['🥘','地方菜系'] }
 const categories = ref([])
 const activeCategoryId = ref(null)
 
@@ -128,10 +130,24 @@ function onWindowWheel(event) {
   event.preventDefault()
 }
 
+// 鼠标在品类条上滚动时转成横向滚动；滚到两端就把这次滚动交回页面。
+// 必须 stopPropagation：否则 window 上的 onWindowWheel 还会再滚一次店铺区。
+function onChannelWheel(event) {
+  const el = event.currentTarget
+  if (el.scrollWidth <= el.clientWidth) return
+  const delta = event.deltaY
+  const canRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+  const canLeft = el.scrollLeft > 0
+  if ((delta > 0 && !canRight) || (delta < 0 && !canLeft)) return
+  el.scrollLeft += delta
+  event.preventDefault()
+  event.stopPropagation()
+}
+
 onMounted(() => {
   measureShell()
   load(1)
-  listBusinessCategories().then(items=>{categories.value=(items||[]).map(c=>{const meta=CATEGORY_META[c.name]||['🍽️',c.name];return {...c,emoji:meta[0],displayName:meta[1]}})}).catch(()=>{categories.value=[]})
+  listBusinessCategories().then(items=>{categories.value=(items||[]).map(c=>{const meta=CATEGORY_META[c.name]||['🍽️',c.name.slice(0,4)];return {...c,emoji:meta[0],displayName:meta[1]}})}).catch(()=>{categories.value=[]})
   window.addEventListener('wheel', onWindowWheel, { passive: false })
   window.addEventListener('resize', measureShell)
 })
@@ -170,7 +186,7 @@ onUnmounted(() => {
 
     <!-- 频道分类 + 附近店铺：搜索框触顶后作为一个整体滚动 -->
     <div ref="browseBlock" class="browse-block">
-      <section class="channel">
+      <section class="channel" data-testid="home-channel" @wheel="onChannelWheel">
         <button v-for="item in categories" :key="item.id" class="channel-chip" :class="{ active: activeCategoryId === item.id }" :data-testid="`home-category-${item.id}`" @click="selectCategory(item.id)">
           <span class="chip-emoji">{{ item.emoji }}</span>
           <span>{{ item.displayName }}</span>
@@ -188,7 +204,14 @@ onUnmounted(() => {
             :data-testid="`home-shop-${shop.id}`"
             class="shop-card"
           >
-            <div class="shop-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>
+            <img
+              v-if="shop.imageUrl"
+              :src="shop.imageUrl"
+              class="shop-thumb"
+              alt="店铺照片"
+              :data-testid="`home-shop-image-${shop.id}`"
+            />
+            <div v-else class="shop-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>
             <div class="shop-body">
               <div class="shop-line">
                 <strong>{{ shop.shopName }}</strong>
@@ -292,15 +315,31 @@ onUnmounted(() => {
 
 /* 频道条 */
 .channel {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  display: flex;
   gap: 0.5rem;
   background: #fff;
   border-radius: var(--card-radius);
   padding: 0.9rem 0.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  /* 只横向滚动。browse-block 是固定高的纵向 flex 容器，不给 flex 就会被压矮，
+     而 overflow-x 会把 overflow-y 隐式变成 auto，于是内部又冒出纵向滚动条、图标被滚掉。 */
+  flex: 0 0 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.channel::-webkit-scrollbar {
+  height: 6px;
+}
+.channel::-webkit-scrollbar-thumb {
+  background: #e4e4e4;
+  border-radius: 3px;
 }
 .channel-chip {
+  /* 单行不换行，宽度够放下 emoji 和最长四字标签（奶茶甜品） */
+  flex: 0 0 auto;
+  min-width: 4.9rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -309,9 +348,10 @@ onUnmounted(() => {
   color: #444;
   border: 0;
   border-radius: 10px;
-  padding: 0.35rem 0.2rem;
+  padding: 0.45rem 0.5rem;
   background: transparent;
   cursor: pointer;
+  white-space: nowrap;
 }
 .channel-chip.active {
   color: #ff5000;
@@ -391,6 +431,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 3rem;
+  /* 有店铺照片时按图片渲染，object-fit 让它填满且不变形 */
+  object-fit: cover;
 }
 .shop-body {
   flex: 1;
@@ -481,8 +523,7 @@ onUnmounted(() => {
 }
 @media (max-width: 560px) {
   .channel {
-    grid-template-columns: repeat(4, 1fr);
-    row-gap: 0.6rem;
+    padding: 0.8rem 0.4rem;
   }
   .hero {
     flex-direction: column;

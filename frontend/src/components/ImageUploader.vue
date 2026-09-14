@@ -1,13 +1,7 @@
 <script setup>
-// 统一的图片上传控件。四个上传点（顾客头像、店铺照片、店铺封面、商品图）共用一套交互：
-//   预览图 + 隐藏的原生 input + 样式化按钮
-// 走 POST /images，服务端落盘并把 URL 关联到目标资源，因此这里只负责把返回的 url 回填预览，
-// 页面不需要再额外保存一次。
-//
-// 之前各页面写法不一：店铺封面用 FileReader 读成 base64 只做本地预览、图片从来没上传；
-// 商品图预览只在上传时赋值、刷新后不显示已保存的图；商家资料页直接把原生 input 内联在页面上，
-// 窄屏放不下。这里统一掉。
-import { ref } from 'vue'
+// 图片上传控件：预览图 + 隐藏的原生 input + 样式化按钮。
+// 图片走 POST /images，服务端落盘并回写目标资源，这里只把返回的 url 回填预览。
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { uploadImage } from '@/api/upload'
 
 const props = defineProps({
@@ -31,6 +25,27 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'message'])
 
 const uploading = ref(false)
+const viewing = ref(false)
+
+// 缩略图是裁切过的（object-fit: cover），双击看完整原图
+function openViewer() {
+  if (props.modelValue) viewing.value = true
+}
+
+function closeViewer() {
+  viewing.value = false
+}
+
+function onKeydown(event) {
+  if (event.key === 'Escape') closeViewer()
+}
+
+watch(viewing, (open) => {
+  if (open) window.addEventListener('keydown', onKeydown)
+  else window.removeEventListener('keydown', onKeydown)
+})
+
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 async function pick(event) {
   const file = event.target.files?.[0]
@@ -64,6 +79,8 @@ async function pick(event) {
       :class="shape"
       :alt="`${title || '图片'}预览`"
       :data-testid="inputTestid ? `${inputTestid}-preview` : undefined"
+      title="双击查看完整图片"
+      @dblclick="openViewer"
     />
     <div v-else class="upload-thumb placeholder" :class="shape">{{ placeholder }}</div>
 
@@ -82,6 +99,24 @@ async function pick(event) {
         />
       </label>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="viewing"
+        class="img-viewer"
+        data-testid="image-viewer"
+        @click="closeViewer"
+      >
+        <img :src="modelValue" class="img-viewer-img" :alt="`${title || '图片'}完整图片`" />
+        <button
+          type="button"
+          class="img-viewer-close"
+          data-testid="image-viewer-close"
+          aria-label="关闭"
+          @click.stop="closeViewer"
+        >×</button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -148,5 +183,38 @@ async function pick(event) {
 @media (max-width: 420px) {
   .upload-row { flex-wrap: wrap; }
   .upload-btn { flex-basis: 100%; text-align: right; }
+}
+
+/* 双击缩略图后的完整大图：contain 保证是整张图，不裁切 */
+.img-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  cursor: zoom-out;
+}
+.img-viewer-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.img-viewer-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #333;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
 }
 </style>

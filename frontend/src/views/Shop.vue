@@ -26,8 +26,23 @@ const STATUS_TEXT = {
   TEMP_CLOSED: '临时打烊',
 }
 
+function goBack() {
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  const { from, q } = route.query
+  if (from === 'search') router.push({ path: '/search', query: q ? { q: String(q) } : {} })
+  else router.push('/')
+}
+
 function fmt(value) {
   return (Number(value) || 0).toFixed(2)
+}
+
+// 后端把营业时间序列化成 "HH:mm" 或 "HH:mm:ss"，只取前五位显示。
+function fmtClock(value) {
+  return value ? String(value).slice(0, 5) : ''
 }
 
 const FOOD_EMOJI = ['🍜', '🍔', '🧋', '🍕', '🍣', '🥟', '🍗', '🍤', '🍰', '🥡']
@@ -53,8 +68,7 @@ const productTotalPages = ref(1)
 
 // 点单页底部购物车：底部常驻条 + 上滑卷轴
 const isCustomer = session.load()?.role === 'CUSTOMER'
-// GET /cart 返回的是全站购物车（每条带 shopId）。店铺页只该展示当前这家店的条目，
-// 否则会把别的店的商品和金额挂在底部栏上（§4「购物车…按顾客和店铺隔离」、FR-012）。
+// GET /cart 返回全站购物车（每条带 shopId），这里只取当前店铺的条目。
 const cartItems = ref([])
 const sheetOpen = ref(false)
 const recipient = ref('')
@@ -104,9 +118,7 @@ async function openSheet() {
   await loadCart()
 }
 
-// UC-02「字段非法不提交」：收货人非空、电话规范化后 7–15 位、地址 5–255 字符（§4）。
-// 与 Cart.vue 同一套校验，避免同一个下单动作两处行为不一致。
-// NFR-006「错误说明可操作」：提交按钮灰掉时必须说清是哪一项不满足。
+// 与 Cart.vue 同一套收货字段校验；按钮不可提交时要说清是哪一项不满足。
 const checkoutBlockedReason = computed(() => {
   if (!isCustomer) return '请先登录顾客账号再下单'
   if (!shopCartItems.value.length) return '本店购物车还是空的，先加购商品'
@@ -202,8 +214,7 @@ async function addProduct(product) {
 }
 
 onMounted(async () => {
-  // FR-014「底部常驻汇总」：进店就要按本店已有商品把底部购物车显示出来，
-  // 不能等到用户再点一次加购才出现。
+  // 进店就按本店已有商品显示底部购物车，不必等用户再点一次加购。
   loadCart()
   try {
     await load()
@@ -215,12 +226,31 @@ onMounted(async () => {
 
 <template>
   <section class="shop-page">
-    <button class="back-home" @click="router.push('/')">← 返回首页</button>
+    <button class="back-home" data-testid="shop-back" @click="goBack">← 返回</button>
     <template v-if="shop">
+      <img
+        v-if="shop.coverImageUrl"
+        :src="shop.coverImageUrl"
+        class="shop-cover"
+        alt="店铺封面"
+        data-testid="shop-cover"
+      />
       <header class="shop-head">
-        <div>
+        <img
+          v-if="shop.imageUrl"
+          :src="shop.imageUrl"
+          class="shop-logo"
+          alt="店铺照片"
+          data-testid="shop-image"
+        />
+        <div class="shop-info">
           <h2 data-testid="shop-name">{{ shop.shopName }}</h2>
           <p data-testid="shop-notice" class="shop-notice">{{ shop.notice }}</p>
+          <p
+            v-if="shop.openingTime && shop.closingTime"
+            data-testid="shop-hours"
+            class="shop-hours"
+          >营业时间 {{ fmtClock(shop.openingTime) }}–{{ fmtClock(shop.closingTime) }}</p>
         </div>
         <span
           data-testid="shop-status"
@@ -340,11 +370,31 @@ onMounted(async () => {
   padding: 1.5rem;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
 }
+.shop-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 6;
+  object-fit: cover;
+  border-radius: var(--card-radius);
+  background: #fff4ec;
+}
 .shop-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+.shop-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.shop-logo {
+  flex: 0 0 auto;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #fff4ec;
 }
 .shop-head h2 {
   margin: 0;
@@ -353,6 +403,11 @@ onMounted(async () => {
   margin: 0.35rem 0 0;
   color: #888;
   font-size: 0.9rem;
+}
+.shop-hours {
+  margin: 0.25rem 0 0;
+  color: var(--el-color-primary);
+  font-size: 0.85rem;
 }
 .shop-status {
   flex-shrink: 0;

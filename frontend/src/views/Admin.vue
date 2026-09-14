@@ -8,7 +8,7 @@ const props = defineProps({ initialTab: { type: String, default: 'users' } })
 const tab=ref(props.initialTab),rows=ref([]),error=ref(''),loading=ref(false)
 const loaders={users:listUsers,merchants:listMerchants,products:listAdminProducts,orders:listAdminOrders,refunds:listAdminRefunds}
 const mask=v=>!v?'':v.length>=7?`${v.slice(0,3)}****${v.slice(-4)}`:'***'
-// FR-016：管理员的订单列表同样要能按状态、时间查询。
+// 订单列表按状态、时间查询的参数。
 const orderStatus=ref(''),orderStart=ref(''),orderEnd=ref('')
 function orderQuery(){const p={page:1,size:20};if(orderStatus.value)p.status=orderStatus.value;if(orderStart.value)p.startTime=orderStart.value;if(orderEnd.value)p.endTime=orderEnd.value;return p}
 async function refresh(){error.value='';loading.value=true;try{const data=tab.value==='orders'?await listAdminOrders(orderQuery()):await loaders[tab.value]();rows.value=Array.isArray(data)?data:data?.items??[]}catch(e){error.value=e?.message||'管理数据加载失败';rows.value=[]}finally{loading.value=false}}
@@ -39,7 +39,7 @@ onMounted(refresh)
     <p v-if="loading" data-testid="admin-loading">加载中…</p>
     <p v-if="error" data-testid="admin-error" class="admin-error">{{ error }}</p>
     <p v-if="!loading&&!error&&!rows.length" data-testid="admin-empty">暂无数据</p>
-    <!-- FR-016：管理员订单按状态、时间查询。放在表格链之前，避免打断 v-if/v-else-if 链。 -->
+    <!-- 放在表格链之前，避免打断 v-if/v-else-if 链。 -->
     <div v-if="tab==='orders'" class="admin-filters">
       <label for="admin-order-status-filter">状态</label>
       <select
@@ -77,7 +77,6 @@ onMounted(refresh)
           <td data-label="订单号">{{o.orderNo}}</td>
           <td data-label="订单状态" :data-testid="`admin-order-status-${o.id}`">{{ORDER_STATUS_TEXT[o.status]||o.status}}</td>
           <td data-label="支付状态">{{o.paymentStatus}}</td>
-          <!-- NFR-004：管理员列表只下发脱敏号码，收货地址不下发 -->
           <td data-label="联系号码">{{o.recipientPhoneMasked||'—'}}</td>
           <td data-label="改为">
             <select

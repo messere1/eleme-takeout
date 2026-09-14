@@ -9,7 +9,7 @@ import { session } from '@/utils/session'
 const router = useRouter()
 
 const PHONE_RE = /^1[3-9]\d{9}$/
-const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{6,64}$/
+const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/
 
 const form = reactive({
   role: 'CUSTOMER',
@@ -27,13 +27,13 @@ const submitting = ref(false)
 
 function invalidMessage() {
   if (!PHONE_RE.test(form.phone.trim())) return '手机号格式不正确'
-  if (!PASSWORD_RE.test(form.password)) return '密码需 6~64 位且包含字母和数字'
+  if (!PASSWORD_RE.test(form.password)) return '密码需 8~64 位且包含字母和数字'
   if (form.role === 'CUSTOMER') {
     const username = form.username.trim()
     if (username.length < 3 || username.length > 30) return '用户名需 3~30 个字符'
   } else if (form.role === 'RIDER') {
     const name = form.riderName.trim()
-    if (!name || name.length > 50) return '请输入骑手姓名（最多 50 字）'
+    if (name.length < 2 || name.length > 50) return '骑手姓名需 2~50 个字符'
   } else {
     const name = form.merchantName.trim()
     if (!name || name.length > 50) return '请输入商家名称（最多 50 字）'
@@ -145,7 +145,7 @@ onMounted(async () => {
             v-model="form.riderName"
             data-testid="register-rider-name"
             class="auth-input"
-            placeholder="最多 50 字"
+            placeholder="2~50 个字符"
             maxlength="50"
           />
         </div>
@@ -184,7 +184,7 @@ onMounted(async () => {
           type="password"
           data-testid="register-password"
           class="auth-input"
-          placeholder="6~64 位，含字母和数字"
+          placeholder="8~64 位，含字母和数字"
           show-password
         />
       </div>

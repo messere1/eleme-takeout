@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { acceptOrder, listMerchantOrders, listMerchantRefunds, decideMerchantRefund } from '@/api/order'
 
-// §5.1 状态机的全部取值，前端不自造状态（原来的 PENDING 后端从不产生）。
+// 订单状态取值，后端不产生 PENDING。
 const STATUS_TEXT = {
   CREATED: '待接单',
   ACCEPTED: '已接单',
@@ -30,12 +30,12 @@ function statusText(status) {
   return STATUS_TEXT[status] || status
 }
 
-// FR-020 / EX-016：只有已支付订单才能接单。
+// 只有已支付订单才能接单。
 function canAccept(order) {
   return order.status === 'CREATED' && order.paymentStatus === 'PAID'
 }
 
-// FR-016：顾客、商家、管理员都要能按分页、状态、时间查询。
+// 分页、状态、时间查询参数。
 function query(page) {
   const params = { page, size: 20 }
   if (selectedStatus.value) params.status = selectedStatus.value
@@ -75,8 +75,7 @@ async function accept(order) {
   }
 }
 
-// 订单完成不由商家触发：§5.1 的完成路径是「DELIVERED → 顾客确认收货」（FR-022），
-// §9 接口表里也没有商家完成的接口，所以这里只说明流程，不发请求。
+// 完成路径是「骑手送达 → 顾客确认收货」，商家不能直接完成，这里只说明流程。
 function complete(order) {
   message.value = `订单 ${order.orderNo} 需骑手送达后由顾客确认收货才能完成`
 }
@@ -134,8 +133,7 @@ async function decideRefund(r,status){try{const x=await decideMerchantRefund(r.i
           </div>
           <div class="order-amount">¥{{ fmt(order.totalAmount) }}</div>
           <div class="order-actions">
-            <!-- FR-020「已支付订单才能进入履约」：CREATED 订单支付状态仍是 CREATED，
-                 只看 status 会把未支付订单的接单按钮摆出来，点了必然 409（EX-016）。 -->
+            <!-- 只看 status 不够：支付后 status 仍是 CREATED，必须同时看 paymentStatus -->
             <button
               v-if="canAccept(order)"
               class="primary-btn small"

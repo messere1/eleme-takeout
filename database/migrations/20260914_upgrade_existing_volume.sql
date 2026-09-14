@@ -70,4 +70,23 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
     created_at TIMESTAMP NOT NULL
 );
 
+-- 店铺营业时间与店铺经营品类关联；已有数据卷不会重跑 schema.sql 的 CREATE TABLE，故在此补。
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS opening_time TIME;
+ALTER TABLE shops ADD COLUMN IF NOT EXISTS closing_time TIME;
+
+CREATE TABLE IF NOT EXISTS shop_business_categories (
+    shop_id BIGINT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+    business_category_id BIGINT NOT NULL REFERENCES business_categories(id),
+    PRIMARY KEY (shop_id, business_category_id)
+);
+
+-- 按经营范围名称把已有店铺补进经营品类关联表，否则新表为空、按品类筛选恒为空。
+-- 只做精确匹配，不做相似度猜测；匹配不上的店铺由商家在商家信息页自行选择品类。
+INSERT INTO shop_business_categories(shop_id, business_category_id)
+SELECT sh.id, bc.id
+FROM shops sh
+JOIN merchants m ON m.id = sh.merchant_id
+JOIN business_categories bc ON bc.name = m.business_scope
+ON CONFLICT DO NOTHING;
+
 COMMIT;

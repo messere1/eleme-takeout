@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cn.edu.tju.takeout.common.BusinessException;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,47 @@ class ShopManagementServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(error -> ((BusinessException) error).code())
                 .isEqualTo("RESOURCE_NOT_FOUND");
+    }
+
+    @Test
+    void searchShopsMatchesKeywordWithPaging() {
+        when(shopMapper.searchPage("简餐", 10, 10))
+                .thenReturn(List.of(shop(20L, 12L), shop(21L, 13L)));
+        when(shopMapper.countByKeyword("简餐")).thenReturn(12L);
+
+        ShopPage result = shopService.searchShops(2, 10, "  简餐  ");
+
+        assertThat(result.items()).extracting(ShopView::id).containsExactly(20L, 21L);
+        assertThat(result.page()).isEqualTo(2);
+        assertThat(result.total()).isEqualTo(12L);
+        assertThat(result.totalPages()).isEqualTo(2);
+        verify(shopMapper).searchPage("简餐", 10, 10);
+    }
+
+    @Test
+    void searchShopsRejectsBlankKeyword() {
+        assertThatThrownBy(() -> shopService.searchShops(1, 20, "   "))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).code())
+                .isEqualTo("VALIDATION_ERROR");
+
+        assertThatThrownBy(() -> shopService.searchShops(1, 20, null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).code())
+                .isEqualTo("VALIDATION_ERROR");
+    }
+
+    @Test
+    void searchShopsRejectsInvalidPaging() {
+        assertThatThrownBy(() -> shopService.searchShops(0, 20, "简餐"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).code())
+                .isEqualTo("VALIDATION_ERROR");
+
+        assertThatThrownBy(() -> shopService.searchShops(1, 101, "简餐"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).code())
+                .isEqualTo("VALIDATION_ERROR");
     }
 
     private static Shop shop(Long id, Long merchantId) {

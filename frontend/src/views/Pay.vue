@@ -12,8 +12,8 @@ const message = ref('')
 const paying = ref(false)
 const now = ref(Date.now())
 let timer
-// §9.1：倒计时以服务器给的 paymentDeadline 为准。截止时间为空的历史订单不能
-// 用 new Date(0) 顶替——那样会永远显示 00:00、按钮永久禁用，还会被本地误判成"已取消"。
+// 倒计时以服务器给的 paymentDeadline 为准；截止时间为空时不能用 new Date(0) 顶替，
+// 否则会一直显示 00:00、按钮永久禁用。
 const hasDeadline = computed(()=>!!order.value?.paymentDeadline)
 const remaining = computed(()=>{
   if(!hasDeadline.value) return null
@@ -32,7 +32,7 @@ function fmt(value) {
 onMounted(async () => {
   try {
     order.value = await getOrder(orderId)
-    // 只在拿到服务器截止时间时才本地判定超时；否则交给后端判定（FR-018/EX-013）。
+    // 只在拿到截止时间时才本地判定超时，否则交给后端判定。
     timer=setInterval(()=>{now.value=Date.now();if(expired.value){clearInterval(timer);order.value.status='CANCELLED'}},1000)
   } catch (error) {
     message.value = '无法加载订单：' + (error?.message || '请稍后重试')

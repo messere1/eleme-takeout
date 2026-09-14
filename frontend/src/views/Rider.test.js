@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
-// 骑手配送台。mock 掉 api 模块；页面须提供 data-testid：
-// rider-available-<id> / rider-claim-<id> / rider-mine-<id> / rider-deliver-<id>。
+// rider-available-<id> / rider-claim-<id> / rider-mine-<id> / rider-deliver-<id>
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

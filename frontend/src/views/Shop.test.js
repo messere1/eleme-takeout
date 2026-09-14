@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // 店铺页（顾客点单）红灯基线。mock 掉 api 模块；页面须提供 data-testid：
-// shop-name / shop-notice / shop-status / category-<id> / product-card-<id> / add-<id> / shop-message。
+// shop-name / shop-notice / shop-status / category-<id> / product-card-<id> / add-<id> / shop-message
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -56,6 +56,95 @@ describe('店铺页（顾客点单）', () => {
     expect(wrapper.get('[data-testid="shop-name"]').text()).toContain('北洋餐厅')
     expect(wrapper.get('[data-testid="shop-notice"]').text()).toContain('欢迎光临')
     expect(wrapper.get('[data-testid="shop-status"]').text()).toContain('营业中')
+  })
+
+  it('展示商家设置的营业时间', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, openingTime: '08:00', closingTime: '21:30' })
+
+    expect(wrapper.get('[data-testid="shop-hours"]').text()).toContain('08:00')
+    expect(wrapper.get('[data-testid="shop-hours"]').text()).toContain('21:30')
+  })
+
+  it('后端返回带秒的时间也按 HH:mm 展示', async () => {
+    const { wrapper } = await mountShop({
+      ...SHOP, openingTime: '08:00:00', closingTime: '21:30:00',
+    })
+
+    expect(wrapper.get('[data-testid="shop-hours"]').text()).toContain('08:00–21:30')
+  })
+
+  it('展示商家上传的店铺封面与店铺照片', async () => {
+    const { wrapper } = await mountShop({
+      ...SHOP, imageUrl: '/uploads/shop.png', coverImageUrl: '/uploads/cover.png',
+    })
+
+    expect(wrapper.get('[data-testid="shop-cover"]').attributes('src')).toBe('/uploads/cover.png')
+    expect(wrapper.get('[data-testid="shop-image"]').attributes('src')).toBe('/uploads/shop.png')
+  })
+
+  it('商家没传图时不展示图片元素', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, imageUrl: null, coverImageUrl: null })
+
+    expect(wrapper.find('[data-testid="shop-cover"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="shop-image"]').exists()).toBe(false)
+  })
+
+  it('商家没设置营业时间时不展示这一行', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, openingTime: null, closingTime: null })
+
+    expect(wrapper.find('[data-testid="shop-hours"]').exists()).toBe(false)
+  })
+
+  // 浏览器里 vue-router 会在 history.state.back 记下上一页；有它就历史返回，
+  // 这样不会多压一条历史（否则搜索页自己的返回按钮会弹回店铺）。
+  it('有上一页时返回按钮走历史返回而不是新压一条', async () => {
+    const original = window.history.state
+    window.history.replaceState({ back: '/search?q=奶茶' }, '')
+    try {
+      const { wrapper, router } = await mountView(Shop, { path: '/shops/7' })
+      const back = vi.spyOn(router, 'back').mockImplementation(() => {})
+      await flushPromises()
+
+      await wrapper.get('[data-testid="shop-back"]').trigger('click')
+
+      expect(back).toHaveBeenCalledTimes(1)
+    } finally {
+      window.history.replaceState(original, '')
+    }
+  })
+
+  it('从搜索页进店后，返回按钮回到搜索结果页并带上原关键词', async () => {
+    const { wrapper, router } = await mountView(Shop, { path: '/shops/7?from=search&q=奶茶' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="shop-back"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/search')
+    expect(router.currentRoute.value.query.q).toBe('奶茶')
+  })
+
+  it('从首页进店后，返回按钮回首页', async () => {
+    const { wrapper, router } = await mountView(Shop, { path: '/shops/7' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="shop-back"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('直接打开店铺页（没有上一页）时返回按钮回首页', async () => {
+    getShop.mockResolvedValue(SHOP)
+    listCategories.mockResolvedValue(CATEGORIES)
+    listProducts.mockResolvedValue({ items: [], page: 1, size: 20, totalPages: 1 })
+    const { wrapper, router } = await mountView(Shop, { path: '/shops/7' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="shop-back"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/')
   })
 
   it('默认选中第一个分类并展示其商品', async () => {
