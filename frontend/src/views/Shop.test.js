@@ -134,7 +134,10 @@ describe('店铺页（顾客点单）', () => {
     session.save({ token: 'customer-token', role: 'CUSTOMER' })
     addToCart.mockResolvedValue({ id: 50, productId: 40, quantity: 1 })
     getCart.mockResolvedValue({
-      items: [{ id: 50, shopId: 7, productName: '煎饼果子', quantity: 1, subtotal: 8.5 }],
+      items: [{
+        id: 50, shopId: 7, productId: 40, productName: '煎饼果子',
+        quantity: 1, subtotal: 8.5, available: true, unavailableReason: null,
+      }],
       totalAmount: 8.5,
     })
     getProfile.mockResolvedValue({ username: '张三', phone: '13800138000', address: '天津大学北洋园校区' })
@@ -155,6 +158,151 @@ describe('店铺页（顾客点单）', () => {
       recipientName: '张三',
       recipientPhone: '13800138000',
       deliveryAddress: '天津大学北洋园校区',
+    }))
+  })
+
+
+  // §4 / FR-012：购物车按顾客+店铺隔离，店铺页只该看到当前这家店的条目。
+  it('进店即按本店已有商品显示底部购物车，且只算本店', async () => {
+    session.save({ token: 'customer-token', role: 'CUSTOMER' })
+    getCart.mockResolvedValue({
+      items: [
+        { id: 50, shopId: 7, productId: 40, productName: '煎饼果子', quantity: 2, subtotal: 17.0, available: true },
+        { id: 60, shopId: 9, productId: 90, productName: '别家奶茶', quantity: 3, subtotal: 30.0, available: true },
+      ],
+      totalAmount: 47.0,
+    })
+
+    const { wrapper } = await mountShop()
+    await flushPromises()
+
+    // 不用先加购就该出现；件数与合计只算本店（2 件 / ¥17.00），不能混进别家的 3 件 / ¥47.00
+    expect(wrapper.get('[data-testid="shop-cart-bar"]').text()).toContain('共 2 件')
+    expect(wrapper.get('[data-testid="shop-cart-bar"]').text()).toContain('17.00')
+    expect(wrapper.get('[data-testid="shop-cart-bar"]').text()).not.toContain('47.00')
+
+    await wrapper.get('[data-testid="shop-cart-bar"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="shop-sheet-item-50"]').text()).toContain('煎饼果子')
+    expect(wrapper.find('[data-testid="shop-sheet-item-60"]').exists()).toBe(false)
+  })
+
+  it('本店没有商品时不显示底部购物车', async () => {
+    session.save({ token: 'customer-token', role: 'CUSTOMER' })
+    getCart.mockResolvedValue({
+      items: [
+        { id: 60, shopId: 9, productId: 90, productName: '别家奶茶', quantity: 3, subtotal: 30.0, available: true },
+      ],
+      totalAmount: 30.0,
+    })
+
+    const { wrapper } = await mountShop()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="shop-cart-bar"]').exists()).toBe(false)
+  })
+
+  it('本店购物车里有不可购买商品时禁止结算', async () => {
+    session.save({ token: 'customer-token', role: 'CUSTOMER' })
+    getCart.mockResolvedValue({
+      items: [
+        { id: 50, shopId: 7, productId: 40, productName: '煎饼果子', quantity: 2, subtotal: 17.0, available: false, unavailableReason: 'OFF_SALE' },
+      ],
+      totalAmount: 0,
+    })
+    getProfile.mockResolvedValue({ username: '张三', phone: '13800138000', address: '天津大学北洋园校区' })
+
+    const { wrapper } = await mountShop()
+    await flushPromises()
+    await wrapper.get('[data-testid="shop-cart-bar"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="shop-checkout"]').element.disabled).toBe(true)
+  })
+
+  // NFR-006：提交按钮灰掉时必须写清原因。
+  it('提交按钮灰掉时给出具体原因', async () => {
+    session.save({ token: 'customer-token', role: 'CUSTOMER' })
+    getCart.mockResolvedValue({
+      items: [{
+        id: 50, shopId: 7, productId: 40, productName: '煎饼果子',
+        quantity: 1, subtotal: 8.5, available: true, unavailableReason: null,
+      }],
+      totalAmount: 8.5,
+    })
+    getProfile.mockResolvedValue({ username: '张三', phone: '', address: '天津大学北洋园校区' })
+
+    const { wrapper } = await mountShop()
+    await flushPromises()
+    await wrapper.get('[data-testid="shop-cart-bar"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="shop-checkout"]').element.disabled).toBe(true)
+    expect(wrapper.get('[data-testid="shop-checkout-hint"]').text()).toContain('联系电话')
+  })
+
+  // UC-02 异常流程「字段非法不提交」：店铺页下单此前完全不做校验。
+  it('收货字段缺失或电话非法时禁止提交', async () => {
+    session.save({ token: 'customer-token', role: 'CUSTOMER' })
+    addToCart.mockResolvedValue({ id: 50, productId: 40, quantity: 1 })
+    getCart.mockResolvedValue({
+      items: [{
+        id: 50, shopId: 7, productId: 40, productName: '煎饼果子',
+        quantity: 1, subtotal: 8.5, available: true, unavailableReason: null,
+      }],
+      totalAmount: 8.5,
+    })
+    getProfile.mockResolvedValue({})
+
+    const { wrapper } = await mountShop()
+    await wrapper.get('[data-testid="add-40"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="shop-cart-bar"]').trigger('click')
+    await flushPromises()
+
+    // 未填任何收货信息
+    expect(wrapper.get('[data-testid="shop-checkout"]').element.disabled).toBe(true)
+
+    await wrapper.get('.shop-sheet input[placeholder="收货人"]').setValue('张同学')
+    await wrapper.get('.shop-sheet input[placeholder="联系电话"]').setValue('-------+')
+    await wrapper.get('.shop-sheet input[placeholder="收货地址"]').setValue('天津大学北洋园校区')
+    expect(wrapper.get('[data-testid="shop-checkout"]').element.disabled).toBe(true)
+
+    await wrapper.get('[data-testid="shop-checkout"]').trigger('click')
+    await flushPromises()
+    expect(createOrder).not.toHaveBeenCalled()
+  })
+
+  it('联系电话含国际前缀与分隔符时按 EX-007 规范化后提交', async () => {
+    session.save({ token: 'customer-token', role: 'CUSTOMER' })
+    addToCart.mockResolvedValue({ id: 50, productId: 40, quantity: 1 })
+    getCart.mockResolvedValue({
+      items: [{
+        id: 50, shopId: 7, productId: 40, productName: '煎饼果子',
+        quantity: 1, subtotal: 8.5, available: true, unavailableReason: null,
+      }],
+      totalAmount: 8.5,
+    })
+    getProfile.mockResolvedValue({})
+    createOrder.mockResolvedValue({ id: 88 })
+    saveDeliveryInfo.mockResolvedValue({})
+
+    const { wrapper } = await mountShop()
+    await wrapper.get('[data-testid="add-40"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="shop-cart-bar"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('.shop-sheet input[placeholder="收货人"]').setValue('张同学')
+    await wrapper.get('.shop-sheet input[placeholder="联系电话"]').setValue('+86 138-0013-8000')
+    await wrapper.get('.shop-sheet input[placeholder="收货地址"]').setValue('天津大学北洋园校区')
+
+    await wrapper.get('[data-testid="shop-checkout"]').trigger('click')
+    await flushPromises()
+
+    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      recipientPhone: '8613800138000',
     }))
   })
 })

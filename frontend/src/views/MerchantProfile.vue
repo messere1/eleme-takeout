@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { getMyMerchant, updateMyMerchant, listBusinessCategories, deleteMyMerchant, getMyShopBusinessCategories, updateMyShopBusinessCategories } from '@/api/merchant'
-import { uploadImage } from '@/api/upload'
+import ImageUploader from '@/components/ImageUploader.vue'
 
 const info = ref({
   merchantName: '',
@@ -15,7 +15,6 @@ const info = ref({
 const message=ref('')
 const categories=ref([])
 const selectedCategoryIds=ref([])
-async function pick(event,type){const file=event.target.files?.[0];if(!file)return;try{const r=await uploadImage(file,type,info.value.shopId);if(type==='SHOP_IMAGE')info.value.imageUrl=r.url;else info.value.coverImageUrl=r.url;message.value='图片已上传'}catch(e){message.value=e?.message||'上传失败'}}
 
 onMounted(async () => {
   try {
@@ -49,10 +48,42 @@ async function remove(){if(!window.confirm('确认注销商家账号？'))return
       <div><dt>店铺地址</dt><dd><input v-model="info.shopAddress" /></dd></div>
       <div><dt>营业状态</dt><dd>{{ info.shopStatus || '（未填写）' }}</dd></div>
     </dl>
-    <div class="uploads"><label>店铺照片 <input type="file" accept="image/jpeg,image/png,image/webp" @change="pick($event,'SHOP_IMAGE')" /></label>
-      <label>封面照片 <input type="file" accept="image/jpeg,image/png,image/webp" @change="pick($event,'SHOP_COVER')" /></label></div>
+
+    <section class="uploads">
+      <ImageUploader
+        v-model="info.imageUrl"
+        target-type="SHOP_IMAGE"
+        :target-id="info.shopId"
+        shape="square"
+        title="店铺照片"
+        tip="店铺列表和点单页使用的小图，建议正方形"
+        placeholder="店铺照片"
+        upload-label="上传照片"
+        replace-label="更换照片"
+        input-testid="profile-shop-image-input"
+        @message="message = $event"
+      />
+      <ImageUploader
+        v-model="info.coverImageUrl"
+        target-type="SHOP_COVER"
+        :target-id="info.shopId"
+        shape="wide"
+        title="封面照片"
+        tip="顾客进店时店铺顶部的大图，建议横向"
+        placeholder="封面照片"
+        upload-label="上传封面"
+        replace-label="更换封面"
+        input-testid="profile-cover-image-input"
+        @message="message = $event"
+      />
+    </section>
+
     <p v-if="message">{{message}}</p>
-    <button @click="save">保存资料</button><button class="danger" @click="remove">注销商家账号</button>
+
+    <div class="actions">
+      <button @click="save">保存资料</button>
+      <button class="danger" @click="remove">注销商家账号</button>
+    </div>
   </section>
 </template>
 
@@ -70,9 +101,55 @@ async function remove(){if(!window.confirm('确认注销商家账号？'))return
 .info-list div {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  /* 窄屏放不下时整行换行，而不是把输入框挤出屏幕 */
+  flex-wrap: wrap;
   padding: 0.6rem 0;
   border-bottom: 1px dashed #f0f0f0;
 }
-.info-list dt { color: #999; }
-.info-list dd { margin: 0; }
+.info-list dt { color: #999; flex: 0 0 auto; }
+.info-list dd { margin: 0; flex: 1 1 10rem; min-width: 0; text-align: right; }
+.info-list input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  padding: 0.4rem 0.5rem;
+  font: inherit;
+  color: inherit;
+}
+
+/* 上传控件本身的样式在 components/ImageUploader.vue 里，四个页面共用 */
+.uploads {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+}
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.actions button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.5rem 1.2rem;
+  background: var(--brand-gradient);
+  color: #2b1d00;
+  font-weight: 600;
+  cursor: pointer;
+}
+.actions .danger {
+  background: #fff1e8;
+  color: #e34d1c;
+}
+
+/* 很窄的屏幕上按钮独占一行，避免和预览图挤在一起 */
+@media (max-width: 420px) {
+  .info-list dd { text-align: left; }
+}
 </style>

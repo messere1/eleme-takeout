@@ -9,6 +9,8 @@ const orders = ref([])
 const currentPage = ref(1)
 const totalPages = ref(1)
 const selectedStatus = ref('')
+const startTime = ref('')
+const endTime = ref('')
 const loadError = ref('')
 
 function fmt(value) {
@@ -19,7 +21,8 @@ function fmtTime(value) {
   return value ? String(value).replace('T', ' ').slice(0, 16) : ''
 }
 
-const STATUS_TEXT = { CREATED: '待处理', CANCELLED: '已取消', ACCEPTED: '已接单', COMPLETED: '已完成', PENDING: '待处理' }
+// §5.1 状态机的全部取值。原来的 PENDING 不在状态机里，后端从不产生。
+const STATUS_TEXT = { CREATED: '待处理', CANCELLED: '已取消', ACCEPTED: '已接单', DELIVERING: '配送中', DELIVERED: '已送达', COMPLETED: '已完成' }
 
 function statusText(status) {
   return STATUS_TEXT[status] || status
@@ -36,6 +39,8 @@ async function cancelRow(order) {
 }
 
 async function confirmRow(order) {
+  // 后端确认收货只接受 DELIVERED → COMPLETED，状态不对时不发请求，避免无意义的 409
+  if (order.status !== 'DELIVERED') return
   loadError.value = ''
   try {
     const res = await confirmOrder(order.id)
@@ -47,8 +52,11 @@ async function confirmRow(order) {
 
 async function load(page) {
   try {
+    // FR-016：顾客订单按分页、状态、时间查询。
     const params = { page, size: 20 }
     if (selectedStatus.value) params.status = selectedStatus.value
+    if (startTime.value) params.startTime = startTime.value
+    if (endTime.value) params.endTime = endTime.value
     const data = await listOrders(params)
     orders.value = data?.items ?? []
     currentPage.value = data?.page ?? page
@@ -75,7 +83,6 @@ function goDetail(order) {
   router.push(`/orders/${order.id}`)
 }
 
-const UNPAID_MINUTES = 15
 const now = ref(Date.now())
 let ticker = null
 if (import.meta.env.MODE !== 'test') {
@@ -91,14 +98,21 @@ function pad(n) {
   return String(n).padStart(2, '0')
 }
 
+// §5.1 只有 CREATED+UNPAID 会被自动取消；§9.1 / FR-019 要求倒计时以服务器 paymentDeadline 为准，
+// 不能用 createdAt 自己加 15 分钟推算（那样已支付订单也会显示"已超时"，客户端时钟偏了还全错）。
 function countdownText(order) {
-  if (order.status !== 'CREATED' && order.status !== 'PENDING') return ''
-  const deadline = new Date(order.createdAt).getTime() + UNPAID_MINUTES * 60 * 1000
-  const remain = deadline - now.value
+  if (order.status !== 'CREATED' || order.paymentStatus === 'PAID') return ''
+  if (!order.paymentDeadline) return ''
+  const remain = new Date(order.paymentDeadline).getTime() - now.value
   if (Number.isNaN(remain)) return ''
   if (remain <= 0) return '已超时，等待自动取消'
   const s = Math.floor(remain / 1000)
   return `距自动取消 ${pad(Math.floor(s / 60))}:${pad(s % 60)}`
+}
+
+// §5.1：CREATED+UNPAID 才允许顾客取消。
+function canCancel(order) {
+  return order.status === 'CREATED' && order.paymentStatus !== 'PAID'
 }
 
 onMounted(() => load(1))
@@ -119,8 +133,24 @@ onMounted(() => load(1))
         @change="onStatusChange"
       >
         <option value="">全部</option>
-        <option value="CREATED">待处理</option>
+        <option v-for="(text, code) in STATUS_TEXT" :key="code" :value="code">{{ text }}</option>
       </select>
+      <label for="orders-start">起</label>
+      <input
+        id="orders-start"
+        v-model="startTime"
+        data-testid="orders-start"
+        type="datetime-local"
+        @change="onStatusChange"
+      />
+      <label for="orders-end">止</label>
+      <input
+        id="orders-end"
+        v-model="endTime"
+        data-testid="orders-end"
+        type="datetime-local"
+        @change="onStatusChange"
+      />
     </div>
 
     <template v-if="orders.length">
@@ -142,19 +172,27 @@ onMounted(() => load(1))
             <span class="order-time">{{ fmtTime(order.createdAt) }}</span>
             <strong class="order-amount">¥{{ fmt(order.totalAmount) }}</strong>
           </div>
-          <div v-if="order.status === 'CREATED' || order.status === 'PENDING'" class="order-cancel">
+          <div v-if="canCancel(order)" class="order-cancel">
             <button
               class="cancel-btn"
               :data-testid="`order-cancel-${order.id}`"
               @click.stop="cancelRow(order)"
             >取消订单</button>
           </div>
-          <div v-else-if="order.status === 'ACCEPTED'" class="order-confirm">
+          <span
+            v-else-if="order.status === 'CREATED'"
+            :data-testid="`order-paid-hint-${order.id}`"
+            class="confirm-hint"
+          >已支付，不可取消</span>
+          <!-- 确认收货只认 DELIVERED → COMPLETED：已接单但骑手还没送达时，按钮保留但不可点 -->
+          <div v-else-if="order.status === 'ACCEPTED' || order.status === 'DELIVERED'" class="order-confirm">
             <button
               class="confirm-btn"
               :data-testid="`order-confirm-${order.id}`"
+              :disabled="order.status !== 'DELIVERED'"
               @click.stop="confirmRow(order)"
             >确认完成</button>
+            <span v-if="order.status !== 'DELIVERED'" class="confirm-hint">骑手送达后可确认</span>
           </div>
         </li>
       </ul>
@@ -334,6 +372,21 @@ onMounted(() => load(1))
   font-size: 0.85rem;
   white-space: nowrap;
 }
+.confirm-btn:disabled {
+  background: #ececec;
+  color: #999;
+  cursor: not-allowed;
+}
+.order-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.confirm-hint {
+  color: #aaa;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
 .order-shop-thumb {
   flex-shrink: 0;
   width: 2.6rem;
@@ -353,8 +406,13 @@ onMounted(() => load(1))
 .orders-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+}
+.orders-toolbar input {
+  min-width: 0;
+  max-width: 100%;
 }
 .orders-toolbar label {
   color: #666;

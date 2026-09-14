@@ -383,13 +383,14 @@ onUnmounted(() => {
 }
 .shop-thumb {
   flex-shrink: 0;
-  width: 5.4rem;
-  height: 5.4rem;
+  /* 5.4rem × 1.5 */
+  width: 8.1rem;
+  height: 8.1rem;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+  font-size: 3rem;
 }
 .shop-body {
   flex: 1;

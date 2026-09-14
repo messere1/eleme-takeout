@@ -84,7 +84,15 @@ public interface OrderMapper {
     @Select("SELECT * FROM orders WHERE id = #{id} FOR UPDATE")
     Optional<Order> findByIdForUpdate(Long id);
 
-    @Select("SELECT * FROM order_items WHERE order_id = #{orderId} ORDER BY id ASC")
+    // 订单明细带上商品图：order_items 快照不存图，所以关联 products 取当前图片
+    // （商品是软删除，历史订单仍能取到）。
+    @Select("""
+            SELECT oi.*, p.image_url
+            FROM order_items oi
+            LEFT JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = #{orderId}
+            ORDER BY oi.id ASC
+            """)
     List<OrderItem> findItemsByOrderId(Long orderId);
 
     @Update("""
@@ -130,9 +138,32 @@ public interface OrderMapper {
     @Update("UPDATE orders SET status = 'DELIVERED' WHERE id = #{orderId} AND rider_id = #{riderId} AND status = 'DELIVERING'")
     int markDelivered(Long orderId, Long riderId);
 
-    @Select("SELECT * FROM orders ORDER BY created_at DESC, id DESC LIMIT #{limit} OFFSET #{offset}")
-    List<Order> findPageForAdmin(int limit, int offset);
-    @Select("SELECT COUNT(*) FROM orders") long countAll();
+    // FR-016：管理员侧同样要能按状态、时间查询（此前只支持分页）。
+    @Select("""
+            <script>
+            SELECT * FROM orders
+            <where>
+              <if test='status != null and status != ""'> AND status = #{status} </if>
+              <if test='startTime != null'> AND created_at &gt;= #{startTime} </if>
+              <if test='endTime != null'> AND created_at &lt;= #{endTime} </if>
+            </where>
+            ORDER BY created_at DESC, id DESC LIMIT #{limit} OFFSET #{offset}
+            </script>
+            """)
+    List<Order> findPageForAdmin(
+            String status, LocalDateTime startTime, LocalDateTime endTime, int limit, int offset);
+
+    @Select("""
+            <script>
+            SELECT COUNT(*) FROM orders
+            <where>
+              <if test='status != null and status != ""'> AND status = #{status} </if>
+              <if test='startTime != null'> AND created_at &gt;= #{startTime} </if>
+              <if test='endTime != null'> AND created_at &lt;= #{endTime} </if>
+            </where>
+            </script>
+            """)
+    long countForAdmin(String status, LocalDateTime startTime, LocalDateTime endTime);
     @Update("UPDATE orders SET status = #{status} WHERE id = #{id}") int setStatusForAdmin(Long id, String status);
     @Select("SELECT COUNT(*) FROM orders WHERE user_id=#{userId} AND status NOT IN ('COMPLETED','CANCELLED')")
     long countActiveByUser(Long userId);

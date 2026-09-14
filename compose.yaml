@@ -37,5 +37,19 @@ services:
 
     restart: unless-stopped
 
+  migrate:
+    image: postgres:16
+    depends_on:
+      - postgres
+    environment:
+      PGPASSWORD: take_out
+    volumes:
+      - ./database/migrations/20260914_upgrade_existing_volume.sql:/migration.sql:ro
+    entrypoint: ["/bin/sh", "-ec"]
+    command: >-
+      until pg_isready -h postgres -U take_out -d take_out; do sleep 1; done;
+      psql -h postgres -U take_out -d take_out -v ON_ERROR_STOP=1 -f /migration.sql
+    restart: "no"
+
 volumes:
   takeout-postgres-data:

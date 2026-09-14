@@ -49,6 +49,18 @@
 
 `POST /orders/{orderId}/pay`（CUSTOMER）仅允许本人 `CREATED/UNPAID` 且服务器时间早于截止时间的订单。成功变为 `PAID`；重复已成功支付幂等。系统每30秒扫描到期未支付订单，改为 `CANCELLED` 并回补库存一次。支付与取消竞争时只能一方成功。
 
+订单状态是「业务状态 + 支付状态」这一对（SRS §5.1），支付成功后 `status` 仍是 `CREATED`，只改 `paymentStatus`。因此 `GET /orders`、`GET /merchant/orders`、`GET /admin/orders` 的列表项除 `status` 外还必须返回 `paymentStatus` 与 `paymentDeadline`：
+
+```json
+{"id":60,"orderNo":"T20260901001","shopId":7,"totalAmount":17.00,
+ "status":"CREATED","paymentStatus":"UNPAID","paymentDeadline":"2026-09-01T12:45:00",
+ "createdAt":"2026-09-01T12:30:00"}
+```
+
+- `CREATED+UNPAID` 允许顾客支付与取消；`CREATED+PAID` 只允许商家接单或顾客申请退款——两者动作不同，页面不得只按 `status` 判断。
+- 支付倒计时一律以 `paymentDeadline` 为准，页面不得用 `createdAt` 自行推算。
+- 商家订单列表与顾客订单列表同样支持 `status`、`startTime`、`endTime`、`page`、`size`（FR-016）。
+
 ## 5. 退款
 
 `POST /orders/{orderId}/refunds`（CUSTOMER）：
@@ -61,7 +73,7 @@
 
 - `GET /refunds`：顾客查看本人退款。
 - `GET /merchant/refunds`、`PATCH /merchant/refunds/{id}`：本店商家查询并提交 `APPROVED` 或 `REJECTED`。
-- `GET /admin/refunds`、`PATCH /admin/refunds/{id}`：管理员查询和处理。
+- `GET /admin/refunds`、`PATCH /admin/refunds/{id}`：管理员查询和处理。查询为分页，响应 `data` 是 `{items, page, size, total, totalPages}` 信封（与其他 admin 列表一致），不再是裸数组。
 
 状态为 `PENDING → APPROVED | REJECTED`，终态不可重复处理。
 
@@ -80,6 +92,10 @@
 - `GET /admin/users|merchants|products|orders|refunds`
 - `PATCH /admin/users|merchants|products|orders/{id}/status`
 - `PATCH /admin/refunds/{id}`
+
+五个列表接口统一分页（默认 `page=1&size=20`，最大 100），响应 `data` 均为 `{items, page, size, total, totalPages}`。订单列表另支持 `status`、`startTime`、`endTime` 筛选（FR-016），且 `startTime` 不得晚于 `endTime`。
+
+订单列表项不含收货地址，手机号仅以 `recipientPhoneMasked` 脱敏下发（NFR-004）。
 
 账号状态为 `ENABLED|DISABLED`，商品为 `ON_SALE|OFF_SALE`，订单状态必须属于 SRS 状态机。写操作记录管理员、动作、目标和时间；列表手机号脱敏，不返回密码摘要或 Token。
 

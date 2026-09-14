@@ -78,14 +78,13 @@ describe('SRS V1.4 前端接口契约（文件名保留以兼容历史链接）'
     expect(http.post).toHaveBeenCalledWith('/orders', recipient)
   })
 
-  it('订单流转使用V1.4约定的接单、完成和确认收货接口', async () => {
+  // SRS V2 移除了商家直接完成的 POST /orders/{id}/complete，完成只剩「骑手送达 → 顾客确认收货」一条路径。
+  it('订单流转使用SRS V2约定的接单与确认收货接口', async () => {
     await orderApi.acceptOrder(60)
-    await orderApi.completeOrder(60)
     await orderApi.confirmOrder(60)
 
     expect(http.post).toHaveBeenNthCalledWith(1, '/orders/60/accept')
-    expect(http.post).toHaveBeenNthCalledWith(2, '/orders/60/complete')
-    expect(http.post).toHaveBeenNthCalledWith(3, '/orders/60/confirm')
+    expect(http.post).toHaveBeenNthCalledWith(2, '/orders/60/confirm')
   })
 
   it('管理员账号清单使用只读接口和默认20条分页', async () => {

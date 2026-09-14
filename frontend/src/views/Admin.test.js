@@ -33,6 +33,20 @@ describe('管理员只读账号清单', () => {
     expect(wrapper.text()).toContain('138****8000')
   })
 
+  it('窄屏用户列表为每个字段和操作提供卡片标签', async () => {
+    const { wrapper } = await mountAdmin([
+      { id: 7, username: 'alice', phone: '138****8000', nickname: 'Alice' },
+    ])
+
+    const cells = wrapper.findAll('.admin-table tbody tr td')
+    expect(cells.map(cell => cell.attributes('data-label'))).toEqual([
+      'ID', '用户名', '手机号', '昵称', '操作',
+    ])
+    expect(wrapper.findAll('.admin-table thead th').map(th => th.text())).toEqual([
+      'ID', '用户名', '手机号', '昵称', '操作',
+    ])
+  })
+
   it('切换商家页签后加载商家清单', async () => {
     listMerchants.mockResolvedValueOnce({
       items: [{ id: 12, merchantName: '北洋餐厅', phone: '139****9000', businessScope: '快餐' }],
@@ -85,12 +99,32 @@ describe('管理员只读账号清单', () => {
     await flushPromises()
     expect(wrapper.get('[data-testid="admin-order-status-9"]').text()).toContain('待处理')
 
-    await wrapper.get('select').setValue('DELIVERING')
+    await wrapper.get('[data-testid="admin-order-target-9"]').setValue('DELIVERING')
     await wrapper.get('[data-testid="admin-order-set-9"]').trigger('click')
     await flushPromises()
 
     expect(setAdminStatus).toHaveBeenCalledWith('orders', 9, 'DELIVERING')
     expect(wrapper.get('[data-testid="admin-order-status-9"]').text()).toContain('配送中')
+  })
+
+  // FR-016：管理员订单列表也要能按状态、时间查询。
+  it('订单页签支持按状态与起止时间筛选', async () => {
+    listAdminOrders.mockResolvedValue({ items: [] })
+    const { wrapper } = await mountAdmin()
+
+    await wrapper.findAll('button')[3].trigger('click') // 订单页签
+    await flushPromises()
+    expect(listAdminOrders).toHaveBeenLastCalledWith({ page: 1, size: 20 })
+
+    await wrapper.get('[data-testid="admin-order-status-filter"]').setValue('DELIVERING')
+    await flushPromises()
+    expect(listAdminOrders).toHaveBeenLastCalledWith({ page: 1, size: 20, status: 'DELIVERING' })
+
+    await wrapper.get('[data-testid="admin-order-start"]').setValue('2026-09-01T00:00')
+    await flushPromises()
+    expect(listAdminOrders).toHaveBeenLastCalledWith({
+      page: 1, size: 20, status: 'DELIVERING', startTime: '2026-09-01T00:00',
+    })
   })
 
   it('订单状态更新失败时展示后端原因且列表状态不变', async () => {
@@ -103,7 +137,7 @@ describe('管理员只读账号清单', () => {
     await wrapper.findAll('button')[3].trigger('click')
     await flushPromises()
 
-    await wrapper.get('select').setValue('CANCELLED')
+    await wrapper.get('[data-testid="admin-order-target-9"]').setValue('CANCELLED')
     await wrapper.get('[data-testid="admin-order-set-9"]').trigger('click')
     await flushPromises()
 

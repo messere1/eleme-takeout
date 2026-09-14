@@ -1,7 +1,8 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getOrder, requestRefund } from '@/api/order'
+import { isPositiveMoney } from '@/utils/money'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,7 +12,35 @@ const detail = ref(null)
 const loadError = ref('')
 const refundAmount = ref('')
 const refundReason = ref('')
+const refundEvidence = ref('')
 const refundMessage = ref('')
+const refundSubmitting = ref(false)
+
+// UC-06 / §5.2：金额零、负、三位小数、指数形式，以及原因空、证据超过 3 个，都在提交前拦下。
+const EVIDENCE_MAX = 3
+const refundEvidenceUrls = computed(() =>
+  refundEvidence.value.split('\n').map((url) => url.trim()).filter(Boolean),
+)
+const refundBlockedReason = computed(() => {
+  if (!isPositiveMoney(refundAmount.value)) return '金额需为 0.01～99999999.99 且最多两位小数'
+  if (!refundReason.value.trim()) return '请填写退款原因'
+  if (refundEvidenceUrls.value.length > EVIDENCE_MAX) return `退款证据最多 ${EVIDENCE_MAX} 个图片 URL`
+  return ''
+})
+// NFR-006：提交期间禁用，防重复提交（EX-012）。
+const canSubmitRefund = computed(() => !refundBlockedReason.value && !refundSubmitting.value)
+const showRefundHint = computed(
+  () => !!refundBlockedReason.value
+    && (!!refundAmount.value.trim() || !!refundReason.value.trim() || !!refundEvidence.value.trim()),
+)
+
+// §5.1：CREATED+UNPAID 才允许顾客支付；支付成功后 status 仍是 CREATED，只改 paymentStatus，
+// 所以支付入口必须同时看 paymentStatus，否则已支付但商家未接单的订单会被再次引导去付款。
+const canPay = computed(
+  () => !!detail.value
+    && detail.value.paymentStatus !== 'PAID'
+    && detail.value.status === 'CREATED',
+)
 
 function fmt(value) {
   return (Number(value) || 0).toFixed(2)
@@ -47,7 +76,31 @@ onMounted(async () => {
   }
 })
 
-async function submitRefund(){try{await requestRefund(orderId,{amount:Number(refundAmount.value),reason:refundReason.value.trim(),evidenceUrls:[]});refundMessage.value='退款申请已提交'}catch(e){refundMessage.value=e?.message||'退款申请失败'}}
+async function submitRefund() {
+  if (refundSubmitting.value) return
+  if (refundBlockedReason.value) {
+    refundMessage.value = refundBlockedReason.value
+    return
+  }
+  refundSubmitting.value = true
+  refundMessage.value = ''
+  try {
+    await requestRefund(orderId, {
+      // 已按 §9.1 校验过格式，此处 Number 不会产生指数形式或多余小数位。
+      amount: Number(refundAmount.value.trim()),
+      reason: refundReason.value.trim(),
+      evidenceUrls: refundEvidenceUrls.value,
+    })
+    refundMessage.value = '退款申请已提交'
+    refundAmount.value = ''
+    refundReason.value = ''
+    refundEvidence.value = ''
+  } catch (e) {
+    refundMessage.value = e?.message || '退款申请失败'
+  } finally {
+    refundSubmitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -60,10 +113,15 @@ async function submitRefund(){try{await requestRefund(orderId,{amount:Number(ref
         <span data-testid="order-status" class="order-status">{{ detail.status }}</span>
       </header>
       <RouterLink
-        v-if="detail.status === 'CREATED' || detail.status === 'PENDING'"
+        v-if="canPay"
         :to="`/orders/${detail.id}/pay`"
         class="pay-link"
       >去支付 →</RouterLink>
+      <p
+        v-else-if="detail.paymentStatus === 'PAID' && detail.status === 'CREATED'"
+        data-testid="order-paid-tip"
+        class="pay-done-tip"
+      >已支付，等待商家接单</p>
       <p class="order-time">{{ fmtTime(detail.createdAt) }}</p>
 
       <div class="shop-banner">
@@ -101,10 +159,34 @@ async function submitRefund(){try{await requestRefund(orderId,{amount:Number(ref
         <strong data-testid="order-total" class="order-total">¥{{ fmt(detail.totalAmount) }}</strong>
       </footer>
       <section v-if="detail.paymentStatus === 'PAID'" class="refund-box"><h3>申请退款</h3>
-        <el-input v-model="refundAmount" type="number" placeholder="退款金额" />
-        <el-input v-model="refundReason" maxlength="255" placeholder="退款原因" />
-        <button :disabled="!refundAmount || !refundReason.trim()" @click="submitRefund">提交退款申请</button>
-        <p v-if="refundMessage">{{refundMessage}}</p></section>
+        <el-input
+          v-model="refundAmount"
+          type="text"
+          inputmode="decimal"
+          data-testid="refund-amount"
+          placeholder="退款金额，最多两位小数"
+        />
+        <el-input
+          v-model="refundReason"
+          maxlength="255"
+          data-testid="refund-reason"
+          placeholder="退款原因"
+        />
+        <el-input
+          v-model="refundEvidence"
+          type="textarea"
+          :rows="2"
+          maxlength="765"
+          data-testid="refund-evidence"
+          placeholder="证据图片 URL，每行一个，最多 3 个（可留空）"
+        />
+        <button
+          :disabled="!canSubmitRefund"
+          data-testid="refund-submit"
+          @click="submitRefund"
+        >{{ refundSubmitting ? '提交中…' : '提交退款申请' }}</button>
+        <p v-if="showRefundHint" data-testid="refund-hint" class="refund-hint">{{ refundBlockedReason }}</p>
+        <p v-if="refundMessage">{{ refundMessage }}</p></section>
     </template>
     <p v-else class="loading-tip">{{ loadError || '订单加载中…' }}</p>
   </section>
@@ -161,26 +243,28 @@ async function submitRefund(){try{await requestRefund(orderId,{amount:Number(ref
   gap: 0.75rem;
 }
 .shop-thumb {
-  width: 3rem;
-  height: 3rem;
+  /* 3rem × 1.5 */
+  width: 4.5rem;
+  height: 4.5rem;
   border-radius: 10px;
   object-fit: cover;
   background: #fff4ec;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
+  font-size: 2.4rem;
 }
 .dish-thumb {
   flex-shrink: 0;
-  width: 2.6rem;
-  height: 2.6rem;
+  /* 2.6rem × 1.5 */
+  width: 3.9rem;
+  height: 3.9rem;
   border-radius: 8px;
   object-fit: cover;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
+  font-size: 2.1rem;
 }
 .contact-panel {
   background: #fff7f0;
@@ -241,6 +325,9 @@ async function submitRefund(){try{await requestRefund(orderId,{amount:Number(ref
   text-align: center;
 }
 .refund-box{border-top:1px dashed #eee;padding-top:1rem;display:grid;gap:.6rem}.refund-box h3{margin:0}.refund-box button{border:0;border-radius:999px;padding:.5rem;background:var(--brand-gradient)}
+.refund-box button:disabled{opacity:.5;cursor:not-allowed}.refund-box p{margin:0;font-size:.85rem}
+.refund-hint{color:#e34d1c}
+.pay-done-tip{margin:0;font-size:.85rem;color:#52a05a}
 .detail-head {
   flex-wrap: wrap;
 }
@@ -262,9 +349,10 @@ async function submitRefund(){try{await requestRefund(orderId,{amount:Number(ref
     font-size: 1rem;
   }
   .dish-thumb {
-    width: 2.2rem;
-    height: 2.2rem;
-    font-size: 1.1rem;
+    /* 2.2rem × 1.5 */
+    width: 3.3rem;
+    height: 3.3rem;
+    font-size: 1.65rem;
   }
   .item-name {
     font-size: 0.92rem;

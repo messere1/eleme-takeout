@@ -8,6 +8,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -35,6 +38,22 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiResponse<Void>> handleUnreadable(HttpMessageNotReadableException exception) {
         return ResponseEntity.badRequest().body(ApiResponse.failure(
                 "VALIDATION_ERROR", "请求内容格式不正确", null));
+    }
+
+    // 路由不存在 / 接口已下线时不能落进兜底的 500。契约 §1 的「404 不存在」，
+    // 以及 EX-030「未知路由 → 404/400/500」。删掉的接口（如 POST /orders/{id}/complete）
+    // 应当明确报 404，而不是让调用方以为服务端崩了。
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    ResponseEntity<ApiResponse<Void>> handleNoResourceFound(Exception exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.failure(
+                "RESOURCE_NOT_FOUND", "请求的接口不存在", null));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ApiResponse.failure(
+                "METHOD_NOT_ALLOWED", "请求方法不被支持", null));
     }
 
     @ExceptionHandler(Exception.class)

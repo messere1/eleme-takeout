@@ -200,6 +200,40 @@ class OrderWorkflowServiceTest {
         assertThat(result.userAddress()).isEqualTo("天津****育园");
     }
 
+    // 订单详情要能看到商家图片和菜品图。图片不在 order_items 快照里，
+    // 由查询时 LEFT JOIN products 与 ShopMapper 取当前图片。
+    @Test
+    void detailCarriesShopImageAndItemImage() {
+        Order order = order(61L, 7L, 20L, "CREATED");
+        Shop shop = shop(12L, 20L);
+        shop.setImageUrl("/uploads/shop.png");
+        OrderItem item = OrderItem.restore(
+                1L, 61L, 40L, "煎饼果子", new BigDecimal("8.50"), 2, new BigDecimal("17.00"));
+        item.setImageUrl("/uploads/dish.png");
+
+        when(orderMapper.findById(61L)).thenReturn(Optional.of(order));
+        when(orderMapper.findItemsByOrderId(61L)).thenReturn(List.of(item));
+        when(shopMapper.findById(20L)).thenReturn(Optional.of(shop));
+
+        OrderView result = service.getDetail(7L, "CUSTOMER", 61L);
+
+        assertThat(result.shopImage()).isEqualTo("/uploads/shop.png");
+        assertThat(result.items()).singleElement()
+                .extracting(OrderItemView::imageUrl).isEqualTo("/uploads/dish.png");
+    }
+
+    @Test
+    void detailToleratesMissingImages() {
+        Order order = order(62L, 7L, 20L, "CREATED");
+        when(orderMapper.findById(62L)).thenReturn(Optional.of(order));
+        when(orderMapper.findItemsByOrderId(62L)).thenReturn(List.of());
+        when(shopMapper.findById(20L)).thenReturn(Optional.of(shop(12L, 20L)));
+
+        OrderView result = service.getDetail(7L, "CUSTOMER", 62L);
+
+        assertThat(result.shopImage()).isNull();
+    }
+
     @Test
     void missingResourcesAtWorkflowLookupsReturnNotFound() {
         Order created = order(70L, 7L, 20L, "CREATED");

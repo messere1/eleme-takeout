@@ -4,18 +4,21 @@ import {
   changeProductStatus,
   createProduct,
   deleteProduct,
+  getMyShop,
   listCategories,
   listMerchantProducts,
   updateProduct,
   updateProductPrice,
   updateProductStock,
 } from '@/api/shop'
-import { uploadImage } from '@/api/upload'
-import { session } from '@/utils/session'
+import ImageUploader from '@/components/ImageUploader.vue'
+import { isPositiveMoney } from '@/utils/money'
 
-const stored = session.loadShop()
-const shopId = stored?.shopId
-const missingShop = !shopId
+// 店铺一律以服务端为准：登录接口不返回 shopId，本地缓存（takeout-shop）只在注册时写过，
+// 退出登录或任意 401 都会清掉它，靠缓存就会让商家退出再登录后进不了商品管理。
+const shopId = ref(null)
+const missingShop = ref(false)
+const loadingShop = ref(true)
 
 const STATUS_TEXT = { ON_SALE: '在售', OFF_SALE: '已下架' }
 
@@ -27,14 +30,10 @@ const editingNameId = ref(null)
 const nameEdit = reactive({})
 const message = ref('')
 const creating = ref(false)
+// 上传成功后写入这里；预览优先取它，其次回退到已保存的 product.imageUrl，
+// 这样刷新后已上传的菜品图不会消失。
 const imgSrc = reactive({})
 
-async function handleImg(productId, event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-  try { const result=await uploadImage(file,'PRODUCT_IMAGE',productId);imgSrc[productId]=result.url;message.value='图片已上传' }
-  catch(error){message.value=error?.message||'图片上传失败'}
-}
 const productPage = ref(1)
 const productTotalPages = ref(1)
 const form = reactive({ categoryId: '', name: '', price: '', stock: '' })
@@ -44,10 +43,21 @@ function fmt(value) {
 }
 
 async function load(page = 1) {
-  if (missingShop) return
   try {
+    const mine = await getMyShop()
+    shopId.value = mine?.id ? Number(mine.id) : null
+  } catch {
+    // 拿不到「我的店铺」等价于这个账号没有绑定店铺，下面统一走注册/登录提示。
+    shopId.value = null
+  }
+  try {
+    if (!shopId.value) {
+      missingShop.value = true
+      return
+    }
+    missingShop.value = false
     const [cats, res] = await Promise.all([
-      listCategories(shopId),
+      listCategories(shopId.value),
       listMerchantProducts({ page, size: 20 }),
     ])
     categories.value = cats || []
@@ -65,6 +75,8 @@ async function load(page = 1) {
     })
   } catch (error) {
     message.value = error?.message || '商品加载失败，请稍后重试'
+  } finally {
+    loadingShop.value = false
   }
 }
 
@@ -92,11 +104,14 @@ async function saveProduct(product) {
 
 async function savePrice(product) {
   message.value = ''
-  const price = Number(priceEdit[product.id])
-  if (!Number.isFinite(price) || price <= 0) {
-    message.value = '价格需大于 0'
+  // FR-010 / EX-029：价格必须严格校验，不接受指数形式、三位小数，也不得先舍入再接受。
+  // Number() 会放过 1.234、1e-7 这类写法，所以先按 §9.1 的金额格式判一次。
+  const raw = String(priceEdit[product.id] ?? '').trim()
+  if (!isPositiveMoney(raw)) {
+    message.value = '价格需为 0.01～99999999.99 且最多两位小数'
     return
   }
+  const price = Number(raw)
   try {
     const res = await updateProductPrice(product.id, price)
     product.price = res?.price ?? price
@@ -144,7 +159,6 @@ async function removeProduct(product) {
 async function createNew() {
   message.value = ''
   const name = form.name.trim()
-  const price = Number(form.price)
   const stock = Number(form.stock)
   const categoryId = Number(form.categoryId)
   if (!form.categoryId) {
@@ -155,17 +169,19 @@ async function createNew() {
     message.value = '请输入商品名称'
     return
   }
-  if (!Number.isFinite(price) || price <= 0) {
-    message.value = '价格需大于 0'
+  // FR-010 / EX-029：同上，先按金额格式判，不靠 Number() 的隐式转换。
+  if (!isPositiveMoney(form.price)) {
+    message.value = '价格需为 0.01～99999999.99 且最多两位小数'
     return
   }
+  const price = Number(String(form.price).trim())
   if (!Number.isInteger(stock) || stock < 0) {
     message.value = '库存需为非负整数'
     return
   }
   creating.value = true
   try {
-    const created = await createProduct(shopId, {
+    const created = await createProduct(shopId.value, {
       categoryId,
       name,
       description: '',
@@ -190,7 +206,8 @@ onMounted(load)
 <template>
   <section class="console">
     <h2>商品管理</h2>
-    <p v-if="missingShop" class="console-missing">
+    <p v-if="loadingShop">店铺加载中…</p>
+    <p v-else-if="missingShop" class="console-missing">
       还没有店铺？<RouterLink to="/register">去注册开店</RouterLink>，或
       <RouterLink to="/login">用账号登录</RouterLink>。
     </p>
@@ -206,13 +223,19 @@ onMounted(load)
           class="mgmt-item"
         >
           <div class="mgmt-main">
-            <span class="prod-thumb">
-              <img v-if="imgSrc[product.id]" :src="imgSrc[product.id]" class="prod-img" alt="菜品图" />
-              <label class="img-label">+图
-                <input type="file" accept="image/*" class="file-input"
-                  :data-testid="`product-img-${product.id}`" @change="handleImg(product.id, $event)" />
-              </label>
-            </span>
+            <ImageUploader
+              :model-value="imgSrc[product.id] ?? product.imageUrl ?? ''"
+              target-type="PRODUCT_IMAGE"
+              :target-id="product.id"
+              shape="square"
+              plain
+              placeholder="菜品图"
+              upload-label="上传图片"
+              replace-label="换图"
+              :input-testid="`product-img-${product.id}`"
+              @update:model-value="imgSrc[product.id] = $event"
+              @message="message = $event"
+            />
             <template v-if="editingNameId === product.id">
               <el-input
                 v-model="nameEdit[product.id]"
@@ -475,49 +498,8 @@ onMounted(load)
   background: #fff;
   color: #333;
 }
-.prod-thumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-.prod-img {
-  width: 2.6rem;
-  height: 2.6rem;
-  object-fit: cover;
-  border-radius: 8px;
-}
-.img-label {
-  font-size: 0.8rem;
-  color: #ff6a00;
-  cursor: pointer;
-  border: 1px dashed #ffb36e;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
-}
-.file-input {
-  display: none;
-}
 .ctrl-label {
   font-size: 0.9rem;
   color: #666;
-}
-.prod-thumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-.prod-img {
-  width: 2.6rem;
-  height: 2.6rem;
-  object-fit: cover;
-  border-radius: 8px;
-}
-.img-label {
-  font-size: 0.8rem;
-  color: #ff6a00;
-  cursor: pointer;
-  border: 1px dashed #ffb36e;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
 }
 </style>

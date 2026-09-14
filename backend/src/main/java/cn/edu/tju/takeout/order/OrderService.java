@@ -370,7 +370,8 @@ public class OrderService {
                 .withContacts(
                         shopPhoneHolder[0],
                         maskPhone(recipientPhone),
-                        maskAddress(deliveryAddress));
+                        maskAddress(deliveryAddress),
+                        shopForPhone != null ? shopForPhone.getImageUrl() : null);
     }
 
     private String maskPhone(String phone) {

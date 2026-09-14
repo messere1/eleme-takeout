@@ -6,16 +6,21 @@
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('@/api/upload', () => ({ uploadImage: vi.fn() }))
 vi.mock('@/api/shop', () => ({
+  getMyShop: vi.fn(),
   listMerchantProducts: vi.fn(),
   listCategories: vi.fn(),
   createProduct: vi.fn(),
   changeProductStatus: vi.fn(),
   updateProductStock: vi.fn(),
+  updateProduct: vi.fn(),
+  updateProductPrice: vi.fn(),
   deleteProduct: vi.fn(),
 }))
 
-import { changeProductStatus, createProduct, deleteProduct, listCategories, listMerchantProducts, updateProductStock } from '@/api/shop'
+import { changeProductStatus, createProduct, deleteProduct, getMyShop, listCategories, listMerchantProducts, updateProductPrice, updateProductStock } from '@/api/shop'
+import { uploadImage } from '@/api/upload'
 import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import MerchantProducts from './MerchantProducts.vue'
@@ -29,10 +34,11 @@ const CATEGORIES = [
   { id: 31, shopId: 7, name: '饮品', sort: 2 },
 ]
 
-async function mountProducts() {
+async function mountProducts(list = PRODUCTS) {
   session.save({ token: 'mt-1', role: 'MERCHANT' })
   session.saveShop({ merchantId: 12, shopId: 7, shopName: '北洋餐厅' })
-  listMerchantProducts.mockResolvedValue(PRODUCTS)
+  getMyShop.mockResolvedValue({ id: 7, shopName: '北洋餐厅' })
+  listMerchantProducts.mockResolvedValue(list)
   listCategories.mockResolvedValue(CATEGORIES)
   const ctx = await mountView(MerchantProducts, { path: '/merchant/products' })
   await flushPromises()
@@ -49,6 +55,95 @@ describe('商家商品管理', () => {
   beforeEach(() => {
     session.clear()
     vi.clearAllMocks()
+    getMyShop.mockResolvedValue({ id: 7, shopName: '北洋餐厅' })
+  })
+
+  it('直接登录后即使没有本地店铺缓存也能按本人店铺加载商品', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
+    listMerchantProducts.mockResolvedValue(PRODUCTS)
+    listCategories.mockResolvedValue(CATEGORIES)
+
+    const { wrapper } = await mountView(MerchantProducts, { path: '/merchant/products' })
+    await flushPromises()
+
+    expect(getMyShop).toHaveBeenCalledTimes(1)
+    expect(listCategories).toHaveBeenCalledWith(7)
+    expect(wrapper.find('[data-testid="product-mgmt-item-40"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('还没有店铺')
+  })
+
+  it('本地店铺缓存过期时优先使用服务端的本人店铺', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
+    session.saveShop({ merchantId: 99, shopId: 99, shopName: '旧店铺' })
+    listMerchantProducts.mockResolvedValue(PRODUCTS)
+    listCategories.mockResolvedValue(CATEGORIES)
+
+    await mountView(MerchantProducts, { path: '/merchant/products' })
+    await flushPromises()
+
+    expect(listCategories).toHaveBeenCalledWith(7)
+  })
+
+  // 拿不到「我的店铺」时不能只丢一行错误，要给出去注册/登录的可操作提示（NFR-006）。
+  it('接口拿不到本人店铺时提示去注册而不是静默失败', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
+    getMyShop.mockRejectedValue(new Error('未绑定店铺'))
+
+    const { wrapper } = await mountView(MerchantProducts, { path: '/merchant/products' })
+    await flushPromises()
+
+    expect(wrapper.get('.console-missing').text()).toContain('还没有店铺')
+  })
+
+  // 菜品图上传走后端 POST /images，并把返回的 url 作为预览
+  it('上传菜品图调用接口并更新预览', async () => {
+    uploadImage.mockResolvedValue({ url: '/uploads/dish-40.png' })
+    const { wrapper } = await mountProducts()
+
+    const input = wrapper.get('[data-testid="product-img-40"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['x'], 'dish.png', { type: 'image/png' })],
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(uploadImage).toHaveBeenCalledWith(expect.any(File), 'PRODUCT_IMAGE', 40)
+    expect(wrapper.get('[data-testid="product-img-40-preview"]').attributes('src'))
+      .toBe('/uploads/dish-40.png')
+  })
+
+  // 以前 imgSrc 只在上传时赋值，刷新后已保存的菜品图不显示。
+  it('刷新后回填已保存的菜品图', async () => {
+    const { wrapper } = await mountProducts([
+      { ...PRODUCTS[0], imageUrl: '/uploads/saved-40.png' },
+    ])
+
+    expect(wrapper.get('[data-testid="product-img-40-preview"]').attributes('src'))
+      .toBe('/uploads/saved-40.png')
+  })
+
+  // FR-010 / EX-029：价格不接受指数形式、三位小数，也不得先舍入再接受。
+  it('改价时拒绝三位小数与指数形式，不发请求', async () => {
+    const { wrapper } = await mountProducts()
+
+    for (const bad of ['1.234', '1e-7', '0', '-1']) {
+      await wrapper.get('[data-testid="product-mgmt-price-40"]').setValue(bad)
+      await wrapper.get('[data-testid="product-mgmt-save-price-40"]').trigger('click')
+      await flushPromises()
+      expect(updateProductPrice).not.toHaveBeenCalled()
+      expect(wrapper.text()).toContain('0.01～99999999.99')
+    }
+  })
+
+  it('改价接受两位小数以内金额', async () => {
+    updateProductPrice.mockResolvedValue({ id: 40, price: 9.5 })
+    const { wrapper } = await mountProducts()
+
+    await wrapper.get('[data-testid="product-mgmt-price-40"]').setValue('9.50')
+    await wrapper.get('[data-testid="product-mgmt-save-price-40"]').trigger('click')
+    await flushPromises()
+
+    expect(updateProductPrice).toHaveBeenCalledWith(40, 9.5)
   })
 
   it('列出在售与下架的全部商品', async () => {
