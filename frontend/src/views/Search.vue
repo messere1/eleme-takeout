@@ -11,13 +11,19 @@ const searched = ref(false)
 const searching = ref(false)
 const message = ref('')
 const localOnly = ref(false)
+let latestSearchId = 0
 
 const HOT = ['煎饼果子', '奶茶', '汉堡', '拉面', '烧烤', '甜品']
 
 async function search(text) {
+  const searchId = ++latestSearchId
   const q = (text ?? keyword.value).trim()
   keyword.value = q
   if (!q) {
+    results.value = []
+    searched.value = false
+    searching.value = false
+    localOnly.value = false
     message.value = '请输入店铺或美食名称'
     return
   }
@@ -31,23 +37,29 @@ async function search(text) {
   try {
     // 优先走后端搜索：可按 店铺名 / 经营类别 / 菜品名 匹配
     const data = await searchShops(q)
+    if (searchId !== latestSearchId) return
     results.value = data?.items ?? []
   } catch {
+    if (searchId !== latestSearchId) return
     // 后端搜索接口尚未提供时，退回本地按店名过滤
     localOnly.value = true
     try {
       const data = await listShops({ page: 1, size: 100 })
+      if (searchId !== latestSearchId) return
       const items = data?.items ?? []
       results.value = items.filter((shop) =>
         String(shop.shopName || '').toLowerCase().includes(q.toLowerCase()),
       )
     } catch (error) {
+      if (searchId !== latestSearchId) return
       results.value = []
       message.value = '搜索失败：' + (error?.message || '请稍后重试')
     }
   } finally {
-    searched.value = true
-    searching.value = false
+    if (searchId === latestSearchId) {
+      searched.value = true
+      searching.value = false
+    }
   }
 }
 

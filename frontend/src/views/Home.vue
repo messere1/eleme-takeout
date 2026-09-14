@@ -37,21 +37,25 @@ function statusText(status) {
 const currentPage = ref(1)
 const totalPages = ref(1)
 const feedLoading = ref(false)
+let latestLoadId = 0
 
 async function load(page, append = false, categoryId = activeCategoryId.value) {
-  if (feedLoading.value) return
+  if (feedLoading.value && append) return
+  const loadId = ++latestLoadId
   feedLoading.value = true
   feedError.value = ''
   try {
     const params = { page, size: 20 }
     if (categoryId) params.businessCategoryId = categoryId
     const data = await listShops(params)
+    if (loadId !== latestLoadId) return
     const items = (data?.items || []).map(decorate)
     shops.value = append ? shops.value.concat(items) : items
     currentPage.value = data?.page ?? page
     totalPages.value = data?.totalPages ?? 1
     if (!append && items.length === 0) feedError.value = '暂时没有可展示的店铺'
   } catch {
+    if (loadId !== latestLoadId) return
     if (!append) {
       shops.value = []
       currentPage.value = 1
@@ -59,7 +63,7 @@ async function load(page, append = false, categoryId = activeCategoryId.value) {
       feedError.value = '店铺列表加载失败，请稍后重试'
     }
   } finally {
-    feedLoading.value = false
+    if (loadId === latestLoadId) feedLoading.value = false
   }
 }
 
