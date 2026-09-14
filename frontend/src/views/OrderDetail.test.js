@@ -43,6 +43,35 @@ describe('订单详情页', () => {
     expect(wrapper.get('[data-testid="order-total"]').text()).toContain('17.00')
   })
 
+  // 订单详情要能看到商家图片和菜品图（后端从 shops/products 带出来）
+  it('有图片时展示商家图与菜品图', async () => {
+    getOrder.mockResolvedValue({
+      ...DETAIL,
+      shopImage: '/uploads/shop.png',
+      items: DETAIL.items.map((item, i) => ({
+        ...item,
+        imageUrl: i === 0 ? '/uploads/dish-40.png' : null,
+      })),
+    })
+    const { wrapper } = await mountView(OrderDetail, { path: '/orders/11' })
+    await flushPromises()
+
+    expect(wrapper.get('.shop-thumb').attributes('src')).toBe('/uploads/shop.png')
+    expect(wrapper.get('[data-testid="order-item-40"] img').attributes('src'))
+      .toBe('/uploads/dish-40.png')
+  })
+
+  // 没有图片时退化成占位，不能是裂图
+  it('没有图片时退化成占位图而不是裂图', async () => {
+    getOrder.mockResolvedValue({ ...DETAIL, shopImage: null })
+    const { wrapper } = await mountView(OrderDetail, { path: '/orders/11' })
+    await flushPromises()
+
+    expect(wrapper.get('.shop-thumb').element.tagName).toBe('DIV')
+    expect(wrapper.get('[data-testid="order-item-40"]').find('img').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="order-item-40"]').text()).toContain('煎饼果子')
+  })
+
   it('逐条展示商品行与金额', async () => {
     const { wrapper } = await mountDetail()
     const first = wrapper.get('[data-testid="order-item-40"]')

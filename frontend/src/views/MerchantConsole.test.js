@@ -6,6 +6,7 @@ import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/api/shop', () => ({
+  getMyShop: vi.fn(),
   getShop: vi.fn(),
   updateShop: vi.fn(),
   changeStatus: vi.fn(),
@@ -13,8 +14,10 @@ vi.mock('@/api/shop', () => ({
   createCategory: vi.fn(),
   deleteCategory: vi.fn(),
 }))
+vi.mock('@/api/upload', () => ({ uploadImage: vi.fn() }))
 
-import { changeStatus, createCategory, deleteCategory, getShop, listCategories, updateShop } from '@/api/shop'
+import { changeStatus, createCategory, deleteCategory, getMyShop, getShop, listCategories, updateShop } from '@/api/shop'
+import { uploadImage } from '@/api/upload'
 import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import MerchantConsole from './MerchantConsole.vue'
@@ -22,10 +25,11 @@ import MerchantConsole from './MerchantConsole.vue'
 const SHOP = { id: 7, merchantId: 12, shopName: '北洋餐厅', notice: '欢迎光临', status: 'OPEN' }
 const CATEGORIES = [{ id: 30, shopId: 7, name: '热销', sort: 1 }]
 
-async function mountConsole() {
+async function mountConsole(shop = SHOP) {
   session.save({ token: 'mt-1', role: 'MERCHANT' })
   session.saveShop({ merchantId: 12, shopId: 7, shopName: '北洋餐厅' })
-  getShop.mockResolvedValue(SHOP)
+  getMyShop.mockResolvedValue({ ...shop })
+  getShop.mockResolvedValue({ ...shop })
   listCategories.mockResolvedValue(CATEGORIES)
   const ctx = await mountView(MerchantConsole, { path: '/merchant' })
   await flushPromises()
@@ -127,4 +131,45 @@ describe('商家后台', () => {
     expect(wrapper.get('[data-testid="console-save-shop"]').element.disabled).toBe(true)
     expect(updateShop).toHaveBeenCalledTimes(1)
   })
+
+  // 之前这里用 FileReader 读成 base64 只做本地预览，图片从来没有上传过。
+  it('选择封面会真正调用上传接口并把返回的 url 用作预览', async () => {
+    uploadImage.mockResolvedValue({ url: '/uploads/cover-1.png' })
+    const { wrapper } = await mountConsole()
+
+    const input = wrapper.get('[data-testid="console-cover-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['x'], 'cover.png', { type: 'image/png' })],
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(uploadImage).toHaveBeenCalledWith(expect.any(File), 'SHOP_COVER', 7)
+    expect(wrapper.get('[data-testid="console-cover-input-preview"]').attributes('src'))
+      .toBe('/uploads/cover-1.png')
+    expect(wrapper.get('[data-testid="console-message"]').text()).toContain('图片已上传')
+  })
+
+  it('封面上传失败时展示后端原因', async () => {
+    uploadImage.mockRejectedValue(new Error('仅支持不超过5MiB的JPEG、PNG或WebP图片'))
+    const { wrapper } = await mountConsole()
+
+    const input = wrapper.get('[data-testid="console-cover-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['x'], 'bad.bmp', { type: 'image/bmp' })],
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="console-message"]').text()).toContain('JPEG')
+  })
+
+  // 已保存的封面以前从不回填，进页面永远显示占位图。
+  it('进页面回填已保存的封面图', async () => {
+    const { wrapper } = await mountConsole({ ...SHOP, coverImageUrl: '/uploads/saved.png' })
+
+    expect(wrapper.get('[data-testid="console-cover-input-preview"]').attributes('src'))
+      .toBe('/uploads/saved.png')
+  })
+
 })

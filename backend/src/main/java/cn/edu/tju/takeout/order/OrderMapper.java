@@ -84,7 +84,15 @@ public interface OrderMapper {
     @Select("SELECT * FROM orders WHERE id = #{id} FOR UPDATE")
     Optional<Order> findByIdForUpdate(Long id);
 
-    @Select("SELECT * FROM order_items WHERE order_id = #{orderId} ORDER BY id ASC")
+    // 订单明细带上商品图：order_items 快照不存图，所以关联 products 取当前图片
+    // （商品是软删除，历史订单仍能取到）。
+    @Select("""
+            SELECT oi.*, p.image_url
+            FROM order_items oi
+            LEFT JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = #{orderId}
+            ORDER BY oi.id ASC
+            """)
     List<OrderItem> findItemsByOrderId(Long orderId);
 
     @Update("""

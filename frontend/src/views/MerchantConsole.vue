@@ -11,6 +11,7 @@ import {
   updateCategory,
   updateShop,
 } from '@/api/shop'
+import ImageUploader from '@/components/ImageUploader.vue'
 import { session } from '@/utils/session'
 
 const STATUS_TEXT = {
@@ -20,21 +21,14 @@ const STATUS_TEXT = {
 }
 
 const stored = session.loadShop()
-let shopId = stored?.shopId ?? null
-const missingShop = ref(!shopId)
+// 用 ref 而不是普通变量：它要作为 ImageUploader 的 targetId 绑定，必须在拿到后能触发更新
+const shopId = ref(stored?.shopId ?? null)
+const missingShop = ref(!shopId.value)
 
 const shop = ref(null)
+// 封面预览：进页面由 load() 回填 shop.coverImageUrl，上传成功后由 ImageUploader 回写
 const cover = ref('')
 
-function onCoverPick(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    cover.value = String(reader.result)
-  }
-  reader.readAsDataURL(file)
-}
 const editName = ref('')
 const editNotice = ref('')
 const categories = ref([])
@@ -78,28 +72,30 @@ async function load() {
   try {
     const mine = await getMyShop()
     if (mine?.id) {
-      shopId = Number(mine.id)
+      shopId.value = Number(mine.id)
       // 顺手把本地缓存补回来：登录接口不返回 shopId，而 takeout-shop 只在注册时写过、
       // 退出登录或 401 会被清掉。不刷新的话，商家退出再登录就只剩这一个页面能用。
       session.saveShop({
         merchantId: mine.merchantId ?? stored?.merchantId,
-        shopId,
+        shopId: shopId.value,
         shopName: mine.shopName,
       })
     }
   } catch {
     /* ignore：使用缓存 shopId */
   }
-  if (!shopId) {
+  if (!shopId.value) {
     missingShop.value = true
     return
   }
   missingShop.value = false
   try {
-    shop.value = await getShop(shopId)
+    shop.value = await getShop(shopId.value)
     editName.value = shop.value.shopName || ''
     editNotice.value = shop.value.notice || ''
-    categories.value = await listCategories(shopId)
+    // 回填已保存的封面，否则进页面永远显示占位图
+    cover.value = shop.value.coverImageUrl || ''
+    categories.value = await listCategories(shopId.value)
   } catch (error) {
     message.value = error?.message || '店铺加载失败，请稍后重试'
   }
@@ -109,7 +105,7 @@ async function saveShop() {
   message.value = ''
   savingShop.value = true
   try {
-    const data = await updateShop(shopId, {
+    const data = await updateShop(shopId.value, {
       shopName: editName.value.trim(),
       notice: editNotice.value.trim(),
     })
@@ -125,7 +121,7 @@ async function saveShop() {
 async function onStatusChange() {
   message.value = ''
   try {
-    const data = await changeStatus(shopId, shop.value.status)
+    const data = await changeStatus(shopId.value, shop.value.status)
     shop.value.status = data.status
     message.value = '营业状态已更新'
   } catch (error) {
@@ -142,7 +138,7 @@ async function addCategory() {
   }
   try {
     const sort = Number(newCategorySort.value)
-    const created = await createCategory(shopId, { name, sort: Number.isNaN(sort) ? 0 : sort })
+    const created = await createCategory(shopId.value, { name, sort: Number.isNaN(sort) ? 0 : sort })
     categories.value.push(created)
     newCategoryName.value = ''
     newCategorySort.value = ''
@@ -187,13 +183,19 @@ onMounted(load)
     <template v-if="shop">
       <section class="panel">
         <h3>店铺</h3>
-        <div class="cover-row">
-          <img v-if="cover" :src="cover" class="cover-preview" alt="封面预览" />
-          <div v-else class="cover-placeholder">店铺封面</div>
-          <label class="link-btn">上传封面
-            <input type="file" accept="image/*" data-testid="console-cover-input" class="file-input" @change="onCoverPick" />
-          </label>
-        </div>
+        <ImageUploader
+          v-model="cover"
+          target-type="SHOP_COVER"
+          :target-id="shopId"
+          shape="wide"
+          title="店铺封面"
+          tip="顾客进店时店铺顶部的大图，建议横向"
+          placeholder="店铺封面"
+          upload-label="上传封面"
+          replace-label="更换封面"
+          input-testid="console-cover-input"
+          @message="message = $event"
+        />
         <div class="console-head">
           <strong data-testid="console-shop-name">{{ shop.shopName }}</strong>
           <span
@@ -217,6 +219,7 @@ onMounted(load)
           data-testid="console-notice-input"
           maxlength="255"
         />
+
 
         <div class="row">
           <label class="ctrl-label" for="console-status">营业状态</label>
@@ -342,27 +345,6 @@ onMounted(load)
   align-items: center;
   gap: 0.75rem;
 }
-.cover-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.cover-preview,
-.cover-placeholder {
-  width: 8rem;
-  height: 4.5rem;
-  object-fit: cover;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f2f3f5;
-  color: #999;
-  font-size: 0.85rem;
-}
-.file-input {
-  display: none;
-}
 .link-btn {
   border: none;
   background: transparent;
@@ -371,27 +353,6 @@ onMounted(load)
 }
 .console-head strong {
   font-size: 1.15rem;
-}
-.file-input {
-  display: none;
-}
-.cover-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.cover-preview,
-.cover-placeholder {
-  width: 8rem;
-  height: 4.5rem;
-  object-fit: cover;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f2f3f5;
-  color: #999;
-  font-size: 0.85rem;
 }
 .status-pill {
   font-size: 0.85rem;

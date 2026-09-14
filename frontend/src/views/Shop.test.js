@@ -161,6 +161,7 @@ describe('店铺页（顾客点单）', () => {
     }))
   })
 
+
   // §4 / FR-012：购物车按顾客+店铺隔离，店铺页只该看到当前这家店的条目。
   it('进店即按本店已有商品显示底部购物车，且只算本店', async () => {
     session.save({ token: 'customer-token', role: 'CUSTOMER' })

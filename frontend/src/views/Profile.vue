@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { getProfile, updateProfile, deleteAccount } from '@/api/user'
-import { uploadImage } from '@/api/upload'
+import ImageUploader from '@/components/ImageUploader.vue'
 import { session } from '@/utils/session'
 import { useRouter } from 'vue-router'
 
@@ -12,13 +12,6 @@ const saving = ref(false)
 const avatar = ref('')
 const userId = ref(null)
 const router = useRouter()
-
-async function onAvatarPick(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-  try { const result = await uploadImage(file, 'USER_AVATAR', userId.value); avatar.value = result.url; message.value='头像已上传' }
-  catch (error) { message.value=error?.message||'头像上传失败' }
-}
 
 async function load() {
   try {
@@ -64,14 +57,17 @@ onMounted(load)
     <h2>个人资料</h2>
     <p v-if="username" class="account-line">账号：{{ username }}</p>
 
-    <div class="avatar-row">
-      <img v-if="avatar" :src="avatar" class="avatar-preview" alt="头像预览" />
-      <div v-else class="avatar-placeholder">头像</div>
-      <label class="avatar-btn">
-        上传头像
-        <input type="file" accept="image/*" data-testid="profile-avatar-input" @change="onAvatarPick" />
-      </label>
-    </div>
+    <ImageUploader
+      v-model="avatar"
+      target-type="USER_AVATAR"
+      :target-id="userId"
+      shape="round"
+      placeholder="头像"
+      upload-label="上传头像"
+      replace-label="更换头像"
+      input-testid="profile-avatar-input"
+      @message="message = $event"
+    />
 
     <div class="field">
       <label for="profile-nickname">昵称</label>
@@ -143,56 +139,6 @@ onMounted(load)
   color: #999;
   font-size: 0.85rem;
 }
-.avatar-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.avatar-preview,
-.avatar-placeholder {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f2f3f5;
-  color: #999;
-}
-.avatar-btn {
-  color: var(--el-color-primary);
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-.avatar-btn input {
-  display: none;
-}
-.avatar-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.avatar-preview,
-.avatar-placeholder {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f2f3f5;
-  color: #999;
-}
-.avatar-btn {
-  color: var(--el-color-primary);
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-.avatar-btn input {
-  display: none;
-}
 .field {
   display: flex;
   flex-direction: column;
@@ -217,9 +163,6 @@ onMounted(load)
 @media (max-width: 520px) {
   .profile-page {
     padding: 1rem;
-  }
-  .avatar-row {
-    flex-wrap: wrap;
   }
 }
 </style>

@@ -6,6 +6,7 @@
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('@/api/upload', () => ({ uploadImage: vi.fn() }))
 vi.mock('@/api/shop', () => ({
   getMyShop: vi.fn(),
   listMerchantProducts: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock('@/api/shop', () => ({
 }))
 
 import { changeProductStatus, createProduct, deleteProduct, getMyShop, listCategories, listMerchantProducts, updateProductPrice, updateProductStock } from '@/api/shop'
+import { uploadImage } from '@/api/upload'
 import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import MerchantProducts from './MerchantProducts.vue'
@@ -32,11 +34,11 @@ const CATEGORIES = [
   { id: 31, shopId: 7, name: '饮品', sort: 2 },
 ]
 
-async function mountProducts() {
+async function mountProducts(list = PRODUCTS) {
   session.save({ token: 'mt-1', role: 'MERCHANT' })
   session.saveShop({ merchantId: 12, shopId: 7, shopName: '北洋餐厅' })
   getMyShop.mockResolvedValue({ id: 7, shopName: '北洋餐厅' })
-  listMerchantProducts.mockResolvedValue(PRODUCTS)
+  listMerchantProducts.mockResolvedValue(list)
   listCategories.mockResolvedValue(CATEGORIES)
   const ctx = await mountView(MerchantProducts, { path: '/merchant/products' })
   await flushPromises()
@@ -91,6 +93,33 @@ describe('商家商品管理', () => {
     await flushPromises()
 
     expect(wrapper.get('.console-missing').text()).toContain('还没有店铺')
+  })
+
+  // 菜品图上传走后端 POST /images，并把返回的 url 作为预览
+  it('上传菜品图调用接口并更新预览', async () => {
+    uploadImage.mockResolvedValue({ url: '/uploads/dish-40.png' })
+    const { wrapper } = await mountProducts()
+
+    const input = wrapper.get('[data-testid="product-img-40"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['x'], 'dish.png', { type: 'image/png' })],
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(uploadImage).toHaveBeenCalledWith(expect.any(File), 'PRODUCT_IMAGE', 40)
+    expect(wrapper.get('[data-testid="product-img-40-preview"]').attributes('src'))
+      .toBe('/uploads/dish-40.png')
+  })
+
+  // 以前 imgSrc 只在上传时赋值，刷新后已保存的菜品图不显示。
+  it('刷新后回填已保存的菜品图', async () => {
+    const { wrapper } = await mountProducts([
+      { ...PRODUCTS[0], imageUrl: '/uploads/saved-40.png' },
+    ])
+
+    expect(wrapper.get('[data-testid="product-img-40-preview"]').attributes('src'))
+      .toBe('/uploads/saved-40.png')
   })
 
   // FR-010 / EX-029：价格不接受指数形式、三位小数，也不得先舍入再接受。

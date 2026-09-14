@@ -11,7 +11,7 @@ import {
   updateProductPrice,
   updateProductStock,
 } from '@/api/shop'
-import { uploadImage } from '@/api/upload'
+import ImageUploader from '@/components/ImageUploader.vue'
 import { isPositiveMoney } from '@/utils/money'
 
 // 店铺一律以服务端为准：登录接口不返回 shopId，本地缓存（takeout-shop）只在注册时写过，
@@ -30,14 +30,10 @@ const editingNameId = ref(null)
 const nameEdit = reactive({})
 const message = ref('')
 const creating = ref(false)
+// 上传成功后写入这里；预览优先取它，其次回退到已保存的 product.imageUrl，
+// 这样刷新后已上传的菜品图不会消失。
 const imgSrc = reactive({})
 
-async function handleImg(productId, event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-  try { const result=await uploadImage(file,'PRODUCT_IMAGE',productId);imgSrc[productId]=result.url;message.value='图片已上传' }
-  catch(error){message.value=error?.message||'图片上传失败'}
-}
 const productPage = ref(1)
 const productTotalPages = ref(1)
 const form = reactive({ categoryId: '', name: '', price: '', stock: '' })
@@ -227,13 +223,19 @@ onMounted(load)
           class="mgmt-item"
         >
           <div class="mgmt-main">
-            <span class="prod-thumb">
-              <img v-if="imgSrc[product.id]" :src="imgSrc[product.id]" class="prod-img" alt="菜品图" />
-              <label class="img-label">+图
-                <input type="file" accept="image/*" class="file-input"
-                  :data-testid="`product-img-${product.id}`" @change="handleImg(product.id, $event)" />
-              </label>
-            </span>
+            <ImageUploader
+              :model-value="imgSrc[product.id] ?? product.imageUrl ?? ''"
+              target-type="PRODUCT_IMAGE"
+              :target-id="product.id"
+              shape="square"
+              plain
+              placeholder="菜品图"
+              upload-label="上传图片"
+              replace-label="换图"
+              :input-testid="`product-img-${product.id}`"
+              @update:model-value="imgSrc[product.id] = $event"
+              @message="message = $event"
+            />
             <template v-if="editingNameId === product.id">
               <el-input
                 v-model="nameEdit[product.id]"
@@ -496,49 +498,8 @@ onMounted(load)
   background: #fff;
   color: #333;
 }
-.prod-thumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-.prod-img {
-  width: 2.6rem;
-  height: 2.6rem;
-  object-fit: cover;
-  border-radius: 8px;
-}
-.img-label {
-  font-size: 0.8rem;
-  color: #ff6a00;
-  cursor: pointer;
-  border: 1px dashed #ffb36e;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
-}
-.file-input {
-  display: none;
-}
 .ctrl-label {
   font-size: 0.9rem;
   color: #666;
-}
-.prod-thumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-.prod-img {
-  width: 2.6rem;
-  height: 2.6rem;
-  object-fit: cover;
-  border-radius: 8px;
-}
-.img-label {
-  font-size: 0.8rem;
-  color: #ff6a00;
-  cursor: pointer;
-  border: 1px dashed #ffb36e;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
 }
 </style>
