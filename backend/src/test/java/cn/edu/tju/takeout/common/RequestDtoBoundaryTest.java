@@ -37,7 +37,7 @@ class RequestDtoBoundaryTest {
         assertThat(invalidFields(new UserRegistrationRequest("ab", "123", "abcdef")))
                 .containsExactlyInAnyOrder("username", "phone", "password");
         assertThat(invalidFields(new UserRegistrationRequest(
-                "u".repeat(31), "13800138000", "abc123")))
+                "u".repeat(31), "13800138000", "abc12345")))
                 .containsExactly("username");
         assertThat(invalidFields(new UserRegistrationRequest(
                 "valid_user", "13800138000", "123456")))
@@ -54,7 +54,7 @@ class RequestDtoBoundaryTest {
     @Test
     void merchantRegistrationRejectsOversizedText() {
         assertThat(invalidFields(new MerchantRegistrationRequest(
-                "m".repeat(51), "13800138000", "abc123", "s".repeat(101))))
+                "m".repeat(51), "13800138000", "abc12345", "s".repeat(101))))
                 .containsExactlyInAnyOrder("merchantName", "businessScope");
     }
 

@@ -13,7 +13,6 @@ public class ShopService {
     private final ShopMapper shopMapper;
 
     public ShopService(ShopMapper shopMapper) {
-        // 仅保留依赖签名，等待功能开发人员实现。
         this.shopMapper=shopMapper;
     }
 
@@ -87,7 +86,15 @@ public class ShopService {
         return ShopView.from(shop);
     }
 
-    public ShopPage listShops(Integer page, Integer size){
+    public ShopPage listShops(Integer page, Integer size) {
+        return listShops(page, size, null);
+    }
+
+    public ShopPage listShops(Integer page, Integer size, String businessScope){
+        return listShops(page, size, businessScope, null);
+    }
+
+    public ShopPage listShops(Integer page, Integer size, String businessScope, Long businessCategoryId){
         int currentPage=page==null?1:page;
         int pageSize=size==null?20:size;
         if(currentPage<1){
@@ -108,23 +115,81 @@ public class ShopService {
 
         int offset = (currentPage - 1) * pageSize;
 
-        List<ShopView> items = shopMapper.findPage(pageSize, offset)
-            .stream()
-            .map(ShopView::from)
-            .toList();
+        String scope = businessScope == null ? "" : businessScope.trim();
 
-        long total = shopMapper.countAll();
+        List<Shop> shopList;
+        long total;
+
+        if (businessCategoryId != null) {
+            if (businessCategoryId <= 0) throw new BusinessException(HttpStatus.BAD_REQUEST,"VALIDATION_ERROR","经营品类ID不合法");
+            shopList = shopMapper.findPageByBusinessCategoryId(businessCategoryId,pageSize,offset);
+            total = shopMapper.countByBusinessCategoryId(businessCategoryId);
+        } else if (scope.isEmpty()) {
+            shopList = shopMapper.findPage(pageSize, offset);
+            total = shopMapper.countAll();
+        } else {
+            shopList = shopMapper.findPageByBusinessScope(
+                    scope,
+                    pageSize,
+                    offset
+            );
+            total = shopMapper.countByBusinessScope(scope);
+        }
+
+        List<ShopView> items = shopList.stream()
+                .map(ShopView::from)
+                .toList();
         int totalPages = (int) ((total + pageSize - 1) / pageSize);
 
-        return new ShopPage(
-            items,
-            currentPage,
-            pageSize,
-            total,
-            totalPages
-        );
+        return new ShopPage(items, currentPage, pageSize, total, totalPages);
     }
-    private UnsupportedOperationException pending() {
-        return new UnsupportedOperationException("待功能开发：店铺业务尚未实现");
+    public ShopView updateBusinessHours(
+        Long merchantId,
+        Long shopId,
+        ShopBusinessHoursRequest request) {
+
+        Shop shop = shopMapper.findById(shopId)
+                .orElseThrow(() -> new BusinessException(
+                        HttpStatus.NOT_FOUND,
+                        "RESOURCE_NOT_FOUND",
+                        "店铺不存在"
+                ));
+
+        if (!shop.getMerchantId().equals(merchantId)) {
+            throw new BusinessException(
+                    HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "无权修改该店铺"
+            );
+        }
+
+        if (!request.closingTime().isAfter(request.openingTime())) {
+            throw new BusinessException(
+                    HttpStatus.BAD_REQUEST,
+                    "VALIDATION_ERROR",
+                    "结束营业时间必须晚于开始营业时间"
+            );
+        }
+
+        shop.updateBusinessHours(
+                request.openingTime(),
+                request.closingTime()
+        );
+
+        int updated = shopMapper.updateBusinessHours(
+                shopId,
+                request.openingTime(),
+                request.closingTime()
+        );
+
+        if (updated == 0) {
+            throw new BusinessException(
+                    HttpStatus.NOT_FOUND,
+                    "RESOURCE_NOT_FOUND",
+                    "店铺不存在"
+            );
+        }
+
+        return ShopView.from(shop);
     }
 }

@@ -15,3 +15,5 @@ export function getMyMerchant() {
 export function listBusinessCategories() { return http.get('/business-categories') }
 export function updateMyMerchant(payload) { return http.patch('/merchants/me', payload) }
 export function deleteMyMerchant() { return http.delete('/merchants/me') }
+export function getMyShopBusinessCategories() { return http.get('/merchant/shop/business-categories') }
+export function updateMyShopBusinessCategories(categoryIds) { return http.put('/merchant/shop/business-categories', { categoryIds }) }

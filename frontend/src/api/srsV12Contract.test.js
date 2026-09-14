@@ -17,6 +17,7 @@ import * as orderApi from './order'
 import * as shopApi from './shop'
 import * as userApi from './user'
 import * as merchantApi from './merchant'
+import * as riderApi from './rider'
 
 describe('SRS V1.4 前端接口契约（文件名保留以兼容历史链接）', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -39,6 +40,14 @@ describe('SRS V1.4 前端接口契约（文件名保留以兼容历史链接）'
 
   it('提供独立的商品价格修改接口', () => {
     expect(shopApi.updateProductPrice).toBeTypeOf('function')
+  })
+
+  it('商家通过店铺营业时间接口保存开始和结束时间', async () => {
+    await shopApi.updateBusinessHours(7, '08:00', '21:00')
+    expect(http.patch).toHaveBeenCalledWith('/shops/7/business-hours', {
+      openingTime: '08:00',
+      closingTime: '21:00',
+    })
   })
 
   it('购物车新增和修改使用SRS约定路径与方法', async () => {
@@ -88,5 +97,11 @@ describe('SRS V1.4 前端接口契约（文件名保留以兼容历史链接）'
     expect(http.get).toHaveBeenNthCalledWith(2, '/admin/merchants', {
       params: { page: 1, size: 20 },
     })
+  })
+
+  it('骑手注册使用公开骑手资源接口', async () => {
+    const payload = { riderName: '骑手小王', phone: '13700137000', password: 'abc12345' }
+    await riderApi.registerRider(payload)
+    expect(http.post).toHaveBeenCalledWith('/riders', payload)
   })
 })

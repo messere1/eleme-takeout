@@ -10,6 +10,7 @@ import {
   listCategories,
   updateCategory,
   updateShop,
+  updateBusinessHours,
 } from '@/api/shop'
 import ImageUploader from '@/components/ImageUploader.vue'
 import { session } from '@/utils/session'
@@ -39,6 +40,11 @@ const catNameEdit = reactive({})
 const catSortEdit = reactive({})
 const message = ref('')
 const savingShop = ref(false)
+const openingTime = ref('')
+const closingTime = ref('')
+const savingBusinessHours = ref(false)
+
+function normalizeTime(value) { return value ? String(value).slice(0, 5) : '' }
 
 function startEditCategory(category) {
   editingCatId.value = category.id
@@ -93,6 +99,8 @@ async function load() {
     shop.value = await getShop(shopId.value)
     editName.value = shop.value.shopName || ''
     editNotice.value = shop.value.notice || ''
+    openingTime.value = normalizeTime(shop.value.openingTime)
+    closingTime.value = normalizeTime(shop.value.closingTime)
     // 回填已保存的封面，否则进页面永远显示占位图
     cover.value = shop.value.coverImageUrl || ''
     categories.value = await listCategories(shopId.value)
@@ -127,6 +135,20 @@ async function onStatusChange() {
   } catch (error) {
     message.value = error?.message || '更新失败，请稍后重试'
   }
+}
+
+async function saveBusinessHours() {
+  message.value = ''
+  if (!openingTime.value || !closingTime.value) { message.value = '请选择开始和结束营业时间'; return }
+  if (closingTime.value <= openingTime.value) { message.value = '结束营业时间必须晚于开始营业时间'; return }
+  savingBusinessHours.value = true
+  try {
+    const data = await updateBusinessHours(shopId.value, openingTime.value, closingTime.value)
+    openingTime.value = normalizeTime(data.openingTime)
+    closingTime.value = normalizeTime(data.closingTime)
+    message.value = '营业时间已保存'
+  } catch (error) { message.value = error?.message || '营业时间保存失败，请稍后重试' }
+  finally { savingBusinessHours.value = false }
 }
 
 async function addCategory() {
@@ -234,6 +256,17 @@ onMounted(load)
             <option value="CLOSED">休息中</option>
             <option value="TEMP_CLOSED">临时闭店</option>
           </select>
+        </div>
+
+        <div class="business-hours">
+          <label class="ctrl-label" for="opening-time">开始营业时间</label>
+          <input id="opening-time" v-model="openingTime" data-testid="opening-time-input" type="time" />
+          <label class="ctrl-label" for="closing-time">结束营业时间</label>
+          <input id="closing-time" v-model="closingTime" data-testid="closing-time-input" type="time" />
+          <button type="button" class="primary-btn business-hours-save" data-testid="business-hours-save"
+            :disabled="savingBusinessHours" @click="saveBusinessHours">
+            {{ savingBusinessHours ? '保存中…' : '保存营业时间' }}
+          </button>
         </div>
 
         <button
@@ -374,6 +407,9 @@ onMounted(load)
   align-items: center;
   gap: 0.75rem;
 }
+.business-hours { display:grid; grid-template-columns:auto minmax(8rem,1fr); align-items:center; gap:.75rem; margin:.35rem 0; }
+.business-hours input[type='time'] { min-width:0; padding:.55rem .7rem; border:1px solid #dcdfe6; border-radius:8px; background:#fff; }
+.business-hours-save { grid-column:1 / -1; }
 .select {
   border: 1px solid #dcdfe6;
   border-radius: 8px;

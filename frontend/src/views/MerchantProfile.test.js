@@ -10,10 +10,12 @@ vi.mock('@/api/merchant', () => ({
   updateMyMerchant: vi.fn(),
   listBusinessCategories: vi.fn(),
   deleteMyMerchant: vi.fn(),
+  getMyShopBusinessCategories: vi.fn(),
+  updateMyShopBusinessCategories: vi.fn(),
 }))
 vi.mock('@/api/upload', () => ({ uploadImage: vi.fn() }))
 
-import { getMyMerchant, listBusinessCategories } from '@/api/merchant'
+import { getMyMerchant, getMyShopBusinessCategories, listBusinessCategories } from '@/api/merchant'
 import { uploadImage } from '@/api/upload'
 import { mountView } from '@/test/mountView'
 import MerchantProfile from './MerchantProfile.vue'
@@ -33,6 +35,7 @@ const ME = {
 async function mountProfile(me = ME) {
   getMyMerchant.mockResolvedValue({ ...me })
   listBusinessCategories.mockResolvedValue([])
+  getMyShopBusinessCategories.mockResolvedValue([])
   const ctx = await mountView(MerchantProfile, { path: '/merchant/profile' })
   await flushPromises()
   return ctx

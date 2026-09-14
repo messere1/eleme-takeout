@@ -1,5 +1,6 @@
 package cn.edu.tju.takeout.shop;
 
+import java.time.LocalTime;
 public class Shop {
     private Long id;
     private Long merchantId;
@@ -9,6 +10,8 @@ public class Shop {
     private String shopAddress;
     private String imageUrl;
     private String coverImageUrl;
+    private LocalTime openingTime;
+    private LocalTime closingTime;
 
     public static Shop initiallyClosed(Long merchantId, String name) {
         Shop shop = new Shop();
@@ -33,5 +36,11 @@ public class Shop {
     public void updateInfo(String shopName, String notice) {
         this.shopName = shopName;
         this.notice = notice;
+    }
+    public LocalTime getOpeningTime(){return openingTime;} 
+    public LocalTime getClosingTime(){return closingTime;}
+    public void updateBusinessHours(LocalTime openingTime, LocalTime closingTime){
+        this.openingTime=openingTime;
+        this.closingTime=closingTime;
     }
 }

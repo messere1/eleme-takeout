@@ -16,7 +16,7 @@ public class DemoAccountInitializer implements CommandLineRunner {
     @Override public void run(String... args) {
         if (admins.countAll() == 0) admins.insert("admin", encoder.encode("Admin123"));
         if (riders.countAll() == 0) riders.insert("rider", "13900000000", encoder.encode("Rider123"));
-        for(String name:new String[]{"中式快餐","西式简餐","奶茶甜品","烧烤夜宵","日韩料理","地方菜系"})
+        for(String name:new String[]{"快餐便当","奶茶饮品","小吃炸物","汉堡披萨","日韩料理","烧烤夜宵","甜品烘焙","健康轻食"})
             if(categories.findByName(name).isEmpty())categories.insertDefault(name);
     }
 }

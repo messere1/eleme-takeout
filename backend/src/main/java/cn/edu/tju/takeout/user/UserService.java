@@ -3,6 +3,7 @@ package cn.edu.tju.takeout.user;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import cn.edu.tju.takeout.common.BusinessException;
 
@@ -14,15 +15,19 @@ public class UserService {
 
     //加密密码
     private final PasswordEncoder passwordEncoder;
-    private cn.edu.tju.takeout.order.OrderMapper orderMapper;
+    private final cn.edu.tju.takeout.order.OrderMapper orderMapper;
 
     public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder) {
-        this.userMapper=userMapper;
-        this.passwordEncoder=passwordEncoder;
+        this(userMapper, passwordEncoder, null);
     }
 
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
-    void setOrderMapper(cn.edu.tju.takeout.order.OrderMapper orderMapper) { this.orderMapper = orderMapper; }
+    @org.springframework.beans.factory.annotation.Autowired
+    public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder,
+            cn.edu.tju.takeout.order.OrderMapper orderMapper) {
+        this.userMapper=userMapper;
+        this.passwordEncoder=passwordEncoder;
+        this.orderMapper=orderMapper;
+    }
 
     // 异常辅助方法
     private BusinessException userAlreadyExists(String message) {
@@ -90,6 +95,7 @@ public class UserService {
         return UserView.from(user);
     }
 
+    @Transactional
     public void deleteAccount(Long userId) {
         if (orderMapper != null && orderMapper.countActiveByUser(userId) > 0) {
             throw new BusinessException(HttpStatus.CONFLICT,"BUSINESS_CONFLICT","存在进行中订单，暂不能注销");
@@ -99,7 +105,4 @@ public class UserService {
         }
     }
 
-    private UnsupportedOperationException pending() {
-        return new UnsupportedOperationException("待功能开发：用户业务尚未实现");
-    }
 }

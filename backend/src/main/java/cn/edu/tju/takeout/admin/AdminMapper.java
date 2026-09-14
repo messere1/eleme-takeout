@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.*;
 public interface AdminMapper {
     @Select("SELECT * FROM administrators WHERE username = #{account} AND enabled = TRUE")
     Optional<Admin> findByAccount(@Param("account") String account);
+    @Select("SELECT * FROM administrators WHERE id = #{id}") Optional<Admin> findById(Long id);
     @Select("SELECT COUNT(*) FROM administrators") long countAll();
     @Insert("INSERT INTO administrators(username, password_hash, enabled) VALUES(#{username}, #{hash}, TRUE)")
     void insert(@Param("username") String username, @Param("hash") String hash);

@@ -16,10 +16,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final ObjectMapper objectMapper;
+    private final AccountStatusService accountStatusService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, ObjectMapper objectMapper) {
+    public JwtAuthenticationFilter(JwtService jwtService, ObjectMapper objectMapper,
+            AccountStatusService accountStatusService) {
         this.jwtService = jwtService;
         this.objectMapper = objectMapper;
+        this.accountStatusService = accountStatusService;
     }
 
     @Override
@@ -34,6 +37,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             JwtClaims claims = jwtService.parse(authorization.substring(7));
             Long userId = Long.valueOf(claims.subject());
+            if (!accountStatusService.isUsable(userId, claims.role())) {
+                throw new IllegalArgumentException("账号已停用");
+            }
             UserPrincipal principal = new UserPrincipal(userId, claims.role());
             UsernamePasswordAuthenticationToken authentication =
                     UsernamePasswordAuthenticationToken.authenticated(

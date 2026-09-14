@@ -21,7 +21,6 @@ public class ProductService {
 
     public ProductService(
             ProductMapper productMapper, CategoryMapper categoryMapper, ShopMapper shopMapper) {
-        // 仅保留依赖签名，等待功能开发人员实现。
         this.productMapper=productMapper;
         this.categoryMapper=categoryMapper;
         this.shopMapper=shopMapper;

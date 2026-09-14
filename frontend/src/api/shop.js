@@ -48,6 +48,13 @@ export function changeStatus(shopId, status) {
   return http.patch(`/shops/${shopId}/status`, { status })
 }
 
+export function updateBusinessHours(shopId, openingTime, closingTime) {
+  return http.patch(`/shops/${shopId}/business-hours`, {
+    openingTime,
+    closingTime,
+  })
+}
+
 export function createCategory(shopId, payload) {
   return http.post(`/shops/${shopId}/categories`, payload)
 }
