@@ -218,8 +218,22 @@ onMounted(async () => {
   <section class="shop-page">
     <button class="back-home" @click="router.push('/')">← 返回首页</button>
     <template v-if="shop">
+      <img
+        v-if="shop.coverImageUrl"
+        :src="shop.coverImageUrl"
+        class="shop-cover"
+        alt="店铺封面"
+        data-testid="shop-cover"
+      />
       <header class="shop-head">
-        <div>
+        <img
+          v-if="shop.imageUrl"
+          :src="shop.imageUrl"
+          class="shop-logo"
+          alt="店铺照片"
+          data-testid="shop-image"
+        />
+        <div class="shop-info">
           <h2 data-testid="shop-name">{{ shop.shopName }}</h2>
           <p data-testid="shop-notice" class="shop-notice">{{ shop.notice }}</p>
           <p
@@ -346,11 +360,31 @@ onMounted(async () => {
   padding: 1.5rem;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
 }
+.shop-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 6;
+  object-fit: cover;
+  border-radius: var(--card-radius);
+  background: #fff4ec;
+}
 .shop-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+.shop-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.shop-logo {
+  flex: 0 0 auto;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #fff4ec;
 }
 .shop-head h2 {
   margin: 0;

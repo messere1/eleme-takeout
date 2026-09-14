@@ -53,6 +53,31 @@ class MerchantRegistrationServiceTest {
     }
 
     @Test
+    void registrationLinksTheCategoryMatchingItsBusinessScope() {
+        cn.edu.tju.takeout.catalog.BusinessCategoryMapper categories =
+                org.mockito.Mockito.mock(cn.edu.tju.takeout.catalog.BusinessCategoryMapper.class);
+        MerchantService service = new MerchantService(
+                merchantMapper, shopMapper, new BCryptPasswordEncoder(), categories);
+        when(merchantMapper.findByName("北洋餐厅")).thenReturn(Optional.empty());
+        when(merchantMapper.findByPhone("13800138000")).thenReturn(Optional.empty());
+        when(categories.findByName("中式快餐")).thenReturn(Optional.of(
+                new cn.edu.tju.takeout.catalog.BusinessCategory(1L, "中式快餐", true, true)));
+        org.mockito.Mockito.doAnswer(invocation -> {
+            ((Merchant) invocation.getArgument(0)).setId(12L);
+            return null;
+        }).when(merchantMapper).insert(any());
+        org.mockito.Mockito.doAnswer(invocation -> {
+            ((Shop) invocation.getArgument(0)).setId(20L);
+            return null;
+        }).when(shopMapper).insert(any());
+
+        service.register(new MerchantRegistrationRequest(
+                "北洋餐厅", "13800138000", "abc12345", "中式快餐"));
+
+        verify(categories).linkShop(20L, 1L);
+    }
+
+    @Test
     void duplicateMerchantNameIsRejected() {
         when(merchantMapper.findByName("北洋餐厅")).thenReturn(Optional.of(new Merchant()));
 

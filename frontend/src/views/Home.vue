@@ -16,7 +16,7 @@ const BG = ['#fff1e8', '#fff0f0', '#f4f1ff', '#eef8ff', '#fff7ed', '#fdeef7']
 const shops = ref([])
 const feedError = ref('')
 
-const CATEGORY_META = { 快餐便当:['🍜','快餐'],奶茶饮品:['🧋','奶茶'],小吃炸物:['🥡','小吃'],汉堡披萨:['🍔','汉堡'],日韩料理:['🍣','日料'],烧烤夜宵:['🍢','烧烤'],甜品烘焙:['🍰','甜品'],健康轻食:['🥗','轻食'] }
+const CATEGORY_META = { 快餐便当:['🍜','快餐'],奶茶饮品:['🧋','奶茶'],小吃炸物:['🥡','小吃'],汉堡披萨:['🍔','汉堡'],日韩料理:['🍣','日料'],烧烤夜宵:['🍢','烧烤'],甜品烘焙:['🍰','甜品'],健康轻食:['🥗','轻食'],中式快餐:['🍚','中式'],西式简餐:['🍝','西餐'],奶茶甜品:['🍮','甜品'],地方菜系:['🥘','地方菜'] }
 const categories = ref([])
 const activeCategoryId = ref(null)
 
@@ -131,7 +131,7 @@ function onWindowWheel(event) {
 onMounted(() => {
   measureShell()
   load(1)
-  listBusinessCategories().then(items=>{categories.value=(items||[]).map(c=>{const meta=CATEGORY_META[c.name]||['🍽️',c.name];return {...c,emoji:meta[0],displayName:meta[1]}})}).catch(()=>{categories.value=[]})
+  listBusinessCategories().then(items=>{categories.value=(items||[]).map(c=>{const meta=CATEGORY_META[c.name]||['🍽️',c.name.slice(0,4)];return {...c,emoji:meta[0],displayName:meta[1]}})}).catch(()=>{categories.value=[]})
   window.addEventListener('wheel', onWindowWheel, { passive: false })
   window.addEventListener('resize', measureShell)
 })
@@ -188,7 +188,14 @@ onUnmounted(() => {
             :data-testid="`home-shop-${shop.id}`"
             class="shop-card"
           >
-            <div class="shop-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>
+            <img
+              v-if="shop.imageUrl"
+              :src="shop.imageUrl"
+              class="shop-thumb"
+              alt="店铺照片"
+              :data-testid="`home-shop-image-${shop.id}`"
+            />
+            <div v-else class="shop-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>
             <div class="shop-body">
               <div class="shop-line">
                 <strong>{{ shop.shopName }}</strong>
@@ -293,7 +300,7 @@ onUnmounted(() => {
 /* 频道条 */
 .channel {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(4.2rem, 1fr));
   gap: 0.5rem;
   background: #fff;
   border-radius: var(--card-radius);
@@ -391,6 +398,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 3rem;
+  /* 有店铺照片时按图片渲染，object-fit 让它填满且不变形 */
+  object-fit: cover;
 }
 .shop-body {
   flex: 1;

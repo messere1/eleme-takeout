@@ -94,6 +94,33 @@ public class ShopService {
         return listShops(page, size, businessScope, null);
     }
 
+    public ShopPage searchShops(Integer page, Integer size, String keyword) {
+        String word = keyword == null ? "" : keyword.trim();
+        if (word.isEmpty()) {
+            throw new BusinessException(
+                HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "搜索关键词不能为空");
+        }
+
+        int currentPage = page == null ? 1 : page;
+        int pageSize = size == null ? 20 : size;
+        if (currentPage < 1) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "页码必须大于等于1");
+        }
+        if (pageSize < 1 || pageSize > 100) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "每页数量必须在1到100之间");
+        }
+
+        int offset = (currentPage - 1) * pageSize;
+        List<ShopView> items = shopMapper.searchPage(word, pageSize, offset)
+                .stream()
+                .map(ShopView::from)
+                .toList();
+        long total = shopMapper.countByKeyword(word);
+        int totalPages = (int) ((total + pageSize - 1) / pageSize);
+
+        return new ShopPage(items, currentPage, pageSize, total, totalPages);
+    }
+
     public ShopPage listShops(Integer page, Integer size, String businessScope, Long businessCategoryId){
         int currentPage=page==null?1:page;
         int pageSize=size==null?20:size;

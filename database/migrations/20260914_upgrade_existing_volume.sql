@@ -80,4 +80,13 @@ CREATE TABLE IF NOT EXISTS shop_business_categories (
     PRIMARY KEY (shop_id, business_category_id)
 );
 
+-- 按经营范围名称把已有店铺补进经营品类关联表，否则新表为空、按品类筛选恒为空。
+-- 只做精确匹配，不做相似度猜测；匹配不上的店铺由商家在商家信息页自行选择品类。
+INSERT INTO shop_business_categories(shop_id, business_category_id)
+SELECT sh.id, bc.id
+FROM shops sh
+JOIN merchants m ON m.id = sh.merchant_id
+JOIN business_categories bc ON bc.name = m.business_scope
+ON CONFLICT DO NOTHING;
+
 COMMIT;

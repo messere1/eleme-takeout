@@ -25,6 +25,33 @@ public interface ShopMapper {
     @Select("SELECT * FROM shops WHERE merchant_id = #{merchantId}")
     Optional<Shop> findByMerchantId(Long merchantId);
 
+    @Select("""
+        SELECT DISTINCT s.* FROM shops s
+        JOIN merchants m ON m.id = s.merchant_id
+        LEFT JOIN products p ON p.shop_id = s.id AND p.deleted = FALSE
+        WHERE s.status = 'OPEN' AND m.enabled = TRUE
+          AND (s.shop_name ILIKE '%' || #{keyword} || '%'
+               OR m.business_scope ILIKE '%' || #{keyword} || '%'
+               OR p.name ILIKE '%' || #{keyword} || '%')
+        ORDER BY s.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    """)
+    List<Shop> searchPage(
+            @Param("keyword") String keyword,
+            @Param("limit") int limit,
+            @Param("offset") int offset);
+
+    @Select("""
+        SELECT COUNT(DISTINCT s.id) FROM shops s
+        JOIN merchants m ON m.id = s.merchant_id
+        LEFT JOIN products p ON p.shop_id = s.id AND p.deleted = FALSE
+        WHERE s.status = 'OPEN' AND m.enabled = TRUE
+          AND (s.shop_name ILIKE '%' || #{keyword} || '%'
+               OR m.business_scope ILIKE '%' || #{keyword} || '%'
+               OR p.name ILIKE '%' || #{keyword} || '%')
+    """)
+    long countByKeyword(@Param("keyword") String keyword);
+
     @Update("UPDATE shops SET status = #{status} WHERE id = #{id}")
     void updateStatus(Shop shop);
 

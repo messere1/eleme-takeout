@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // 店铺页（顾客点单）红灯基线。mock 掉 api 模块；页面须提供 data-testid：
-// shop-name / shop-notice / shop-status / category-<id> / product-card-<id> / add-<id> / shop-message。
+// shop-name / shop-notice / shop-status / category-<id> / product-card-<id> / add-<id> / shop-message
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -71,6 +71,22 @@ describe('店铺页（顾客点单）', () => {
     })
 
     expect(wrapper.get('[data-testid="shop-hours"]').text()).toContain('08:00–21:30')
+  })
+
+  it('展示商家上传的店铺封面与店铺照片', async () => {
+    const { wrapper } = await mountShop({
+      ...SHOP, imageUrl: '/uploads/shop.png', coverImageUrl: '/uploads/cover.png',
+    })
+
+    expect(wrapper.get('[data-testid="shop-cover"]').attributes('src')).toBe('/uploads/cover.png')
+    expect(wrapper.get('[data-testid="shop-image"]').attributes('src')).toBe('/uploads/shop.png')
+  })
+
+  it('商家没传图时不展示图片元素', async () => {
+    const { wrapper } = await mountShop({ ...SHOP, imageUrl: null, coverImageUrl: null })
+
+    expect(wrapper.find('[data-testid="shop-cover"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="shop-image"]').exists()).toBe(false)
   })
 
   it('商家没设置营业时间时不展示这一行', async () => {

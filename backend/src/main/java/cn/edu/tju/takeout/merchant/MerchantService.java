@@ -88,6 +88,11 @@ public class MerchantService {
 
         shopMapper.insert(shop);
 
+        if (businessCategoryMapper != null) {
+            businessCategoryMapper.findByName(scope)
+                .ifPresent(category -> businessCategoryMapper.linkShop(shop.getId(), category.id()));
+        }
+
         return new MerchantView(
             merchant.getId(),
             merchant.getMerchantName(),

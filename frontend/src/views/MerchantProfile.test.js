@@ -104,6 +104,35 @@ describe('商家信息页上传区', () => {
     expect(wrapper.get('.upload-thumb.wide').attributes('src')).toBe('/uploads/new-cover.png')
   })
 
+  it('双击预览图打开完整大图，关闭按钮与 Esc 都能收起', async () => {
+    const { wrapper } = await mountProfile({ ...ME, imageUrl: '/uploads/avatar.png' })
+
+    expect(document.body.querySelector('[data-testid="image-viewer"]')).toBeNull()
+
+    await wrapper.get('.upload-thumb.square').trigger('dblclick')
+    const viewer = document.body.querySelector('[data-testid="image-viewer"]')
+    expect(viewer).not.toBeNull()
+    expect(viewer.querySelector('img').getAttribute('src')).toBe('/uploads/avatar.png')
+
+    viewer.querySelector('[data-testid="image-viewer-close"]').click()
+    await flushPromises()
+    expect(document.body.querySelector('[data-testid="image-viewer"]')).toBeNull()
+
+    await wrapper.get('.upload-thumb.square').trigger('dblclick')
+    expect(document.body.querySelector('[data-testid="image-viewer"]')).not.toBeNull()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await flushPromises()
+    expect(document.body.querySelector('[data-testid="image-viewer"]')).toBeNull()
+  })
+
+  it('没有图片时双击不打开大图', async () => {
+    const { wrapper } = await mountProfile()
+
+    await wrapper.get('.upload-thumb.placeholder').trigger('dblclick')
+
+    expect(document.body.querySelector('[data-testid="image-viewer"]')).toBeNull()
+  })
+
   it('上传失败时展示后端原因且不改变预览', async () => {
     uploadImage.mockRejectedValue(new Error('仅支持不超过5MiB的JPEG、PNG或WebP图片'))
     const { wrapper } = await mountProfile()

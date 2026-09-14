@@ -39,6 +39,26 @@ describe('首页店铺流（分页）', () => {
     listBusinessCategories.mockResolvedValue([{ id: 2, name: '奶茶饮品', enabled: true }])
   })
 
+  it('商家传过店铺照片时卡片显示图片', async () => {
+    listShops.mockResolvedValue({
+      ...PAGE1,
+      items: [{ ...SHOP_A, imageUrl: '/uploads/shop-a.png' }],
+    })
+    const { wrapper } = await mountHome()
+
+    expect(wrapper.get('[data-testid="home-shop-image-1"]').attributes('src'))
+      .toBe('/uploads/shop-a.png')
+  })
+
+  it('没有店铺照片时退回 emoji 占位块', async () => {
+    listShops.mockResolvedValue(PAGE1)
+    const { wrapper } = await mountHome()
+
+    expect(wrapper.find('[data-testid="home-shop-image-1"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="home-shop-1"]').find('img').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="home-shop-1"]').text()).toContain('北洋餐厅')
+  })
+
   it('按分页参数取店铺并渲染', async () => {
     listShops.mockResolvedValue(PAGE1)
     const { wrapper } = await mountHome()

@@ -1,6 +1,13 @@
 spring:
   application:
     name: take-out-backend
+  servlet:
+    multipart:
+      # 不配这两行时用 Spring Boot 默认的 1MB，超过 1MB 的图片会在进入 Controller 前被拦掉
+      # （MaxUploadSizeExceededException），前端只看到 500。业务上限是 5MiB
+      # （ImageUploadService.MAX_SIZE），这里放宽一点，让超限请求能走到应用层拿到可读的 400。
+      max-file-size: 6MB
+      max-request-size: 8MB
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:15432/take_out}
     username: ${DB_USERNAME:take_out}

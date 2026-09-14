@@ -26,6 +26,14 @@ public class ShopController {
         return ApiResponse.success(shopService.changeStatus(principal.userId(), shopId, request));
     }
 
+    @GetMapping("/search")
+    public ApiResponse<ShopPage> searchShops(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam String keyword) {
+        return ApiResponse.success(shopService.searchShops(page, size, keyword));
+    }
+
     @GetMapping("/{shopId}")
     public ApiResponse<ShopView> getShop(@PathVariable Long shopId) {
         return ApiResponse.success(shopService.getShop(shopId));
