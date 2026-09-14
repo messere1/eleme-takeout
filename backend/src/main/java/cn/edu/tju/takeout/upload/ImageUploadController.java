@@ -27,10 +27,29 @@ public class ImageUploadController {
         byte[] bytes=file.getBytes();String ext=extension(bytes);
         if(bytes.length==0||bytes.length>MAX||ext==null)throw bad("仅支持不超过5MiB的JPEG、PNG或WebP图片");
         authorizeAndCheck(p,targetType,targetId);
-        Files.createDirectories(root);String name=UUID.randomUUID()+ext;Files.write(root.resolve(name),bytes,StandardOpenOption.CREATE_NEW);
-        String url="/uploads/"+name;int changed=switch(targetType){case "USER_AVATAR"->users.updateAvatar(targetId,url);case "SHOP_IMAGE"->shops.updateImage(targetId,url);case "SHOP_COVER"->shops.updateCover(targetId,url);case "PRODUCT_IMAGE"->products.updateImage(targetId,url);default->0;};
-        if(changed==0){Files.deleteIfExists(root.resolve(name));throw bad("目标类型或目标资源不合法");}
-        return ApiResponse.success(Map.of("url",url));
+        Files.createDirectories(root);
+        String name = UUID.randomUUID() + ext;
+        Path destination = root.resolve(name);
+        try {
+            Files.write(destination, bytes, StandardOpenOption.CREATE_NEW);
+            String url = "/uploads/" + name;
+            int changed = switch (targetType) {
+                case "USER_AVATAR" -> users.updateAvatar(targetId, url);
+                case "SHOP_IMAGE" -> shops.updateImage(targetId, url);
+                case "SHOP_COVER" -> shops.updateCover(targetId, url);
+                case "PRODUCT_IMAGE" -> products.updateImage(targetId, url);
+                default -> 0;
+            };
+            if (changed == 0) throw bad("目标类型或目标资源不合法");
+            return ApiResponse.success(Map.of("url", url));
+        } catch (IOException | RuntimeException failure) {
+            try {
+                Files.deleteIfExists(destination);
+            } catch (IOException cleanupFailure) {
+                failure.addSuppressed(cleanupFailure);
+            }
+            throw failure;
+        }
     }
     private void authorizeAndCheck(UserPrincipal p,String type,Long id){
         if("ADMIN".equals(p.role()))return;
