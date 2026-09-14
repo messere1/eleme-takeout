@@ -406,8 +406,13 @@ onMounted(() => load(1))
 .orders-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+}
+.orders-toolbar input {
+  min-width: 0;
+  max-width: 100%;
 }
 .orders-toolbar label {
   color: #666;
