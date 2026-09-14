@@ -1,11 +1,12 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getShop, listCategories, listProducts } from '@/api/shop'
 import { addToCart, getCart, saveDeliveryInfo } from '@/api/cart'
 import { createOrder } from '@/api/order'
 import { getProfile } from '@/api/user'
 import { session } from '@/utils/session'
+import { isValidRecipientPhone, normalizeRecipientPhone } from '@/utils/recipientPhone'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,16 +53,27 @@ const productTotalPages = ref(1)
 
 // 点单页底部购物车：底部常驻条 + 上滑卷轴
 const isCustomer = session.load()?.role === 'CUSTOMER'
+// GET /cart 返回的是全站购物车（每条带 shopId）。店铺页只该展示当前这家店的条目，
+// 否则会把别的店的商品和金额挂在底部栏上（§4「购物车…按顾客和店铺隔离」、FR-012）。
 const cartItems = ref([])
-const cartTotal = ref(0)
 const sheetOpen = ref(false)
 const recipient = ref('')
 const contact = ref('')
 const deliveryAddress = ref('')
 const ordering = ref(false)
 
+const shopCartItems = computed(() =>
+  cartItems.value.filter((item) => item.shopId === shopId),
+)
+// 合计口径与后端 CartService.get 一致：只累计可购买的行。
+const shopCartTotal = computed(() =>
+  shopCartItems.value
+    .filter((item) => item.available)
+    .reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0),
+)
+
 function cartCount() {
-  return cartItems.value.reduce((sum, item) => sum + (item.quantity || 0), 0)
+  return shopCartItems.value.reduce((sum, item) => sum + (item.quantity || 0), 0)
 }
 
 async function loadCart() {
@@ -69,7 +81,6 @@ async function loadCart() {
   try {
     const data = await getCart()
     cartItems.value = data?.items ?? []
-    cartTotal.value = data?.totalAmount ?? 0
   } catch {
     /* 未登录或接口不可用 */
   }
@@ -93,15 +104,33 @@ async function openSheet() {
   await loadCart()
 }
 
+// UC-02「字段非法不提交」：收货人非空、电话规范化后 7–15 位、地址 5–255 字符（§4）。
+// 与 Cart.vue 同一套校验，避免同一个下单动作两处行为不一致。
+// NFR-006「错误说明可操作」：提交按钮灰掉时必须说清是哪一项不满足。
+const checkoutBlockedReason = computed(() => {
+  if (!isCustomer) return '请先登录顾客账号再下单'
+  if (!shopCartItems.value.length) return '本店购物车还是空的，先加购商品'
+  if (shopCartItems.value.some((item) => !item.available)) return '购物车里有已下架或缺货的商品，请到购物车页移除'
+  if (!recipient.value.trim()) return '请填写收货人'
+  if (!isValidRecipientPhone(contact.value)) return '联系电话需为 7~15 位数字（可含 +、空格、连字符）'
+  if (deliveryAddress.value.trim().length < 5) return '收货地址至少 5 个字符'
+  return ''
+})
+const canCheckout = computed(() => !checkoutBlockedReason.value && !ordering.value)
+
 async function submitFromSheet() {
   if (ordering.value) return
+  if (checkoutBlockedReason.value) {
+    message.value = checkoutBlockedReason.value
+    return
+  }
   ordering.value = true
   message.value = ''
   try {
     const delivery = {
-      shopId: Number(route.params.id),
+      shopId,
       recipientName: recipient.value.trim(),
-      recipientPhone: contact.value.trim(),
+      recipientPhone: normalizeRecipientPhone(contact.value),
       deliveryAddress: deliveryAddress.value.trim(),
       saveToProfile: false,
     }
@@ -173,6 +202,9 @@ async function addProduct(product) {
 }
 
 onMounted(async () => {
+  // FR-014「底部常驻汇总」：进店就要按本店已有商品把底部购物车显示出来，
+  // 不能等到用户再点一次加购才出现。
+  loadCart()
   try {
     await load()
   } catch {
@@ -256,9 +288,9 @@ onMounted(async () => {
     <p v-else class="loading-tip">{{ loadError || '店铺加载中…' }}</p>
 
     <!-- 点单页底部购物车 -->
-    <div v-if="isCustomer && cartItems.length" data-testid="shop-cart-bar" class="shop-cart-bar" @click="openSheet">
+    <div v-if="isCustomer && shopCartItems.length" data-testid="shop-cart-bar" class="shop-cart-bar" @click="openSheet">
       <span class="cart-summary">🛒 共 {{ cartCount() }} 件</span>
-      <strong>合计 ¥{{ fmt(cartTotal) }}</strong>
+      <strong>合计 ¥{{ fmt(shopCartTotal) }}</strong>
       <span class="cart-go">{{ sheetOpen ? '收起 ▲' : '去结算' }}</span>
     </div>
 
@@ -268,7 +300,7 @@ onMounted(async () => {
         <button class="sheet-close" @click="sheetOpen = false">收起 ▲</button>
       </header>
       <ul class="sheet-items">
-        <li v-for="item in cartItems" :key="item.id">
+        <li v-for="item in shopCartItems" :key="item.id" :data-testid="`shop-sheet-item-${item.id}`">
           <span>{{ item.productName }} × {{ item.quantity }}</span>
           <strong>¥{{ fmt(item.subtotal) }}</strong>
         </li>
@@ -285,8 +317,13 @@ onMounted(async () => {
         <label>收货地址</label>
         <el-input v-model="deliveryAddress" placeholder="收货地址" maxlength="255" />
       </div>
-      <div class="sheet-total">合计 <strong>¥{{ fmt(cartTotal) }}</strong></div>
-      <button data-testid="shop-checkout" class="checkout-btn" :disabled="ordering" @click="submitFromSheet">
+      <div class="sheet-total">合计 <strong>¥{{ fmt(shopCartTotal) }}</strong></div>
+      <p
+        v-if="checkoutBlockedReason"
+        data-testid="shop-checkout-hint"
+        class="shop-checkout-hint"
+      >{{ checkoutBlockedReason }}</p>
+      <button data-testid="shop-checkout" class="checkout-btn" :disabled="!canCheckout" @click="submitFromSheet">
         {{ ordering ? '提交中…' : '提交订单' }}
       </button>
     </div>
@@ -615,6 +652,11 @@ onMounted(async () => {
   justify-content: space-between;
   border-top: 1px dashed #eee;
   padding-top: 0.6rem;
+}
+.shop-checkout-hint {
+  margin: 0 0 0.4rem;
+  color: #e34d1c;
+  font-size: 0.85rem;
 }
 .shop-sheet .sheet-total strong {
   color: #ff2f00;

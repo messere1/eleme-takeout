@@ -7,7 +7,9 @@ import cn.edu.tju.takeout.order.*;
 import cn.edu.tju.takeout.product.*;
 import cn.edu.tju.takeout.user.*;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.*;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -27,8 +29,21 @@ public class AdminController {
             @RequestParam(defaultValue="20") int size) { int off=offset(page,size);var safe=merchants.findPage(size,off).stream().map(m->Map.of("id",m.getId(),"merchantName",m.getMerchantName(),"phone",mask(m.getPhone()),"businessScope",m.getBusinessScope(),"enabled",m.isEnabled())).toList();return ApiResponse.success(page(safe,page,size,merchants.countAll())); }
     @GetMapping("/products") public ApiResponse<Map<String,Object>> products(@RequestParam(defaultValue="1") int page,
             @RequestParam(defaultValue="20") int size) { return ApiResponse.success(page(products.findPageForAdmin(size, offset(page,size)),page,size,products.countForAdmin())); }
-    @GetMapping("/orders") public ApiResponse<Map<String,Object>> orders(@RequestParam(defaultValue="1") int page,
-            @RequestParam(defaultValue="20") int size) { return ApiResponse.success(page(orders.findPageForAdmin(size, offset(page,size)),page,size,orders.countAll())); }
+    // FR-016：管理员按分页、状态、时间查询订单。
+    // NFR-004：不再直接下发 Order 实体（会把收件人手机号与收货地址明文吐出去），
+    // 手机号脱敏、履约地址不下发。
+    @GetMapping("/orders") public ApiResponse<Map<String,Object>> orders(
+            @RequestParam(required=false) String status,
+            @RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            @RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
+            @RequestParam(defaultValue="1") int page,
+            @RequestParam(defaultValue="20") int size) {
+        int off = offset(page,size);
+        var safe = orders.findPageForAdmin(status, startTime, endTime, size, off).stream()
+                .map(o -> AdminOrderView.from(o, mask(o.getRecipientPhone()))).toList();
+        return ApiResponse.success(page(safe, page, size,
+                orders.countForAdmin(status, startTime, endTime)));
+    }
 
     @PatchMapping("/users/{id}/status") public ApiResponse<Void> userStatus(@AuthenticationPrincipal UserPrincipal p,
             @PathVariable Long id, @Valid @RequestBody AdminStatusRequest r) {

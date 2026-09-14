@@ -22,6 +22,8 @@ const ORDER_A = {
   shopId: 7,
   totalAmount: 17.0,
   status: 'CREATED',
+  paymentStatus: 'UNPAID',
+  paymentDeadline: '2026-09-01T12:45:00',
   createdAt: '2026-09-01T12:30:00',
 }
 const ORDER_B = {
@@ -30,6 +32,8 @@ const ORDER_B = {
   shopId: 7,
   totalAmount: 6.0,
   status: 'CREATED',
+  paymentStatus: 'UNPAID',
+  paymentDeadline: '2026-09-02T08:15:00',
   createdAt: '2026-09-02T08:00:00',
 }
 const PAGE1 = { items: [ORDER_A, ORDER_B], page: 1, size: 20, total: 3, totalPages: 2 }
@@ -42,9 +46,11 @@ const PAGE2 = {
 }
 const EMPTY = { items: [], page: 1, size: 20, total: 0, totalPages: 0 }
 
+// 页面会就地改写订单对象（取消/确认后写回 status）。这里深拷贝，避免某条用例的状态
+// 泄漏到后续用例——之前 ORDER_A 被改成 CANCELLED 后，后面的用例全都拿到脏数据。
 async function mountOrders(pageData = PAGE1) {
   listOrders.mockImplementation(async (query = {}) =>
-    query.page === 2 ? PAGE2 : pageData,
+    query.page === 2 ? structuredClone(PAGE2) : structuredClone(pageData),
   )
   const ctx = await mountView(Orders, { path: '/orders' })
   await flushPromises()
@@ -149,5 +155,72 @@ describe('订单列表页', () => {
     const { wrapper } = await mountOrders({ ...PAGE1, items: rows })
     expect(wrapper.get('[data-testid="order-row-21"]').text()).toContain('配送中')
     expect(wrapper.get('[data-testid="order-row-22"]').text()).toContain('已送达')
+  })
+
+  // FR-016：顾客订单按分页、状态、时间查询。
+  it('状态筛选项覆盖 §5.1 状态机全部取值，且不含 PENDING', async () => {
+    const { wrapper } = await mountOrders()
+    const values = wrapper.findAll('[data-testid="orders-status"] option')
+      .map((option) => option.element.value)
+
+    expect(values).toEqual(['', 'CREATED', 'CANCELLED', 'ACCEPTED', 'DELIVERING', 'DELIVERED', 'COMPLETED'])
+    expect(values).not.toContain('PENDING')
+  })
+
+  it('填写起止时间后带参数重新拉取订单', async () => {
+    const { wrapper } = await mountOrders()
+
+    await wrapper.get('[data-testid="orders-start"]').setValue('2026-09-01T00:00')
+    await flushPromises()
+    expect(listOrders).toHaveBeenLastCalledWith({
+      page: 1, size: 20, startTime: '2026-09-01T00:00',
+    })
+
+    await wrapper.get('[data-testid="orders-end"]').setValue('2026-09-02T00:00')
+    await flushPromises()
+    expect(listOrders).toHaveBeenLastCalledWith({
+      page: 1, size: 20, startTime: '2026-09-01T00:00', endTime: '2026-09-02T00:00',
+    })
+  })
+
+  // §5.1：CREATED+UNPAID 与 CREATED+PAID 允许的动作不同，取消只对前者开放。
+  it('已支付但未接单的订单不再显示取消按钮', async () => {
+    const paid = { ...ORDER_A, paymentStatus: 'PAID' }
+    const { wrapper } = await mountOrders({ ...PAGE1, items: [paid] })
+
+    expect(wrapper.find('[data-testid="order-cancel-11"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="order-paid-hint-11"]').text()).toContain('已支付')
+    expect(cancelOrder).not.toHaveBeenCalled()
+  })
+
+  // §9.1 / FR-019：倒计时必须用服务器给的 paymentDeadline，不能拿 createdAt 自己加 15 分钟。
+  it('倒计时以服务器 paymentDeadline 为准', async () => {
+    const { wrapper } = await mountOrders({
+      ...PAGE1,
+      // createdAt 已过 15 分钟，但服务器给的截止时间还没到 —— 本地推算会误报"已超时"
+      items: [{ ...ORDER_A, createdAt: '2026-09-01T12:00:00', paymentDeadline: '2099-01-01T00:00:00' }],
+    })
+
+    const text = wrapper.get('[data-testid="order-row-11"]').text()
+    expect(text).toContain('距自动取消')
+    expect(text).not.toContain('已超时')
+  })
+
+  it('已支付订单不显示任何自动取消倒计时', async () => {
+    const { wrapper } = await mountOrders({
+      ...PAGE1,
+      items: [{ ...ORDER_A, paymentStatus: 'PAID', paymentDeadline: '2020-01-01T00:00:00' }],
+    })
+
+    expect(wrapper.get('[data-testid="order-row-11"]').text()).not.toContain('距自动取消')
+    expect(wrapper.get('[data-testid="order-row-11"]').text()).not.toContain('已超时')
+  })
+
+  // §5.1 状态机没有 PENDING，订单页不应再为它保留分支。
+  it('PENDING 不再被当作待处理状态展示', async () => {
+    const { wrapper } = await mountOrders({ ...PAGE1, items: [{ ...ORDER_A, id: 31, status: 'PENDING' }] })
+
+    expect(wrapper.get('[data-testid="order-row-31"]').text()).toContain('PENDING')
+    expect(wrapper.find('[data-testid="order-cancel-31"]').exists()).toBe(false)
   })
 })

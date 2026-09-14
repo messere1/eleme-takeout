@@ -111,4 +111,24 @@ class OrderListServiceTest {
         return Order.restore(
                 id, orderNo, 7L, 20L, new BigDecimal("17.00"), "PENDING", createdAt);
     }
+
+    // §5.1 的订单状态是「业务状态 + 支付状态」这一对：支付后 status 仍是 CREATED，
+    // 列表只有带上 paymentStatus 才能区分 CREATED+UNPAID（可支付/可取消）与
+    // CREATED+PAID（只能商家接单或申请退款）。§9.1 还要求倒计时以 paymentDeadline 为准。
+    @Test
+    void summaryCarriesPaymentStatusAndServerDeadline() {
+        Order created = Order.created("NO-9", 7L, 20L, new BigDecimal("17.00"));
+        created.setId(9L);
+
+        OrderSummaryView unpaid = OrderSummaryView.from(created);
+        assertThat(unpaid.status()).isEqualTo("CREATED");
+        assertThat(unpaid.paymentStatus()).isEqualTo("UNPAID");
+        assertThat(unpaid.paymentDeadline())
+                .isEqualTo(created.getCreatedAt().plusMinutes(15));
+
+        created.markPaid(created.getCreatedAt().plusMinutes(3));
+        OrderSummaryView paid = OrderSummaryView.from(created);
+        assertThat(paid.status()).isEqualTo("CREATED");
+        assertThat(paid.paymentStatus()).isEqualTo("PAID");
+    }
 }

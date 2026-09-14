@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { clearCart, getCart, removeItem, updateItem, saveDeliveryInfo } from '@/api/cart'
 import { createOrder } from '@/api/order'
 import { getProfile } from '@/api/user'
+import { isValidRecipientPhone, normalizeRecipientPhone } from '@/utils/recipientPhone'
 
 const router = useRouter()
 
@@ -33,9 +34,19 @@ const total = computed(() =>
 )
 const empty = computed(() => items.value.length === 0)
 const hasUnavailable = computed(() => items.value.some((item) => !item.available))
-const canCheckout = computed(() => !empty.value && !hasUnavailable.value && !busy.value
-  && recipient.value.trim() && /^[+0-9 -]{7,20}$/.test(contact.value.trim())
-  && checkoutAddress.value.trim().length >= 5)
+// UC-02 异常流程「字段非法不提交」+ EX-007：电话按规范化后 7–15 位判断，
+// 与后端 CartService.normalizePhone 同一套规则。
+// NFR-006「错误说明可操作」：按钮灰掉时必须说清是哪一项不满足，
+// 否则用户只看到「按钮变白、点了没反应」。
+const checkoutBlockedReason = computed(() => {
+  if (empty.value) return '购物车是空的，先去挑点东西吧'
+  if (hasUnavailable.value) return '购物车里有已下架或缺货的商品，请先移除'
+  if (!recipient.value.trim()) return '请填写收货人'
+  if (!isValidRecipientPhone(contact.value)) return '联系电话需为 7~15 位数字（可含 +、空格、连字符）'
+  if (checkoutAddress.value.trim().length < 5) return '收货地址至少 5 个字符'
+  return ''
+})
+const canCheckout = computed(() => !checkoutBlockedReason.value && !busy.value)
 
 function fmt(value) {
   return (Number(value) || 0).toFixed(2)
@@ -98,18 +109,24 @@ async function clearAll() {
 }
 
 async function checkout() {
+  if (checkoutBlockedReason.value) {
+    message.value = checkoutBlockedReason.value
+    return
+  }
   message.value = ''
   busy.value = true
   try {
-    const order = await createOrder({
+    // EX-007 要求电话含空格/连字符/国际前缀时可接受，后端会规范化后落库。
+    // 前端先做同一次规范化，保证下单快照与购物车收货信息一致。
+    const delivery = {
       shopId: items.value[0]?.shopId,
       recipientName: recipient.value.trim(),
-      recipientPhone: contact.value.trim(),
+      recipientPhone: normalizeRecipientPhone(contact.value),
       deliveryAddress: checkoutAddress.value.trim(),
       saveToProfile: saveToProfile.value,
-    })
-    await saveDeliveryInfo({ shopId: items.value[0]?.shopId, recipientName: recipient.value.trim(),
-      recipientPhone: contact.value.trim(), deliveryAddress: checkoutAddress.value.trim(), saveToProfile: saveToProfile.value })
+    }
+    const order = await createOrder(delivery)
+    await saveDeliveryInfo(delivery)
     router.push(`/orders/${order.id}`)
   } catch (error) {
     if (error?.code === 'AUTH_INVALID' || error?.code === 'AUTH_EXPIRED') {
@@ -226,6 +243,13 @@ onMounted(() => {
         </div>
       </footer>
 
+      <!-- NFR-006：按钮灰掉时把原因写在旁边，而不是让用户对着一个没反应的按钮猜 -->
+      <p
+        v-if="checkoutBlockedReason"
+        data-testid="cart-checkout-hint"
+        class="cart-checkout-hint"
+      >{{ checkoutBlockedReason }}</p>
+
       <div class="cart-drawer-bar" @click="drawerOpen = !drawerOpen">
         <span>{{ drawerOpen ? '▼ 收起明细' : '▲ 订单明细' }}（{{ items.length }} 件）</span>
         <strong>合计 ¥{{ fmt(total) }}</strong>
@@ -245,11 +269,18 @@ onMounted(() => {
         <div class="field"><label>收货人</label>
           <el-input v-model="recipient" data-testid="cart-recipient" placeholder="收货人" maxlength="30" /></div>
         <div class="field"><label>联系电话</label>
-          <el-input v-model="contact" data-testid="cart-contact" placeholder="联系电话" maxlength="11" /></div>
+          <!-- EX-007 明确允许国际前缀与分隔符，上限须与后端 @Pattern 的 20 字符对齐，
+               否则 +86 138-0013-8000 会被 maxlength 静默截断成错号码 -->
+          <el-input v-model="contact" data-testid="cart-contact" placeholder="联系电话" maxlength="20" /></div>
         <div class="field"><label>收货地址</label>
           <el-input v-model="checkoutAddress" placeholder="收货地址" maxlength="255" /></div>
         <label class="save-profile"><input v-model="saveToProfile" type="checkbox" /> 保存为个人默认地址</label>
         <div class="sheet-total">合计 <strong>¥{{ fmt(total) }}</strong></div>
+        <p
+          v-if="checkoutBlockedReason"
+          data-testid="cart-sheet-checkout-hint"
+          class="cart-checkout-hint"
+        >{{ checkoutBlockedReason }}</p>
         <button class="checkout-btn sheet-checkout" :disabled="!canCheckout" @click="checkout">提交订单</button>
       </div>
 
@@ -446,6 +477,13 @@ onMounted(() => {
 .sheet-total { display: flex; justify-content: space-between; border-top: 1px dashed #eee; padding-top: 0.7rem; }
 .sheet-total strong { color: #ff2f00; }
 .sheet-checkout { width: 100%; }
+.cart-checkout-hint {
+  margin: 0.5rem 0 0;
+  color: #e34d1c;
+  font-size: 0.85rem;
+  text-align: right;
+}
+.cart-sheet .cart-checkout-hint { text-align: left; }
 .field { display: flex; flex-direction: column; gap: 0.35rem; }
 .field label { font-size: 0.85rem; color: #666; }
 @media (max-width: 520px) {

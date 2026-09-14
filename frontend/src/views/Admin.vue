@@ -8,7 +8,10 @@ const props = defineProps({ initialTab: { type: String, default: 'users' } })
 const tab=ref(props.initialTab),rows=ref([]),error=ref(''),loading=ref(false)
 const loaders={users:listUsers,merchants:listMerchants,products:listAdminProducts,orders:listAdminOrders,refunds:listAdminRefunds}
 const mask=v=>!v?'':v.length>=7?`${v.slice(0,3)}****${v.slice(-4)}`:'***'
-async function refresh(){error.value='';loading.value=true;try{const data=await loaders[tab.value]();rows.value=Array.isArray(data)?data:data?.items??[]}catch(e){error.value=e?.message||'管理数据加载失败';rows.value=[]}finally{loading.value=false}}
+// FR-016：管理员的订单列表同样要能按状态、时间查询。
+const orderStatus=ref(''),orderStart=ref(''),orderEnd=ref('')
+function orderQuery(){const p={page:1,size:20};if(orderStatus.value)p.status=orderStatus.value;if(orderStart.value)p.startTime=orderStart.value;if(orderEnd.value)p.endTime=orderEnd.value;return p}
+async function refresh(){error.value='';loading.value=true;try{const data=tab.value==='orders'?await listAdminOrders(orderQuery()):await loaders[tab.value]();rows.value=Array.isArray(data)?data:data?.items??[]}catch(e){error.value=e?.message||'管理数据加载失败';rows.value=[]}finally{loading.value=false}}
 async function toggle(row,type){try{await setAdminStatus(type,row.id,row.enabled===false?'ENABLED':'DISABLED');row.enabled=!row.enabled}catch(e){error.value=e?.message||'操作失败'}}
 async function decide(row,status){try{const r=await decideRefund(row.id,status);row.status=r.status}catch(e){error.value=e?.message||'处理失败'}}
 // 订单状态：取值与 PATCH /admin/orders/{id}/status 允许集合保持一致，前端不自己发明状态。
@@ -49,16 +52,36 @@ onMounted(refresh)
       </tbody>
     </table>
     <table v-else-if="tab==='products'&&rows.length" class="admin-table"><tbody><tr v-for="p in rows" :key="p.id"><td>{{p.id}}</td><td>{{p.name}}</td><td>{{p.status}}</td><td><button @click="setAdminStatus('products',p.id,p.status==='ON_SALE'?'OFF_SALE':'ON_SALE').then(refresh)">切换上下架</button></td></tr></tbody></table>
-    <table v-else-if="tab==='orders'&&rows.length" class="admin-table">
-      <thead><tr><th>订单号</th><th>订单状态</th><th>支付状态</th><th>改为</th><th>操作</th></tr></thead>
+    <div v-if="tab==='orders'" class="admin-filters">
+      <label for="admin-order-status-filter">状态</label>
+      <select
+        id="admin-order-status-filter"
+        v-model="orderStatus"
+        data-testid="admin-order-status-filter"
+        class="status-select"
+        @change="refresh"
+      >
+        <option value="">全部</option>
+        <option v-for="s in ORDER_STATUS" :key="s" :value="s">{{ORDER_STATUS_TEXT[s]}}</option>
+      </select>
+      <label for="admin-order-start">起</label>
+      <input id="admin-order-start" v-model="orderStart" data-testid="admin-order-start" type="datetime-local" @change="refresh" />
+      <label for="admin-order-end">止</label>
+      <input id="admin-order-end" v-model="orderEnd" data-testid="admin-order-end" type="datetime-local" @change="refresh" />
+    </div>
+    <table v-if="tab==='orders'&&rows.length" class="admin-table">
+      <thead><tr><th>订单号</th><th>订单状态</th><th>支付状态</th><th>联系号码</th><th>改为</th><th>操作</th></tr></thead>
       <tbody>
         <tr v-for="o in rows" :key="o.id">
           <td>{{o.orderNo}}</td>
           <td :data-testid="`admin-order-status-${o.id}`">{{ORDER_STATUS_TEXT[o.status]||o.status}}</td>
           <td>{{o.paymentStatus}}</td>
+          <!-- NFR-004：管理员列表只下发脱敏号码，收货地址不下发 -->
+          <td>{{o.recipientPhoneMasked||'—'}}</td>
           <td>
             <select
               class="status-select"
+              :data-testid="`admin-order-target-${o.id}`"
               :value="orderDraft[o.id]||o.status"
               @change="orderDraft[o.id]=$event.target.value"
             >
@@ -94,6 +117,22 @@ onMounted(refresh)
 .tab { border: 1px solid #eee; background: #fff; padding: 0.4rem 1.2rem; border-radius: 999px; cursor: pointer; }
 .tab.active { background: var(--brand-gradient); color: #fff; border-color: transparent; }
 .admin-error { color: #e34d1c; }
+.admin-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.6rem;
+}
+.admin-filters select,
+.admin-filters input {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+}
 .admin-table { width: 100%; border-collapse: collapse; }
 .admin-table th, .admin-table td { border: 1px solid #eee; padding: 0.5rem 0.75rem; text-align: left; }
 .admin-table th { background: #fafafa; }

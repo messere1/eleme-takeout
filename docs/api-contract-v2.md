@@ -49,6 +49,18 @@
 
 `POST /orders/{orderId}/pay`（CUSTOMER）仅允许本人 `CREATED/UNPAID` 且服务器时间早于截止时间的订单。成功变为 `PAID`；重复已成功支付幂等。系统每30秒扫描到期未支付订单，改为 `CANCELLED` 并回补库存一次。支付与取消竞争时只能一方成功。
 
+订单状态是「业务状态 + 支付状态」这一对（SRS §5.1），支付成功后 `status` 仍是 `CREATED`，只改 `paymentStatus`。因此 `GET /orders`、`GET /merchant/orders`、`GET /admin/orders` 的列表项除 `status` 外还必须返回 `paymentStatus` 与 `paymentDeadline`：
+
+```json
+{"id":60,"orderNo":"T20260901001","shopId":7,"totalAmount":17.00,
+ "status":"CREATED","paymentStatus":"UNPAID","paymentDeadline":"2026-09-01T12:45:00",
+ "createdAt":"2026-09-01T12:30:00"}
+```
+
+- `CREATED+UNPAID` 允许顾客支付与取消；`CREATED+PAID` 只允许商家接单或顾客申请退款——两者动作不同，页面不得只按 `status` 判断。
+- 支付倒计时一律以 `paymentDeadline` 为准，页面不得用 `createdAt` 自行推算。
+- 商家订单列表与顾客订单列表同样支持 `status`、`startTime`、`endTime`、`page`、`size`（FR-016）。
+
 ## 5. 退款
 
 `POST /orders/{orderId}/refunds`（CUSTOMER）：

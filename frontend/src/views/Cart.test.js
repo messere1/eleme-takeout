@@ -191,4 +191,64 @@ describe('购物车页', () => {
     expect(wrapper.get('.sheet-checkout').element.disabled).toBe(true)
     expect(createOrder).not.toHaveBeenCalled()
   })
+
+  // NFR-006「错误说明可操作」：按钮灰掉时必须写清原因，不能只让用户看到"点了没反应"。
+  it('结算按钮不可用时给出具体原因', async () => {
+    getProfile.mockResolvedValue({ username: '下单用户', phone: '', address: '天津大学北洋园校区' })
+    const { wrapper } = await mountCart(AVAILABLE_CART)
+    await wrapper.get('.cart-drawer-bar').trigger('click')
+
+    expect(wrapper.get('[data-testid="cart-checkout"]').element.disabled).toBe(true)
+    expect(wrapper.get('[data-testid="cart-checkout-hint"]').text()).toContain('联系电话')
+
+    await wrapper.get('[data-testid="cart-contact"]').setValue('13800138000')
+    expect(wrapper.get('[data-testid="cart-checkout"]').element.disabled).toBe(false)
+    expect(wrapper.find('[data-testid="cart-checkout-hint"]').exists()).toBe(false)
+  })
+
+  it('购物车里有不可用商品时说明是哪一类问题', async () => {
+    const { wrapper } = await mountCart(FULL_CART)
+    expect(wrapper.get('[data-testid="cart-checkout-hint"]').text()).toContain('已下架或缺货')
+  })
+
+  // EX-007：电话含空格、连字符或国际前缀时，规范化后 7–15 位可接受。
+  it('联系电话含 + / 空格 / 连字符时规范化后提交', async () => {
+    createOrder.mockResolvedValue({ id: 61, status: 'CREATED' })
+    const { wrapper } = await mountCart(AVAILABLE_CART)
+
+    await wrapper.get('.cart-drawer-bar').trigger('click')
+    await wrapper.get('[data-testid="cart-recipient"]').setValue('张同学')
+    await wrapper.get('[data-testid="cart-contact"]').setValue('+86 138-0013-8000')
+    await wrapper.get('[data-testid="cart-address"]').setValue('天津大学北洋园校区学生宿舍1号楼')
+    await wrapper.get('[data-testid="cart-checkout"]').trigger('click')
+    await flushPromises()
+
+    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      recipientPhone: '8613800138000',
+    }))
+  })
+
+  it('联系电话规范化后不足 7 位、超长或非纯数字时禁止提交', async () => {
+    getProfile.mockResolvedValue({})
+    const { wrapper } = await mountCart(AVAILABLE_CART)
+
+    await wrapper.get('.cart-drawer-bar').trigger('click')
+    await wrapper.get('[data-testid="cart-recipient"]').setValue('张同学')
+    await wrapper.get('[data-testid="cart-address"]').setValue('天津大学北洋园校区学生宿舍1号楼')
+
+    for (const phone of ['-------+', '123456', '1234567890123456', '138001380a']) {
+      await wrapper.get('[data-testid="cart-contact"]').setValue(phone)
+      expect(wrapper.get('[data-testid="cart-checkout"]').element.disabled).toBe(true)
+    }
+    expect(createOrder).not.toHaveBeenCalled()
+  })
+
+  // maxlength 若小于 EX-007 允许的写法长度，国际前缀会被静默截断成错号码。
+  it('联系电话输入上限不截断国际前缀写法', async () => {
+    const { wrapper } = await mountCart(AVAILABLE_CART)
+    await wrapper.get('.cart-drawer-bar').trigger('click')
+
+    await wrapper.get('[data-testid="cart-contact"]').setValue('+86 138-0013-8000')
+    expect(wrapper.get('[data-testid="cart-contact"]').element.value).toBe('+86 138-0013-8000')
+  })
 })

@@ -7,15 +7,18 @@ import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/api/shop', () => ({
+  getMyShop: vi.fn(),
   listMerchantProducts: vi.fn(),
   listCategories: vi.fn(),
   createProduct: vi.fn(),
   changeProductStatus: vi.fn(),
   updateProductStock: vi.fn(),
+  updateProduct: vi.fn(),
+  updateProductPrice: vi.fn(),
   deleteProduct: vi.fn(),
 }))
 
-import { changeProductStatus, createProduct, deleteProduct, listCategories, listMerchantProducts, updateProductStock } from '@/api/shop'
+import { changeProductStatus, createProduct, deleteProduct, getMyShop, listCategories, listMerchantProducts, updateProductPrice, updateProductStock } from '@/api/shop'
 import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import MerchantProducts from './MerchantProducts.vue'
@@ -32,6 +35,7 @@ const CATEGORIES = [
 async function mountProducts() {
   session.save({ token: 'mt-1', role: 'MERCHANT' })
   session.saveShop({ merchantId: 12, shopId: 7, shopName: '北洋餐厅' })
+  getMyShop.mockResolvedValue({ id: 7, shopName: '北洋餐厅' })
   listMerchantProducts.mockResolvedValue(PRODUCTS)
   listCategories.mockResolvedValue(CATEGORIES)
   const ctx = await mountView(MerchantProducts, { path: '/merchant/products' })
@@ -49,6 +53,55 @@ describe('商家商品管理', () => {
   beforeEach(() => {
     session.clear()
     vi.clearAllMocks()
+  })
+
+  // 登录接口不返回 shopId，本地缓存只在注册时写过，退出登录/401 会清掉它。
+  // 商家退出再登录后不能因此进不了商品管理。
+  it('本地没有店铺缓存时按登录身份找回店铺并加载商品', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' }) // 有登录态，但没有 takeout-shop
+    getMyShop.mockResolvedValue({ id: 7, shopName: '北洋餐厅' })
+    listMerchantProducts.mockResolvedValue(PRODUCTS)
+    listCategories.mockResolvedValue(CATEGORIES)
+
+    const { wrapper } = await mountView(MerchantProducts, { path: '/merchant/products' })
+    await flushPromises()
+
+    expect(wrapper.find('.console-missing').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="product-mgmt-item-40"]').exists()).toBe(true)
+  })
+
+  it('缓存和接口都拿不到店铺时才提示去注册', async () => {
+    session.save({ token: 'mt-1', role: 'MERCHANT' })
+    getMyShop.mockRejectedValue(new Error('未绑定店铺'))
+
+    const { wrapper } = await mountView(MerchantProducts, { path: '/merchant/products' })
+    await flushPromises()
+
+    expect(wrapper.get('.console-missing').text()).toContain('还没有店铺')
+  })
+
+  // FR-010 / EX-029：价格不接受指数形式、三位小数，也不得先舍入再接受。
+  it('改价时拒绝三位小数与指数形式，不发请求', async () => {
+    const { wrapper } = await mountProducts()
+
+    for (const bad of ['1.234', '1e-7', '0', '-1']) {
+      await wrapper.get('[data-testid="product-mgmt-price-40"]').setValue(bad)
+      await wrapper.get('[data-testid="product-mgmt-save-price-40"]').trigger('click')
+      await flushPromises()
+      expect(updateProductPrice).not.toHaveBeenCalled()
+      expect(wrapper.text()).toContain('0.01～99999999.99')
+    }
+  })
+
+  it('改价接受两位小数以内金额', async () => {
+    updateProductPrice.mockResolvedValue({ id: 40, price: 9.5 })
+    const { wrapper } = await mountProducts()
+
+    await wrapper.get('[data-testid="product-mgmt-price-40"]').setValue('9.50')
+    await wrapper.get('[data-testid="product-mgmt-save-price-40"]').trigger('click')
+    await flushPromises()
+
+    expect(updateProductPrice).toHaveBeenCalledWith(40, 9.5)
   })
 
   it('列出在售与下架的全部商品', async () => {

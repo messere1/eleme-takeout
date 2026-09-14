@@ -4,6 +4,7 @@ import {
   changeProductStatus,
   createProduct,
   deleteProduct,
+  getMyShop,
   listCategories,
   listMerchantProducts,
   updateProduct,
@@ -11,11 +12,29 @@ import {
   updateProductStock,
 } from '@/api/shop'
 import { uploadImage } from '@/api/upload'
+import { isPositiveMoney } from '@/utils/money'
 import { session } from '@/utils/session'
 
-const stored = session.loadShop()
-const shopId = stored?.shopId
-const missingShop = !shopId
+// 登录接口不返回 shopId，本地缓存（takeout-shop）只在注册成功时写过一次，
+// 而退出登录或任意 401 都会清掉它。所以不能只读缓存：缓存没了就按登录身份
+// 把「我的店铺」取回来，否则商家一旦退出再登录就进不了商品管理。
+const shopId = ref(session.loadShop()?.shopId ?? null)
+const missingShop = ref(false)
+
+async function resolveShop() {
+  try {
+    const mine = await getMyShop()
+    if (mine?.id) shopId.value = Number(mine.id)
+  } catch {
+    /* ignore：回退本地缓存 */
+  }
+  if (!shopId.value) {
+    missingShop.value = true
+    return false
+  }
+  missingShop.value = false
+  return true
+}
 
 const STATUS_TEXT = { ON_SALE: '在售', OFF_SALE: '已下架' }
 
@@ -44,10 +63,10 @@ function fmt(value) {
 }
 
 async function load(page = 1) {
-  if (missingShop) return
+  if (!shopId.value) return
   try {
     const [cats, res] = await Promise.all([
-      listCategories(shopId),
+      listCategories(shopId.value),
       listMerchantProducts({ page, size: 20 }),
     ])
     categories.value = cats || []
@@ -92,11 +111,14 @@ async function saveProduct(product) {
 
 async function savePrice(product) {
   message.value = ''
-  const price = Number(priceEdit[product.id])
-  if (!Number.isFinite(price) || price <= 0) {
-    message.value = '价格需大于 0'
+  // FR-010 / EX-029：价格必须严格校验，不接受指数形式、三位小数，也不得先舍入再接受。
+  // Number() 会放过 1.234、1e-7 这类写法，所以先按 §9.1 的金额格式判一次。
+  const raw = String(priceEdit[product.id] ?? '').trim()
+  if (!isPositiveMoney(raw)) {
+    message.value = '价格需为 0.01～99999999.99 且最多两位小数'
     return
   }
+  const price = Number(raw)
   try {
     const res = await updateProductPrice(product.id, price)
     product.price = res?.price ?? price
@@ -144,7 +166,6 @@ async function removeProduct(product) {
 async function createNew() {
   message.value = ''
   const name = form.name.trim()
-  const price = Number(form.price)
   const stock = Number(form.stock)
   const categoryId = Number(form.categoryId)
   if (!form.categoryId) {
@@ -155,17 +176,19 @@ async function createNew() {
     message.value = '请输入商品名称'
     return
   }
-  if (!Number.isFinite(price) || price <= 0) {
-    message.value = '价格需大于 0'
+  // FR-010 / EX-029：同上，先按金额格式判，不靠 Number() 的隐式转换。
+  if (!isPositiveMoney(form.price)) {
+    message.value = '价格需为 0.01～99999999.99 且最多两位小数'
     return
   }
+  const price = Number(String(form.price).trim())
   if (!Number.isInteger(stock) || stock < 0) {
     message.value = '库存需为非负整数'
     return
   }
   creating.value = true
   try {
-    const created = await createProduct(shopId, {
+    const created = await createProduct(shopId.value, {
       categoryId,
       name,
       description: '',
@@ -184,7 +207,9 @@ async function createNew() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  if (await resolveShop()) await load()
+})
 </script>
 
 <template>

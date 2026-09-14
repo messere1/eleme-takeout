@@ -77,7 +77,16 @@ async function load() {
   // 优先按登录身份获取“我的店铺”，接口不可用时回退本地缓存
   try {
     const mine = await getMyShop()
-    if (mine?.id) shopId = Number(mine.id)
+    if (mine?.id) {
+      shopId = Number(mine.id)
+      // 顺手把本地缓存补回来：登录接口不返回 shopId，而 takeout-shop 只在注册时写过、
+      // 退出登录或 401 会被清掉。不刷新的话，商家退出再登录就只剩这一个页面能用。
+      session.saveShop({
+        merchantId: mine.merchantId ?? stored?.merchantId,
+        shopId,
+        shopName: mine.shopName,
+      })
+    }
   } catch {
     /* ignore：使用缓存 shopId */
   }
