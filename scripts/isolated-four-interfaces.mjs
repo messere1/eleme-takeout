@@ -67,8 +67,8 @@ await login(customerName, 'CUSTOMER')
 const defaults = await call('public categories', 'GET', '/business-categories')
 assert(defaults.length >= 3, 'fewer than three default categories')
 tokens.MERCHANT = merchantA
-const initial = await call('GET own categories, empty', 'GET', '/merchant/shop/business-categories', { role: 'MERCHANT' })
-assert(Array.isArray(initial) && initial.length === 0, 'new merchant unexpectedly has categories')
+const initial = await call('GET own categories after registration', 'GET', '/merchant/shop/business-categories', { role: 'MERCHANT' })
+assert(Array.isArray(initial) && initial.length === 1 && initial[0].name === '快餐便当', 'registered business scope was not linked to the shop')
 await call('GET categories without token', 'GET', '/merchant/shop/business-categories', { expected: 401 })
 await call('GET categories as customer', 'GET', '/merchant/shop/business-categories', { role: 'CUSTOMER', expected: 403 })
 
@@ -86,6 +86,9 @@ await call('open merchant A shop before public filtering', 'PATCH', `/shops/${sh
 })
 const filtered = await call('filter shops by first category', 'GET', `/shops?businessCategoryId=${categoryIds[0]}`)
 assert(filtered.items.some(item => item.id === shopA.id), 'category filter omitted shop A')
+const secondaryCategoryName = defaults[1].name
+const categorySearch = await call('search shops by secondary linked category', 'GET', `/shops/search?keyword=${encodeURIComponent(secondaryCategoryName)}`)
+assert(categorySearch.items.some(item => item.id === shopA.id), 'search omitted shop linked to secondary business category')
 await call('PUT unknown category', 'PUT', '/merchant/shop/business-categories', {
   role: 'MERCHANT', body: { categoryIds: [categoryIds[0], 999999] }, expected: 400,
 })
@@ -96,7 +99,7 @@ await call('PUT categories as customer', 'PUT', '/merchant/shop/business-categor
 })
 tokens.MERCHANT = merchantB
 const otherCategories = await call('GET merchant B categories', 'GET', '/merchant/shop/business-categories', { role: 'MERCHANT' })
-assert(otherCategories.length === 0, 'merchant B can see merchant A categories')
+assert(otherCategories.length === 1 && otherCategories[0].name === '快餐便当', 'merchant B categories are not isolated from merchant A')
 
 tokens.MERCHANT = merchantA
 const changedHours = await call('PATCH own business hours', 'PATCH', `/shops/${shopA.id}/business-hours`, {
