@@ -115,11 +115,11 @@ async function pick(event) {
   background: transparent;
   gap: 0.5rem;
 }
-.upload-thumb.square { width: 56px; height: 56px; }
-.upload-thumb.wide { width: 84px; height: 56px; }
-.upload-thumb.round { width: 64px; height: 64px; border-radius: 50%; }
+.upload-thumb.square { width: 84px; height: 84px; }
+.upload-thumb.wide { width: 126px; height: 84px; }
+.upload-thumb.round { width: 96px; height: 96px; border-radius: 50%; }
 .upload-thumb.placeholder {
-  font-size: 0.7rem;
+  font-size: 1.05rem;
   text-align: center;
   padding: 0 0.25rem;
   box-sizing: border-box;

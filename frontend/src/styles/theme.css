@@ -3,6 +3,11 @@
   --brand-bg: #f4f5f7;
   --card-radius: 12px;
 
+  /* 底部 Tab 栏实际高度：.tab 上下 padding 0.5+0.55rem、图标 1.2rem、文字 0.7rem、
+     再加 1px 上边框，约 3.25rem；全面屏还要叠加安全区。浮在它上面的
+     底部常驻条和购物车卷轴都用这个变量定位，不要各写各的魔法数字。 */
+  --tabbar-height: calc(3.25rem + env(safe-area-inset-bottom, 0px));
+
   /* Element Plus */
   --el-color-primary: #ff5000;
   --el-color-primary-light-3: #ff8340;

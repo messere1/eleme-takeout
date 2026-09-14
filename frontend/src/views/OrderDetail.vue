@@ -243,26 +243,28 @@ async function submitRefund() {
   gap: 0.75rem;
 }
 .shop-thumb {
-  width: 3rem;
-  height: 3rem;
+  /* 3rem × 1.5 */
+  width: 4.5rem;
+  height: 4.5rem;
   border-radius: 10px;
   object-fit: cover;
   background: #fff4ec;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
+  font-size: 2.4rem;
 }
 .dish-thumb {
   flex-shrink: 0;
-  width: 2.6rem;
-  height: 2.6rem;
+  /* 2.6rem × 1.5 */
+  width: 3.9rem;
+  height: 3.9rem;
   border-radius: 8px;
   object-fit: cover;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
+  font-size: 2.1rem;
 }
 .contact-panel {
   background: #fff7f0;
@@ -347,9 +349,10 @@ async function submitRefund() {
     font-size: 1rem;
   }
   .dish-thumb {
-    width: 2.2rem;
-    height: 2.2rem;
-    font-size: 1.1rem;
+    /* 2.2rem × 1.5 */
+    width: 3.3rem;
+    height: 3.3rem;
+    font-size: 1.65rem;
   }
   .item-name {
     font-size: 0.92rem;

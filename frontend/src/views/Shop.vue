@@ -525,14 +525,15 @@ onMounted(async () => {
 }
 .dish-thumb {
   flex-shrink: 0;
-  width: 3.9rem;
-  height: 3.9rem;
+  /* 3.9rem × 1.5 */
+  width: 5.85rem;
+  height: 5.85rem;
   border-radius: 10px;
   object-fit: cover;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+  font-size: 3rem;
 }
 .product-info {
   flex: 1;
@@ -567,7 +568,8 @@ onMounted(async () => {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(60px + 0.4rem);
+  bottom: calc(var(--tabbar-height) + 0.4rem);
+  box-sizing: border-box;
   width: min(96%, 46rem);
   background: #2b1d00;
   color: #ffe08a;
@@ -595,13 +597,20 @@ onMounted(async () => {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 60px;
+  /* 用 Tab 栏的实际高度定位，不要写死 60px：全面屏上 Tab 栏还带安全区，
+     写死会被盖住一截（见 theme.css 的 --tabbar-height）。 */
+  bottom: var(--tabbar-height);
+  /* 关键：默认 content-box 下 width:100% 还要再加 padding，手机上会横向溢出、右边被切掉 */
+  box-sizing: border-box;
   width: min(100%, 48rem);
-  max-height: 66vh;
+  /* 移动端地址栏伸缩会让 vh 跳动，dvh 更稳；不支持 dvh 的浏览器用上一行兜底 */
+  max-height: min(66vh, 32rem);
+  max-height: min(66dvh, 32rem);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: #fff;
   border-radius: 18px 18px 0 0;
-  padding: 1rem 1.2rem 1.2rem;
+  padding: 1rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.14);
   z-index: 26;
   display: flex;
