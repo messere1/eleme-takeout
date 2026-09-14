@@ -37,26 +37,26 @@ onMounted(refresh)
     <p v-if="error" data-testid="admin-error" class="admin-error">{{ error }}</p>
     <p v-if="!loading&&!error&&!rows.length" data-testid="admin-empty">暂无数据</p>
     <table v-if="tab === 'users' && rows.length" class="admin-table">
-      <thead><tr><th>ID</th><th>用户名</th><th>手机号</th><th>昵称</th></tr></thead>
+      <thead><tr><th>ID</th><th>用户名</th><th>手机号</th><th>昵称</th><th>操作</th></tr></thead>
       <tbody>
-        <tr v-for="u in rows" :key="u.id"><td>{{u.id}}</td><td>{{u.username}}</td><td>{{mask(u.phone)}}</td><td>{{u.nickname}}</td><td><button @click="toggle(u,'users')">{{u.enabled===false?'启用':'禁用'}}</button></td></tr>
+        <tr v-for="u in rows" :key="u.id"><td data-label="ID">{{u.id}}</td><td data-label="用户名">{{u.username}}</td><td data-label="手机号">{{mask(u.phone)}}</td><td data-label="昵称">{{u.nickname}}</td><td data-label="操作"><button @click="toggle(u,'users')">{{u.enabled===false?'启用':'禁用'}}</button></td></tr>
       </tbody>
     </table>
     <table v-else-if="tab === 'merchants' && rows.length" class="admin-table">
-      <thead><tr><th>ID</th><th>商家名称</th><th>手机号</th><th>经营范围</th></tr></thead>
+      <thead><tr><th>ID</th><th>商家名称</th><th>手机号</th><th>经营范围</th><th>操作</th></tr></thead>
       <tbody>
-        <tr v-for="m in rows" :key="m.id"><td>{{m.id}}</td><td>{{m.merchantName}}</td><td>{{mask(m.phone)}}</td><td>{{m.businessScope}}</td><td><button @click="toggle(m,'merchants')">{{m.enabled===false?'启用':'禁用'}}</button></td></tr>
+        <tr v-for="m in rows" :key="m.id"><td data-label="ID">{{m.id}}</td><td data-label="商家名称">{{m.merchantName}}</td><td data-label="手机号">{{mask(m.phone)}}</td><td data-label="经营范围">{{m.businessScope}}</td><td data-label="操作"><button @click="toggle(m,'merchants')">{{m.enabled===false?'启用':'禁用'}}</button></td></tr>
       </tbody>
     </table>
-    <table v-else-if="tab==='products'&&rows.length" class="admin-table"><tbody><tr v-for="p in rows" :key="p.id"><td>{{p.id}}</td><td>{{p.name}}</td><td>{{p.status}}</td><td><button @click="setAdminStatus('products',p.id,p.status==='ON_SALE'?'OFF_SALE':'ON_SALE').then(refresh)">切换上下架</button></td></tr></tbody></table>
+    <table v-else-if="tab==='products'&&rows.length" class="admin-table"><tbody><tr v-for="p in rows" :key="p.id"><td data-label="ID">{{p.id}}</td><td data-label="商品">{{p.name}}</td><td data-label="状态">{{p.status}}</td><td data-label="操作"><button @click="setAdminStatus('products',p.id,p.status==='ON_SALE'?'OFF_SALE':'ON_SALE').then(refresh)">切换上下架</button></td></tr></tbody></table>
     <table v-else-if="tab==='orders'&&rows.length" class="admin-table">
       <thead><tr><th>订单号</th><th>订单状态</th><th>支付状态</th><th>改为</th><th>操作</th></tr></thead>
       <tbody>
         <tr v-for="o in rows" :key="o.id">
-          <td>{{o.orderNo}}</td>
-          <td :data-testid="`admin-order-status-${o.id}`">{{ORDER_STATUS_TEXT[o.status]||o.status}}</td>
-          <td>{{o.paymentStatus}}</td>
-          <td>
+          <td data-label="订单号">{{o.orderNo}}</td>
+          <td data-label="订单状态" :data-testid="`admin-order-status-${o.id}`">{{ORDER_STATUS_TEXT[o.status]||o.status}}</td>
+          <td data-label="支付状态">{{o.paymentStatus}}</td>
+          <td data-label="改为">
             <select
               class="status-select"
               :value="orderDraft[o.id]||o.status"
@@ -65,7 +65,7 @@ onMounted(refresh)
               <option v-for="s in ORDER_STATUS" :key="s" :value="s">{{ORDER_STATUS_TEXT[s]}}</option>
             </select>
           </td>
-          <td>
+          <td data-label="操作">
             <button
               :data-testid="`admin-order-set-${o.id}`"
               :disabled="(orderDraft[o.id]||o.status)===o.status||orderSaving[o.id]"
@@ -75,7 +75,7 @@ onMounted(refresh)
         </tr>
       </tbody>
     </table>
-    <table v-else-if="tab==='refunds'&&rows.length" class="admin-table"><tbody><tr v-for="r in rows" :key="r.id"><td>{{r.orderId}}</td><td>{{r.amount}}</td><td>{{r.reason}}</td><td>{{r.status}}</td><td><button v-if="r.status==='PENDING'" @click="decide(r,'APPROVED')">批准</button><button v-if="r.status==='PENDING'" @click="decide(r,'REJECTED')">拒绝</button></td></tr></tbody></table>
+    <table v-else-if="tab==='refunds'&&rows.length" class="admin-table"><tbody><tr v-for="r in rows" :key="r.id"><td data-label="订单ID">{{r.orderId}}</td><td data-label="金额">{{r.amount}}</td><td data-label="原因">{{r.reason}}</td><td data-label="状态">{{r.status}}</td><td data-label="操作"><button v-if="r.status==='PENDING'" @click="decide(r,'APPROVED')">批准</button><button v-if="r.status==='PENDING'" @click="decide(r,'REJECTED')">拒绝</button></td></tr></tbody></table>
   </section>
 </template>
 
@@ -98,4 +98,15 @@ onMounted(refresh)
 .admin-table th, .admin-table td { border: 1px solid #eee; padding: 0.5rem 0.75rem; text-align: left; }
 .admin-table th { background: #fafafa; }
 .status-select { border: 1px solid #eee; border-radius: 6px; padding: 0.3rem 0.5rem; background: #fff; color: #444; }
+@media (max-width: 520px) {
+  .admin { padding: 1rem; }
+  .tabs { flex-wrap: wrap; }
+  .admin-table, .admin-table tbody { display: block; width: 100%; }
+  .admin-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .admin-table tr { display: block; border: 1px solid #eee; border-radius: 8px; margin-bottom: 0.75rem; }
+  .admin-table td { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.5rem; border: 0; border-bottom: 1px solid #eee; min-width: 0; overflow-wrap: anywhere; }
+  .admin-table td:last-child { border-bottom: 0; }
+  .admin-table td::before { content: attr(data-label); color: #666; font-weight: 600; }
+  .admin-table td button, .status-select { max-width: 100%; }
+}
 </style>
