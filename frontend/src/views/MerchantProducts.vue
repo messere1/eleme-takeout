@@ -4,6 +4,7 @@ import {
   changeProductStatus,
   createProduct,
   deleteProduct,
+  getMyShop,
   listCategories,
   listMerchantProducts,
   updateProduct,
@@ -11,11 +12,10 @@ import {
   updateProductStock,
 } from '@/api/shop'
 import { uploadImage } from '@/api/upload'
-import { session } from '@/utils/session'
 
-const stored = session.loadShop()
-const shopId = stored?.shopId
-const missingShop = !shopId
+const shopId = ref(null)
+const missingShop = ref(false)
+const loadingShop = ref(true)
 
 const STATUS_TEXT = { ON_SALE: '在售', OFF_SALE: '已下架' }
 
@@ -44,10 +44,16 @@ function fmt(value) {
 }
 
 async function load(page = 1) {
-  if (missingShop) return
   try {
+    const mine = await getMyShop()
+    shopId.value = mine?.id ? Number(mine.id) : null
+    if (!shopId.value) {
+      missingShop.value = true
+      return
+    }
+    missingShop.value = false
     const [cats, res] = await Promise.all([
-      listCategories(shopId),
+      listCategories(shopId.value),
       listMerchantProducts({ page, size: 20 }),
     ])
     categories.value = cats || []
@@ -65,6 +71,8 @@ async function load(page = 1) {
     })
   } catch (error) {
     message.value = error?.message || '商品加载失败，请稍后重试'
+  } finally {
+    loadingShop.value = false
   }
 }
 
@@ -165,7 +173,7 @@ async function createNew() {
   }
   creating.value = true
   try {
-    const created = await createProduct(shopId, {
+    const created = await createProduct(shopId.value, {
       categoryId,
       name,
       description: '',
@@ -190,7 +198,8 @@ onMounted(load)
 <template>
   <section class="console">
     <h2>商品管理</h2>
-    <p v-if="missingShop" class="console-missing">
+    <p v-if="loadingShop">店铺加载中…</p>
+    <p v-else-if="missingShop" class="console-missing">
       还没有店铺？<RouterLink to="/register">去注册开店</RouterLink>，或
       <RouterLink to="/login">用账号登录</RouterLink>。
     </p>
