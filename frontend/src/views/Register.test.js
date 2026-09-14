@@ -1,21 +1,25 @@
 // @vitest-environment jsdom
-// 注册页（顾客/商家统一角色化 + 注册后自动登录）红灯基线。
+// 注册页（顾客/商家/骑手统一角色化 + 注册后自动登录）红灯基线。
 // 页面须提供 data-testid：register-role / register-username / register-merchant-name /
-// register-phone / register-password / register-scope / register-submit / register-error。
+// register-rider-name / register-phone / register-password / register-scope /
+// register-submit / register-error。
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/api/auth', () => ({ register: vi.fn(), login: vi.fn() }))
 vi.mock('@/api/merchant', () => ({ registerMerchant: vi.fn(), listBusinessCategories: vi.fn().mockResolvedValue([]) }))
+vi.mock('@/api/rider', () => ({ registerRider: vi.fn() }))
 
 import { login, register } from '@/api/auth'
 import { registerMerchant } from '@/api/merchant'
+import { registerRider } from '@/api/rider'
 import { session } from '@/utils/session'
 import { mountView } from '@/test/mountView'
 import Register from './Register.vue'
 
 const CUSTOMER = { username: 'beiyang_user', phone: '13800138000', password: 'abc123' }
 const MERCHANT = { merchantName: '北洋餐厅', phone: '13900139000', password: 'abc123', businessScope: '中式快餐', shopAddress: '天津大学北洋园校区' }
+const RIDER = { riderName: '李骑手', phone: '13700137000', password: 'abc123' }
 
 async function mountRegister() {
   return mountView(Register, { path: '/register' })
@@ -92,6 +96,63 @@ describe('注册页（角色化）', () => {
     expect(session.loadShop()?.shopId).toBe(7)
     expect(session.load()?.role).toBe('MERCHANT')
     expect(router.currentRoute.value.path).toBe('/merchant')
+  })
+
+  it('切换骑手角色后展示骑手专属字段，不展示商家字段', async () => {
+    const { wrapper } = await mountRegister()
+    await wrapper.get('[data-testid="register-role"]').setValue('RIDER')
+
+    expect(wrapper.get('[data-testid="register-rider-name"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="register-username"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="register-merchant-name"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="register-scope"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="register-shop-address"]').exists()).toBe(false)
+  })
+
+  // 骑手此前漏了 HOME_BY_ROLE 映射，注册成功会落到首页、再被路由守卫弹回登录页。
+  it('骑手注册成功自动登录并进入骑手工作台', async () => {
+    registerRider.mockResolvedValue({ id: 3, riderName: '李骑手', phone: RIDER.phone, enabled: true })
+    login.mockResolvedValue({ token: 'rd-1', role: 'RIDER', expiresIn: 7200 })
+    const { wrapper, router } = await mountRegister()
+
+    await wrapper.get('[data-testid="register-role"]').setValue('RIDER')
+    await setField(wrapper, 'register-rider-name', RIDER.riderName)
+    await setField(wrapper, 'register-phone', RIDER.phone)
+    await setField(wrapper, 'register-password', RIDER.password)
+    await submit(wrapper)
+
+    expect(registerRider).toHaveBeenCalledWith(RIDER)
+    expect(login).toHaveBeenCalledWith({
+      account: RIDER.phone,
+      password: RIDER.password,
+      role: 'RIDER',
+    })
+    expect(session.load()?.role).toBe('RIDER')
+    expect(router.currentRoute.value.path).toBe('/rider')
+  })
+
+  it('骑手姓名为空时不调用注册接口', async () => {
+    const { wrapper } = await mountRegister()
+    await wrapper.get('[data-testid="register-role"]').setValue('RIDER')
+    await setField(wrapper, 'register-phone', RIDER.phone)
+    await setField(wrapper, 'register-password', RIDER.password)
+    await submit(wrapper)
+
+    expect(registerRider).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-testid="register-error"]').text()).toContain('骑手姓名')
+  })
+
+  // 手机号被占用时后端返回 409，页面要把原因展示出来
+  it('骑手注册失败时展示后端原因', async () => {
+    registerRider.mockRejectedValue(new Error('手机号已被注册'))
+    const { wrapper } = await mountRegister()
+    await wrapper.get('[data-testid="register-role"]').setValue('RIDER')
+    await setField(wrapper, 'register-rider-name', RIDER.riderName)
+    await setField(wrapper, 'register-phone', RIDER.phone)
+    await setField(wrapper, 'register-password', RIDER.password)
+    await submit(wrapper)
+
+    expect(wrapper.get('[data-testid="register-error"]').text()).toContain('手机号已被注册')
   })
 
   it('顾客手机号格式不合法时不调用注册接口并提示', async () => {

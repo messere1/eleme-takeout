@@ -9,7 +9,7 @@ export const http = axios.create({
 })
 
 // 登录/注册等公开接口自身的错误要在页面上展示，不应触发全局跳登录。
-const PUBLIC_PATHS = ['/auth/login', '/users', '/merchants']
+const PUBLIC_PATHS = ['/auth/login', '/users', '/merchants', '/riders']
 
 // 统一业务错误体：页面只读 message/code/data.fieldErrors。
 export class ApiError extends Error {

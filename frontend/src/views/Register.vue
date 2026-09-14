@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { login as apiLogin, register as apiRegister } from '@/api/auth'
 import { registerMerchant, listBusinessCategories } from '@/api/merchant'
+import { registerRider } from '@/api/rider'
 import { session } from '@/utils/session'
 
 const router = useRouter()
@@ -14,6 +15,7 @@ const form = reactive({
   role: 'CUSTOMER',
   username: '',
   merchantName: '',
+  riderName: '',
   phone: '',
   password: '',
   businessScope: '',
@@ -29,6 +31,9 @@ function invalidMessage() {
   if (form.role === 'CUSTOMER') {
     const username = form.username.trim()
     if (username.length < 3 || username.length > 30) return '用户名需 3~30 个字符'
+  } else if (form.role === 'RIDER') {
+    const name = form.riderName.trim()
+    if (!name || name.length > 50) return '请输入骑手姓名（最多 50 字）'
   } else {
     const name = form.merchantName.trim()
     if (!name || name.length > 50) return '请输入商家名称（最多 50 字）'
@@ -38,11 +43,15 @@ function invalidMessage() {
   return ''
 }
 
+// 注册成功后按角色进对应工作区。骑手此前漏了，会落到首页然后被路由守卫弹回登录页。
+const HOME_BY_ROLE = { MERCHANT: '/merchant', ADMIN: '/admin', RIDER: '/rider' }
+const CARD_EMOJI = { CUSTOMER: '🍜', MERCHANT: '🏪', RIDER: '🛵' }
+
 async function autoLogin(phone, password, role) {
   const data = await apiLogin({ account: phone, password, role })
   const finalRole = data.role || role
   session.save({ token: data.token, role: finalRole })
-  router.push(finalRole === 'MERCHANT' ? '/merchant' : finalRole === 'ADMIN' ? '/admin' : '/')
+  router.push(HOME_BY_ROLE[finalRole] || '/')
 }
 
 async function submit() {
@@ -59,6 +68,8 @@ async function submit() {
   try {
     if (form.role === 'CUSTOMER') {
       await apiRegister({ username: form.username.trim(), phone, password })
+    } else if (form.role === 'RIDER') {
+      await registerRider({ riderName: form.riderName.trim(), phone, password })
     } else {
       const data = await registerMerchant({
         merchantName: form.merchantName.trim(),
@@ -94,7 +105,7 @@ onMounted(async () => {
   <div class="auth-page">
     <section class="auth-card">
       <header class="card-head">
-        <span class="card-emoji">{{ form.role === 'MERCHANT' ? '🏪' : '🍜' }}</span>
+        <span class="card-emoji">{{ CARD_EMOJI[form.role] || '🍜' }}</span>
         <h2>注册</h2>
         <p class="card-tip">注册成功后将自动登录</p>
       </header>
@@ -109,6 +120,7 @@ onMounted(async () => {
         >
           <option value="CUSTOMER">我是顾客</option>
           <option value="MERCHANT">我是商家</option>
+          <option value="RIDER">我是骑手</option>
         </select>
       </div>
 
@@ -122,6 +134,19 @@ onMounted(async () => {
             class="auth-input"
             placeholder="3~30 个字符"
             maxlength="30"
+          />
+        </div>
+      </template>
+      <template v-else-if="form.role === 'RIDER'">
+        <div class="field">
+          <label for="register-rider-name">骑手姓名</label>
+          <el-input
+            id="register-rider-name"
+            v-model="form.riderName"
+            data-testid="register-rider-name"
+            class="auth-input"
+            placeholder="最多 50 字"
+            maxlength="50"
           />
         </div>
       </template>
