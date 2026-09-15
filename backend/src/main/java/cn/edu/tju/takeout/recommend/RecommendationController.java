@@ -25,6 +25,12 @@ public class RecommendationController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "6") Integer limit) {
         return ApiResponse.success(recommendationService.recommendShops(
-                principal == null ? null : principal.userId(), limit));
+                customerId(principal), limit));
+    }
+
+    private static Long customerId(UserPrincipal principal) {
+        return principal != null && "CUSTOMER".equals(principal.role())
+                ? principal.userId()
+                : null;
     }
 }

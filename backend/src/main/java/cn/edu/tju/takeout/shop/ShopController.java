@@ -48,7 +48,10 @@ public class ShopController {
         // 记在它前面的话，非法请求也会把关键词写进历史（推荐算法的偏好信号）。
         ShopPage result = shopService.searchShops(page, size, keyword);
         // 该接口对游客开放，登录用户的关键词才记入历史
-        searchHistoryService.record(principal == null ? null : principal.userId(), keyword);
+        Long customerId = customerId(principal);
+        if (customerId != null) {
+            searchHistoryService.record(customerId, keyword);
+        }
         return ApiResponse.success(result);
     }
 
@@ -76,7 +79,7 @@ public class ShopController {
         ShopPage result = shopService.listShops(page, size, businessScope, businessCategoryId);
         // 登录顾客看到的是按偏好重排过的顺序；游客和没有历史的顾客维持原顺序
         return ApiResponse.success(recommendationService.reorderByPreference(
-                principal == null ? null : principal.userId(), result));
+                customerId(principal), result));
     }
 
     @PatchMapping("/{shopId}/business-hours")
@@ -91,5 +94,11 @@ public class ShopController {
                     request          
                 )
             );
-        }
+    }
+
+    private static Long customerId(UserPrincipal principal) {
+        return principal != null && "CUSTOMER".equals(principal.role())
+                ? principal.userId()
+                : null;
+    }
 }
