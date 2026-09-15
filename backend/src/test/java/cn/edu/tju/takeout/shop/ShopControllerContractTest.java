@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import cn.edu.tju.takeout.auth.UserPrincipal;
@@ -59,6 +60,33 @@ class ShopControllerContractTest {
                 .isInstanceOf(IllegalStateException.class);
 
         verify(history, never()).record(any(), any());
+    }
+
+    @Test
+    void nonCustomerSearchDoesNotWriteAnotherUsersHistory() {
+        cn.edu.tju.takeout.recommend.SearchHistoryService history =
+                mock(cn.edu.tju.takeout.recommend.SearchHistoryService.class);
+        when(service.searchShops(1, 20, "简餐"))
+                .thenReturn(new ShopPage(List.of(), 1, 20, 0, 0));
+
+        controller(history).searchShops(merchant, 1, 20, "简餐");
+
+        verifyNoInteractions(history);
+    }
+
+    @Test
+    void nonCustomerShopListDoesNotReadAnotherUsersPreferences() {
+        cn.edu.tju.takeout.recommend.RecommendationService recommendations =
+                mock(cn.edu.tju.takeout.recommend.RecommendationService.class);
+        ShopPage page = new ShopPage(List.of(), 1, 20, 0, 0);
+        when(service.listShops(1, 20, null, null)).thenReturn(page);
+        when(recommendations.reorderByPreference(null, page)).thenReturn(page);
+        ShopController subject = new ShopController(
+                service, mock(cn.edu.tju.takeout.recommend.SearchHistoryService.class), recommendations);
+
+        assertThat(subject.listShops(merchant, 1, 20, null, null).data()).isEqualTo(page);
+
+        verify(recommendations).reorderByPreference(null, page);
     }
 
     private ShopController controller(cn.edu.tju.takeout.recommend.SearchHistoryService history) {

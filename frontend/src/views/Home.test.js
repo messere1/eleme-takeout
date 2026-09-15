@@ -66,6 +66,33 @@ describe('首页店铺流（分页）', () => {
     expect(listRecommendedShops).toHaveBeenCalledWith(10)
   })
 
+  it('点击推荐店铺卡片进入对应店铺详情', async () => {
+    listRecommendedShops.mockResolvedValue([SHOP_B])
+
+    const { wrapper, router } = await mountHome()
+    await wrapper.get('[data-testid="home-recommend-2"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/shops/2')
+  })
+
+  it('推荐卷轴尚未到末端时接管纵向滚轮并横向滚动', async () => {
+    listRecommendedShops.mockResolvedValue([SHOP_A, SHOP_B])
+
+    const ctx = await mountHome()
+    const row = ctx.wrapper.get('.recommend-row').element
+    Object.defineProperty(row, 'clientWidth', { value: 100, configurable: true })
+    Object.defineProperty(row, 'scrollWidth', { value: 400, configurable: true })
+    row.scrollLeft = 0
+
+    const event = new Event('wheel', { cancelable: true })
+    event.deltaY = 80
+    row.dispatchEvent(event)
+
+    expect(row.scrollLeft).toBe(80)
+    expect(event.defaultPrevented).toBe(true)
+  })
+
   it('推荐位复用频道的横向滚轮逻辑，滚到自己两端就把滚动交回页面', async () => {
     listRecommendedShops.mockResolvedValue([SHOP_A, SHOP_B])
 

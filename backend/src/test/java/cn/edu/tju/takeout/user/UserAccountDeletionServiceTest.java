@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import cn.edu.tju.takeout.common.BusinessException;
 import cn.edu.tju.takeout.order.OrderMapper;
+import cn.edu.tju.takeout.recommend.SearchHistoryMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,9 +21,10 @@ class UserAccountDeletionServiceTest {
     @Mock private UserMapper users;
     @Mock private PasswordEncoder passwords;
     @Mock private OrderMapper orders;
+    @Mock private SearchHistoryMapper searchHistory;
     private UserService service;
 
-    @BeforeEach void setUp() { service = new UserService(users, passwords, orders); }
+    @BeforeEach void setUp() { service = new UserService(users, passwords, orders, searchHistory); }
 
     @Test void activeOrderPreventsDeletion() {
         when(orders.countActiveByUser(7L)).thenReturn(1L);
@@ -38,6 +40,7 @@ class UserAccountDeletionServiceTest {
         when(users.softDelete(7L)).thenReturn(1);
         assertThatCode(() -> service.deleteAccount(7L)).doesNotThrowAnyException();
         verify(users).softDelete(7L);
+        verify(searchHistory).deleteByUserId(7L);
     }
 
     @Test void repeatedDeletionReturnsNotFound() {
@@ -47,5 +50,6 @@ class UserAccountDeletionServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(error -> ((BusinessException) error).code())
                 .isEqualTo("RESOURCE_NOT_FOUND");
+        verify(searchHistory, never()).deleteByUserId(7L);
     }
 }

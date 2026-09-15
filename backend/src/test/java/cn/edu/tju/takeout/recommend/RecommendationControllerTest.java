@@ -1,6 +1,7 @@
 package cn.edu.tju.takeout.recommend;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -51,6 +52,29 @@ class RecommendationControllerTest {
                 .andExpect(jsonPath("$.data").isEmpty());
 
         verify(service).recommendShops(7L, 3);
+    }
+
+    /** 商家、管理员和骑手不能借公开推荐接口读取同编号顾客的个人偏好。 */
+    @Test
+    void nonCustomerPrincipalIsServedOnlyPopularityRecommendations() throws Exception {
+        when(service.recommendShops(null, 6)).thenReturn(List.of());
+
+        mvc.perform(get("/api/v1/recommendations/shops")
+                        .principal(authentication(new UserPrincipal(7L, "MERCHANT"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isEmpty());
+
+        verify(service).recommendShops(null, 6);
+    }
+
+    @Test
+    void nonNumericLimitReturnsTraceableBadRequestWithoutCallingService() throws Exception {
+        mvc.perform(get("/api/v1/recommendations/shops").param("limit", "six"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+
+        verifyNoInteractions(service);
     }
 
     private static MockMvc mvc(RecommendationService service) {
