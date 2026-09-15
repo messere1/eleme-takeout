@@ -84,6 +84,10 @@ assert(repeated.length === 3, 'repeated PUT created duplicates')
 await call('open merchant A shop before public filtering', 'PATCH', `/shops/${shopA.id}/status`, {
   role: 'MERCHANT', body: { status: 'OPEN' },
 })
+const recommended = await call('guest recommendation list', 'GET', '/recommendations/shops?limit=6')
+assert(recommended.some(shop => shop.id === shopA.id), 'open shop missing from guest recommendations')
+assert(recommended.every(shop => shop.status === 'OPEN'), 'recommendations exposed a non-open shop')
+await call('invalid recommendation limit', 'GET', '/recommendations/shops?limit=six', { expected: 400 })
 const filtered = await call('filter shops by first category', 'GET', `/shops?businessCategoryId=${categoryIds[0]}`)
 assert(filtered.items.some(item => item.id === shopA.id), 'category filter omitted shop A')
 const secondaryCategoryName = defaults[1].name

@@ -58,6 +58,8 @@ const file = { name: 'fixture.png', mimeType: 'image/png', buffer: png }
 
 try {
   await page.goto(base, { waitUntil: 'networkidle' })
+  await page.locator(`[data-testid="home-recommend-${shop.id}"]`).waitFor()
+  checks.push('guest recommendation endpoint renders an open shop on home')
   await page.locator(`[data-testid="home-category-${secondary.id}"]`).click()
   await page.locator(`[data-testid="home-shop-${shop.id}"]`).waitFor()
   checks.push('home secondary category filters a multiply linked shop')
