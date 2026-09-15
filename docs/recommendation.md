@@ -201,15 +201,18 @@ score(s) = 3.0 · A_shop(s)                                          复购
 | 测试类 | 覆盖内容 |
 | --- | --- |
 | `RecommendationServiceTest` | 复购/品类/关键词各自的排序效果、时间衰减、冷启动退回热度、无历史时不改动顺序、`limit` 边界、前 N 条稳定前缀、分页元数据透传、关键词按店去重与大小写不敏感、按店名/经营范围命中、取消降权、退款排除、营业时间过滤 |
-| `Home.test.js` | 推荐位渲染、无推荐时不显示整块、推荐接口失败不影响主流程 |
+| `Home.test.js` | 17项首页测试；覆盖推荐位渲染、图片/占位图、卡片跳转、滚动接力、空结果及接口失败不影响主流程 |
 | `ShopRecallServiceTest` | 四路召回合并、退款店剔除、页内收敛、兜底补齐的触发与跳过 |
 | `RecommendationRerankTest` | 品类打散、复购后插探索位、约束冲突时放宽、无品类店不误判、单店透传 |
 | `ShopOpenHoursTest` | `Shop.isOpenAt` 的边界：未配置营业时间、起止相同、闭店端点、跨零点窗口。下单链路和推荐共用这个方法，而写入侧测试没覆盖判定本身 |
 | `MealPeriodTest` | 餐段边界逐小时、品类匹配、自建品类与 null 的中性处理 |
 | `SearchHistoryServiceTest` | 游客不记、空白不记、去空格、超长截断、连续重复去重、间隔后可重复记录 |
-| `RecommendationControllerTest` | 游客按热度取推荐、登录顾客按自身 `userId` 取推荐 |
-| `ShopControllerContractTest` | 搜索成功后记录关键词、搜索被拒时不记录 |
+| `RecommendationControllerTest` | 游客按热度取推荐、顾客按本人 `userId` 取推荐、非顾客角色不得读取顾客偏好、非数字 `limit` 返回安全400 |
+| `ShopControllerContractTest` | 搜索成功后记录关键词、搜索被拒时不记录、非顾客不得写搜索历史或读取顾客偏好 |
+| `UserAccountDeletionServiceTest` | 注销受进行中订单约束；注销成功清除搜索历史，失败或重复注销不误删历史 |
 | `RecommendationMapperIntegrationTest` | 连真实库跑注解 SQL：候选店铺排除关店与停用商家、商品名排除下架与已删除、品类按店铺过滤、热度口径、三路召回查询、负反馈聚合 |
+
+此外，`scripts/isolated-four-interfaces.mjs` 在独立H2实例验证游客推荐及非法 `limit`，`frontend/scripts/isolated-browser-storefront.mjs` 在Edge和Chrome中验证首页推荐卡由真实接口返回并可正常渲染。
 
 除 `RecommendationMapperIntegrationTest` 外都是纯逻辑测试，用 Mockito 桩替 Mapper。集成测试是必要的补充：SQL 全写在注解里，纯逻辑测试把它们整个桩掉，拼错列名或 `<foreach>` 写坏都不会被发现。
 
