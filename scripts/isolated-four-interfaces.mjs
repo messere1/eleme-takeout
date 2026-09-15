@@ -115,11 +115,15 @@ const changedHours = await call('PATCH own business hours', 'PATCH', `/shops/${s
   role: 'MERCHANT', body: { openingTime: '08:00', closingTime: '21:00' },
 })
 assert(changedHours.openingTime?.startsWith('08:00') && changedHours.closingTime?.startsWith('21:00'), 'saved hours mismatch')
-await call('PATCH invalid business hours', 'PATCH', `/shops/${shopA.id}/business-hours`, {
-  role: 'MERCHANT', body: { openingTime: '21:00', closingTime: '08:00' }, expected: 400,
+const overnightHours = await call('PATCH overnight business hours', 'PATCH', `/shops/${shopA.id}/business-hours`, {
+  role: 'MERCHANT', body: { openingTime: '22:00', closingTime: '02:00' },
+})
+assert(overnightHours.openingTime?.startsWith('22:00') && overnightHours.closingTime?.startsWith('02:00'), 'overnight hours mismatch')
+await call('PATCH zero-length business hours', 'PATCH', `/shops/${shopA.id}/business-hours`, {
+  role: 'MERCHANT', body: { openingTime: '21:00', closingTime: '21:00' }, expected: 400,
 })
 const afterHoursError = await call('GET shop after invalid hours', 'GET', `/shops/${shopA.id}`)
-assert(afterHoursError.openingTime?.startsWith('08:00'), 'invalid hours changed shop A')
+assert(afterHoursError.openingTime?.startsWith('22:00'), 'invalid hours changed shop A')
 await call('PATCH other merchant shop', 'PATCH', `/shops/${shopB.id}/business-hours`, {
   role: 'MERCHANT', body: { openingTime: '08:00', closingTime: '21:00' }, expected: 403,
 })
