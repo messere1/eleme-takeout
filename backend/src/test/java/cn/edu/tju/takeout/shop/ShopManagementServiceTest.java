@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cn.edu.tju.takeout.common.BusinessException;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,6 +104,33 @@ class ShopManagementServiceTest {
                 .isEqualTo("VALIDATION_ERROR");
 
         assertThatThrownBy(() -> shopService.searchShops(1, 101, "简餐"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(error -> ((BusinessException) error).code())
+                .isEqualTo("VALIDATION_ERROR");
+    }
+
+    @Test
+    void ownerCanSetBusinessHoursAcrossMidnight() {
+        Shop shop = shop(20L, 12L);
+        when(shopMapper.findById(20L)).thenReturn(Optional.of(shop));
+        when(shopMapper.updateBusinessHours(20L, LocalTime.of(22, 0), LocalTime.of(2, 0)))
+                .thenReturn(1);
+
+        ShopView result = shopService.updateBusinessHours(12L, 20L,
+                new ShopBusinessHoursRequest(LocalTime.of(22, 0), LocalTime.of(2, 0)));
+
+        assertThat(result.openingTime()).isEqualTo(LocalTime.of(22, 0));
+        assertThat(result.closingTime()).isEqualTo(LocalTime.of(2, 0));
+        verify(shopMapper).updateBusinessHours(20L, LocalTime.of(22, 0), LocalTime.of(2, 0));
+    }
+
+    @Test
+    void businessHoursRejectZeroLengthInterval() {
+        Shop shop = shop(20L, 12L);
+        when(shopMapper.findById(20L)).thenReturn(Optional.of(shop));
+
+        assertThatThrownBy(() -> shopService.updateBusinessHours(12L, 20L,
+                new ShopBusinessHoursRequest(LocalTime.NOON, LocalTime.NOON)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(error -> ((BusinessException) error).code())
                 .isEqualTo("VALIDATION_ERROR");
