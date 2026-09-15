@@ -190,11 +190,11 @@ public class ShopService {
             );
         }
 
-        if (!request.closingTime().isAfter(request.openingTime())) {
+        if (request.closingTime().equals(request.openingTime())) {
             throw new BusinessException(
                     HttpStatus.BAD_REQUEST,
                     "VALIDATION_ERROR",
-                    "结束营业时间必须晚于开始营业时间"
+                    "营业开始与结束时间不能相同"
             );
         }
 

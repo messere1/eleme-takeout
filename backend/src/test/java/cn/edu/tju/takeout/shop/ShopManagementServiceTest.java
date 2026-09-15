@@ -136,6 +136,24 @@ class ShopManagementServiceTest {
                 .isEqualTo("VALIDATION_ERROR");
     }
 
+    @Test
+    void businessHoursUseInclusiveOpeningAndExclusiveClosingBoundaries() {
+        Shop daytime = shop(20L, 12L);
+        daytime.updateBusinessHours(LocalTime.of(8, 0), LocalTime.of(21, 0));
+        assertThat(daytime.isOpenAt(LocalTime.of(7, 59))).isFalse();
+        assertThat(daytime.isOpenAt(LocalTime.of(8, 0))).isTrue();
+        assertThat(daytime.isOpenAt(LocalTime.of(20, 59))).isTrue();
+        assertThat(daytime.isOpenAt(LocalTime.of(21, 0))).isFalse();
+
+        Shop overnight = shop(21L, 12L);
+        overnight.updateBusinessHours(LocalTime.of(22, 0), LocalTime.of(2, 0));
+        assertThat(overnight.isOpenAt(LocalTime.of(21, 59))).isFalse();
+        assertThat(overnight.isOpenAt(LocalTime.of(22, 0))).isTrue();
+        assertThat(overnight.isOpenAt(LocalTime.MIDNIGHT)).isTrue();
+        assertThat(overnight.isOpenAt(LocalTime.of(1, 59))).isTrue();
+        assertThat(overnight.isOpenAt(LocalTime.of(2, 0))).isFalse();
+    }
+
     private static Shop shop(Long id, Long merchantId) {
         Shop shop = Shop.initiallyClosed(merchantId, "北洋餐厅");
         shop.setId(id);

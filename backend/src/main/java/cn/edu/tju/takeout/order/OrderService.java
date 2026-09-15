@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.scheduling.annotation.Scheduled;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 
 @Service
@@ -100,6 +101,13 @@ public class OrderService {
                     HttpStatus.CONFLICT,
                     "BUSINESS_CONFLICT",
                     "店铺未营业"
+            );
+        }
+        if (!shop.isOpenAt(LocalTime.now())) {
+            throw new BusinessException(
+                    HttpStatus.CONFLICT,
+                    "BUSINESS_CONFLICT",
+                    "当前不在店铺营业时间内"
             );
         }
 

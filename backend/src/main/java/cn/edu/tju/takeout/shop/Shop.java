@@ -43,4 +43,12 @@ public class Shop {
         this.openingTime=openingTime;
         this.closingTime=closingTime;
     }
+    public boolean isOpenAt(LocalTime time) {
+        if (openingTime == null || closingTime == null) return true;
+        if (openingTime.equals(closingTime)) return false;
+        if (closingTime.isAfter(openingTime)) {
+            return !time.isBefore(openingTime) && time.isBefore(closingTime);
+        }
+        return !time.isBefore(openingTime) || time.isBefore(closingTime);
+    }
 }
