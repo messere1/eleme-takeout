@@ -39,7 +39,14 @@ const product = await request('POST', `/shops/${shop.id}/products`, {
   name: productName, categoryId: productCategory.id, description: '浏览器隔离数据', price: '19.80', stock: 10,
 }, merchantToken)
 
-const browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
+const browserName = process.env.TAKEOUT_BROWSER || 'edge'
+const executablePath = browserName === 'edge'
+  ? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
+  : browserName === 'chrome'
+    ? 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+    : null
+if (!executablePath) throw new Error(`Unsupported TAKEOUT_BROWSER: ${browserName}`)
+const browser = await chromium.launch({ headless: true, executablePath })
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } })
 const errors = []
 const uploads = []
@@ -105,7 +112,7 @@ try {
 
   if (uploads.length !== 4 || uploads.some(item => item !== 'POST 200')) throw new Error(`upload responses: ${uploads}`)
   if (errors.length) throw new Error(`page errors: ${errors.join('; ')}`)
-  console.log(JSON.stringify({ result: 'PASS', shopId: shop.id, productId: product.id, checks, uploads, pageErrors: errors }, null, 2))
+  console.log(JSON.stringify({ result: 'PASS', browserName, shopId: shop.id, productId: product.id, checks, uploads, pageErrors: errors }, null, 2))
 } finally {
   await browser.close()
 }
