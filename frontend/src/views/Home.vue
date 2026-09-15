@@ -39,10 +39,8 @@ const totalPages = ref(1)
 const feedLoading = ref(false)
 let latestLoadId = 0
 
-// 推荐位。加载失败不能影响首页主流程，静默隐藏整块即可。
 const recommended = ref([])
 
-// 取 10 条：外壳宽度 48rem，4 条只有 490px 根本填不满，横向滚动就没意义了
 async function loadRecommended() {
   try {
     const items = await listRecommendedShops(10)
@@ -123,28 +121,53 @@ function searchStuck() {
   return box.getBoundingClientRect().top <= brandHeight.value + 2
 }
 
-function onWindowWheel(event) {
+function relayScroll(delta) {
   const block = browseBlock.value
-  if (!block || event.deltaY === 0) return
-  if (!searchStuck()) return // 搜索框未触顶：整页滚动
+  if (!block || delta === 0) return false
+  if (!searchStuck()) return false // 搜索框未触顶：整页滚动
 
   const canDown = block.scrollTop + block.clientHeight < block.scrollHeight - 1
   const canUp = block.scrollTop > 0
 
-  if (event.deltaY > 0) {
+  if (delta > 0) {
     // 往下：列表还能滚就滚列表，到底了才交回整页
-    if (!canDown) return
-    block.scrollTop += event.deltaY
+    if (!canDown) return false
+    block.scrollTop += delta
     maybeLoadMore()
   } else {
     // 往上：列表没到顶就滚列表，到顶了才交回整页
-    if (!canUp) return
-    block.scrollTop += event.deltaY
+    if (!canUp) return false
+    block.scrollTop += delta
   }
+  return true
+}
 
+function onWindowWheel(event) {
   // 列表吃掉这次滚动后必须拦掉默认行为：否则整页会跟着一起滚，店铺区被顶到
   // 吸顶搜索框下面，表现为滚动错位、顶部/底部被截断。
-  event.preventDefault()
+  if (relayScroll(event.deltaY)) event.preventDefault()
+}
+
+let touchLastX = 0
+let touchLastY = 0
+
+function onWindowTouchStart(event) {
+  touchLastX = event.touches[0]?.clientX ?? 0
+  touchLastY = event.touches[0]?.clientY ?? 0
+}
+
+function onWindowTouchMove(event) {
+  const point = event.touches[0]
+  if (!point) return
+
+  const dx = touchLastX - point.clientX
+  const dy = touchLastY - point.clientY
+  touchLastX = point.clientX
+  touchLastY = point.clientY
+
+  if (Math.abs(dx) > Math.abs(dy)) return
+
+  if (relayScroll(dy)) event.preventDefault()
 }
 
 // 鼠标在品类条上滚动时转成横向滚动；滚到两端就把这次滚动交回页面。
@@ -167,10 +190,14 @@ onMounted(() => {
   loadRecommended()
   listBusinessCategories().then(items=>{categories.value=(items||[]).map(c=>{const meta=CATEGORY_META[c.name]||['🍽️',c.name.slice(0,4)];return {...c,emoji:meta[0],displayName:meta[1]}})}).catch(()=>{categories.value=[]})
   window.addEventListener('wheel', onWindowWheel, { passive: false })
+  window.addEventListener('touchstart', onWindowTouchStart, { passive: true })
+  window.addEventListener('touchmove', onWindowTouchMove, { passive: false })
   window.addEventListener('resize', measureShell)
 })
 onUnmounted(() => {
   window.removeEventListener('wheel', onWindowWheel)
+  window.removeEventListener('touchstart', onWindowTouchStart)
+  window.removeEventListener('touchmove', onWindowTouchMove)
   window.removeEventListener('resize', measureShell)
 })
 </script>
@@ -221,7 +248,14 @@ onUnmounted(() => {
             :data-testid="`home-recommend-${shop.id}`"
             class="recommend-card"
           >
-            <div class="recommend-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>
+            <img
+              v-if="shop.imageUrl"
+              :src="shop.imageUrl"
+              class="recommend-thumb"
+              alt="店铺照片"
+              :data-testid="`home-recommend-image-${shop.id}`"
+            />
+            <div v-else class="recommend-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>
             <strong class="recommend-name">{{ shop.shopName }}</strong>
             <span class="recommend-status" :class="{ open: shop.status === 'OPEN' }">{{ statusText(shop.status) }}</span>
           </RouterLink>
@@ -362,14 +396,8 @@ onUnmounted(() => {
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-}
-.channel::-webkit-scrollbar {
-  height: 6px;
-}
-.channel::-webkit-scrollbar-thumb {
-  background: #e4e4e4;
-  border-radius: 3px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .channel-chip {
   /* 单行不换行，宽度够放下 emoji 和最长四字标签（奶茶甜品） */
@@ -413,12 +441,10 @@ onUnmounted(() => {
   font-size: 0.8rem;
 }
 
-/* 推荐位：横向一条，不占纵向空间 */
 .recommend {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  /* 同 .channel：browse-block 是固定高的纵向 flex 容器，不给 flex 会被压矮 */
   flex: 0 0 auto;
 }
 .recommend-title {
@@ -429,12 +455,19 @@ onUnmounted(() => {
 .recommend-row {
   display: flex;
   gap: 0.6rem;
-  /* 同 .channel：overflow-x 会把 overflow-y 隐式变成 auto，必须显式关掉 */
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 0.25rem;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.channel::-webkit-scrollbar,
+.recommend-row::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 .recommend-card {
   flex: 0 0 auto;
@@ -451,6 +484,7 @@ onUnmounted(() => {
   color: inherit;
 }
 .recommend-thumb {
+  flex-shrink: 0;
   width: 2.6rem;
   height: 2.6rem;
   border-radius: 50%;
@@ -458,6 +492,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 1.3rem;
+  object-fit: cover;
 }
 .recommend-name {
   font-size: 0.78rem;

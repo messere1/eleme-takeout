@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { acceptOrder, listMerchantOrders, listMerchantRefunds, decideMerchantRefund } from '@/api/order'
 
-// 订单状态取值，后端不产生 PENDING。
+
 const STATUS_TEXT = {
   CREATED: '待接单',
   ACCEPTED: '已接单',
@@ -30,12 +30,12 @@ function statusText(status) {
   return STATUS_TEXT[status] || status
 }
 
-// 只有已支付订单才能接单。
+
 function canAccept(order) {
   return order.status === 'CREATED' && order.paymentStatus === 'PAID'
 }
 
-// 分页、状态、时间查询参数。
+//分页、状态、时间查询参数
 function query(page) {
   const params = { page, size: 20 }
   if (selectedStatus.value) params.status = selectedStatus.value
