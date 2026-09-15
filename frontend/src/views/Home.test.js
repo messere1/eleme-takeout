@@ -4,14 +4,17 @@
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/api/shop', () => ({ listShops: vi.fn() }))
+vi.mock('@/api/shop', () => ({
+  listShops: vi.fn(),
+  listRecommendedShops: vi.fn().mockResolvedValue([]),
+}))
 vi.mock('@/api/merchant', () => ({
   listBusinessCategories: vi.fn().mockResolvedValue([
     { id: 2, name: '奶茶饮品', enabled: true },
   ]),
 }))
 
-import { listShops } from '@/api/shop'
+import { listRecommendedShops, listShops } from '@/api/shop'
 import { listBusinessCategories } from '@/api/merchant'
 import { mountView } from '@/test/mountView'
 import Home from './Home.vue'
@@ -33,10 +36,108 @@ async function mountHome() {
   return ctx
 }
 
+function touchEvent(type, clientX, clientY) {
+  const event = new Event(type, { cancelable: true })
+  event.touches = [{ clientX, clientY }]
+  return event
+}
+
+function makeScrollable(block) {
+  Object.defineProperty(block, 'clientHeight', { value: 200, configurable: true })
+  Object.defineProperty(block, 'scrollHeight', { value: 600, configurable: true })
+  block.scrollTop = 0
+}
+
 describe('首页店铺流（分页）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     listBusinessCategories.mockResolvedValue([{ id: 2, name: '奶茶饮品', enabled: true }])
+    listShops.mockResolvedValue(PAGE1)
+    listRecommendedShops.mockResolvedValue([])
+  })
+
+  it('有推荐结果时展示猜你喜欢，请求条数固定为 10', async () => {
+    listRecommendedShops.mockResolvedValue([SHOP_B])
+
+    const ctx = await mountHome()
+
+    expect(ctx.wrapper.find('[data-testid="home-recommend"]').exists()).toBe(true)
+    expect(ctx.wrapper.find('[data-testid="home-recommend-2"]').exists()).toBe(true)
+    expect(listRecommendedShops).toHaveBeenCalledWith(10)
+  })
+
+  it('推荐位复用频道的横向滚轮逻辑，滚到自己两端就把滚动交回页面', async () => {
+    listRecommendedShops.mockResolvedValue([SHOP_A, SHOP_B])
+
+    const ctx = await mountHome()
+    const row = ctx.wrapper.find('.recommend-row')
+
+    const event = new Event('wheel', { cancelable: true })
+    event.deltaY = 100
+    row.element.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(false)
+  })
+
+  it('触摸拖动也能滚动店铺列表，并拦住整页跟着滚', async () => {
+    const ctx = await mountHome()
+    const block = ctx.wrapper.get('.browse-block').element
+    makeScrollable(block)
+
+    window.dispatchEvent(touchEvent('touchstart', 0, 300))
+    const move = touchEvent('touchmove', 0, 200)
+    window.dispatchEvent(move)
+
+    expect(block.scrollTop).toBe(100)
+    expect(move.defaultPrevented).toBe(true)
+  })
+
+  it('横向为主的滑动不交给纵向接力，留给品类条原生横滑', async () => {
+    const ctx = await mountHome()
+    const block = ctx.wrapper.get('.browse-block').element
+    makeScrollable(block)
+
+    window.dispatchEvent(touchEvent('touchstart', 300, 100))
+    const move = touchEvent('touchmove', 100, 100)
+    window.dispatchEvent(move)
+
+    expect(block.scrollTop).toBe(0)
+    expect(move.defaultPrevented).toBe(false)
+  })
+
+  it('推荐位有店铺照片时显示图片', async () => {
+    listRecommendedShops.mockResolvedValue([{ ...SHOP_B, imageUrl: '/uploads/shop-b.png' }])
+
+    const ctx = await mountHome()
+
+    expect(ctx.wrapper.get('[data-testid="home-recommend-image-2"]').attributes('src'))
+      .toBe('/uploads/shop-b.png')
+  })
+
+  it('推荐位没有照片时退回 emoji 占位块', async () => {
+    listRecommendedShops.mockResolvedValue([SHOP_B])
+
+    const ctx = await mountHome()
+    const card = ctx.wrapper.get('[data-testid="home-recommend-2"]')
+
+    expect(card.find('[data-testid="home-recommend-image-2"]').exists()).toBe(false)
+    expect(card.find('img').exists()).toBe(false)
+    expect(card.text()).toContain('川渝小馆')
+  })
+
+  it('推荐为空时不展示猜你喜欢整块', async () => {
+    const ctx = await mountHome()
+
+    expect(ctx.wrapper.find('[data-testid="home-recommend"]').exists()).toBe(false)
+  })
+
+  it('推荐接口失败不影响首页店铺流', async () => {
+    listRecommendedShops.mockRejectedValue(new Error('offline'))
+
+    const ctx = await mountHome()
+
+    expect(ctx.wrapper.find('[data-testid="home-recommend"]').exists()).toBe(false)
+    expect(ctx.wrapper.find('[data-testid="home-shop-1"]').exists()).toBe(true)
   })
 
   it('商家传过店铺照片时卡片显示图片', async () => {

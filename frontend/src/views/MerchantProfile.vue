@@ -30,7 +30,7 @@ onMounted(async () => {
       imageUrl: me?.imageUrl || '', coverImageUrl: me?.coverImageUrl || '',
     }
   } catch {
-    // 后端不可用时留空显示
+
   }
 })
 async function save(){if(selectedCategoryIds.value.length<1||selectedCategoryIds.value.length>3){message.value='请选择一至三个经营品类';return}try{const [me]=await Promise.all([updateMyMerchant({businessScope:info.value.businessScope||'多品类',shopName:info.value.shopName,shopAddress:info.value.shopAddress}),updateMyShopBusinessCategories(selectedCategoryIds.value)]);info.value={...info.value,...me};message.value='资料已保存'}catch(e){message.value=e?.message||'保存失败'}}

@@ -43,7 +43,7 @@ function invalidMessage() {
   return ''
 }
 
-// 注册成功后按角色进对应工作区。骑手此前漏了，会落到首页然后被路由守卫弹回登录页。
+
 const HOME_BY_ROLE = { MERCHANT: '/merchant', ADMIN: '/admin', RIDER: '/rider' }
 const CARD_EMOJI = { CUSTOMER: '🍜', MERCHANT: '🏪', RIDER: '🛵' }
 
@@ -86,7 +86,7 @@ async function submit() {
         businessScope: form.businessScope.trim(),
       })
     }
-    // 注册成功后自动登录，并按角色进入对应主页面
+    //注册成功后自动登录
     await autoLogin(phone, password, form.role)
   } catch (error) {
     errorMessage.value = error?.message || '注册失败，请稍后重试'

@@ -1,15 +1,23 @@
 package cn.edu.tju.takeout.shop;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cn.edu.tju.takeout.auth.UserPrincipal;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ShopControllerContractTest {
     private final ShopService service = mock(ShopService.class);
-    private final ShopController controller = new ShopController(service);
+    private final ShopController controller = new ShopController(
+            service,
+            mock(cn.edu.tju.takeout.recommend.SearchHistoryService.class),
+            mock(cn.edu.tju.takeout.recommend.RecommendationService.class));
     private final UserPrincipal merchant = new UserPrincipal(12L, "MERCHANT");
 
     @Test
@@ -24,5 +32,37 @@ class ShopControllerContractTest {
         assertThat(controller.changeStatus(merchant, 20L, status).data()).isEqualTo(view);
         assertThat(controller.getShop(20L).data()).isEqualTo(view);
         assertThat(controller.updateShop(merchant, 20L, update).data()).isEqualTo(view);
+    }
+
+    @Test
+    void searchRecordsKeywordForLoggedInCustomer() {
+        cn.edu.tju.takeout.recommend.SearchHistoryService history =
+                mock(cn.edu.tju.takeout.recommend.SearchHistoryService.class);
+        UserPrincipal customer = new UserPrincipal(7L, "CUSTOMER");
+        when(service.searchShops(1, 20, "简餐")).thenReturn(new ShopPage(List.of(), 1, 20, 0, 0));
+
+        controller(history).searchShops(customer, 1, 20, "简餐");
+
+        verify(history).record(7L, "简餐");
+    }
+
+    /** 关键词必须在搜索成功后记录：否则页码/每页条数非法的请求也会污染搜索历史 */
+    @Test
+    void rejectedSearchDoesNotRecordKeyword() {
+        cn.edu.tju.takeout.recommend.SearchHistoryService history =
+                mock(cn.edu.tju.takeout.recommend.SearchHistoryService.class);
+        UserPrincipal customer = new UserPrincipal(7L, "CUSTOMER");
+        when(service.searchShops(any(), any(), any()))
+                .thenThrow(new IllegalStateException("页码必须大于等于1"));
+
+        assertThatThrownBy(() -> controller(history).searchShops(customer, 0, 20, "简餐"))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(history, never()).record(any(), any());
+    }
+
+    private ShopController controller(cn.edu.tju.takeout.recommend.SearchHistoryService history) {
+        return new ShopController(
+                service, history, mock(cn.edu.tju.takeout.recommend.RecommendationService.class));
     }
 }

@@ -17,6 +17,10 @@ export function getShop(shopId) {
   return http.get(`/shops/${shopId}`)
 }
 
+export function listRecommendedShops(limit = 6) {
+  return http.get('/recommendations/shops', { params: { limit } })
+}
+
 export function listCategories(shopId) {
   return http.get(`/shops/${shopId}/categories`)
 }

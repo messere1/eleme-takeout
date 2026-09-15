@@ -32,7 +32,7 @@ public record ShopView(
             null,
             null);
     }
-    static ShopView from(Shop shop) {
+    public static ShopView from(Shop shop) {
         return new ShopView(
             shop.getId(), 
             shop.getMerchantId(), 

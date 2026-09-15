@@ -46,7 +46,10 @@ class ShopStatusControllerTest {
     }
 
     private static MockMvc mvc(ShopService service) {
-        return MockMvcBuilders.standaloneSetup(new ShopController(service))
+        return MockMvcBuilders.standaloneSetup(new ShopController(
+                        service,
+                        org.mockito.Mockito.mock(cn.edu.tju.takeout.recommend.SearchHistoryService.class),
+                        org.mockito.Mockito.mock(cn.edu.tju.takeout.recommend.RecommendationService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .addFilters((request, response, chain) -> {

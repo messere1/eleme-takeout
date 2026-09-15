@@ -109,7 +109,7 @@ describe('注册页（角色化）', () => {
     expect(wrapper.find('[data-testid="register-shop-address"]').exists()).toBe(false)
   })
 
-  // 骑手此前漏了 HOME_BY_ROLE 映射，注册成功会落到首页、再被路由守卫弹回登录页。
+
   it('骑手注册成功自动登录并进入骑手工作台', async () => {
     registerRider.mockResolvedValue({ id: 3, riderName: '李骑手', phone: RIDER.phone, enabled: true })
     login.mockResolvedValue({ token: 'rd-1', role: 'RIDER', expiresIn: 7200 })

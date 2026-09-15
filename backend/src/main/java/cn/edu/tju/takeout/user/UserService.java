@@ -16,17 +16,25 @@ public class UserService {
     //加密密码
     private final PasswordEncoder passwordEncoder;
     private final cn.edu.tju.takeout.order.OrderMapper orderMapper;
+    private final cn.edu.tju.takeout.recommend.SearchHistoryMapper searchHistoryMapper;
 
     public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder) {
         this(userMapper, passwordEncoder, null);
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
     public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder,
             cn.edu.tju.takeout.order.OrderMapper orderMapper) {
+        this(userMapper, passwordEncoder, orderMapper, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder,
+            cn.edu.tju.takeout.order.OrderMapper orderMapper,
+            cn.edu.tju.takeout.recommend.SearchHistoryMapper searchHistoryMapper) {
         this.userMapper=userMapper;
         this.passwordEncoder=passwordEncoder;
         this.orderMapper=orderMapper;
+        this.searchHistoryMapper=searchHistoryMapper;
     }
 
     // 异常辅助方法
@@ -102,6 +110,10 @@ public class UserService {
         }
         if (userMapper.softDelete(userId) == 0) {
             throw new BusinessException(HttpStatus.NOT_FOUND,"RESOURCE_NOT_FOUND","用户不存在或已注销");
+        }
+        // 搜索历史属于个人数据，注销时一并清除
+        if (searchHistoryMapper != null) {
+            searchHistoryMapper.deleteByUserId(userId);
         }
     }
 
