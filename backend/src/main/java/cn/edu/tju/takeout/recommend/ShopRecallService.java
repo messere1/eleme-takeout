@@ -5,16 +5,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
-/**
- * 召回：把全站店铺收敛成候选集合，只留下有可能拿到正分的店铺。
- *
- * <p>多路召回，任何一路命中都进候选：历史下单店、偏好品类下的店、关键词命中的店、
- * 近期热门店，候选不足时按 id 补齐。关键词那条覆盖店铺名 / 经营范围 / 在售商品名，
- * 和搜索接口的匹配范围一致。每路都对应打分公式里的一个正信号，所以这里返回的是
- * 「所有正分店铺」的超集——召回只决定谁有机会被排序，排前面交给打分和重排。
- *
- * <p>退款通过的店在这里剔除，不再进入后续任何阶段。
- */
 @Service
 class ShopRecallService {
     private final RecommendationMapper recommendationMapper;

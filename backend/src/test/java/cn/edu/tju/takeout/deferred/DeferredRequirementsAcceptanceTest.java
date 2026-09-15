@@ -5,10 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * 第二阶段原延期需求已全部转入正式验收基线。
- * 使用反射保持红灯测试可编译，功能实现后才会转绿。
- */
 class DeferredRequirementsAcceptanceTest {
 
     @Test

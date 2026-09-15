@@ -6,15 +6,6 @@ import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 
-/**
- * 重排：打分之后施加业务规则。打分回答「哪家店更相关」，重排回答「这一屏列表合不合理」。
- *
- * <p>两条规则：同一经营品类最多连续 {@link #CATEGORY_RUN} 家；每 {@link #REPEAT_RUN} 家复购店
- * 之后插一家探索店（约 70% 复购 / 30% 探索）。前者避免整屏都是一个品类，后者避免
- * 「点过一次川菜就天天推川菜」，也给没被历史覆盖的店留曝光位。
- *
- * <p>约束无法同时满足时退回分数优先，不会因为规则把店铺丢掉。
- */
 @Component
 class RecommendationRerank {
     private static final int REPEAT_RUN = 2;

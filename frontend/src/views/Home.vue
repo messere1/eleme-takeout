@@ -80,9 +80,6 @@ async function load(page, append = false, categoryId = activeCategoryId.value) {
 
 async function selectCategory(id) { activeCategoryId.value = activeCategoryId.value === id ? null : id; await load(1,false,activeCategoryId.value) }
 
-// 滚动接力：页面滚到店铺区标题吸顶前 → 滚整页；吸顶后 → 滚店铺列表；
-// 列表到边界再继续滚 → 自动切回整页。列表本身不接原生滚动（overflow:hidden），
-// 全部由这里的滚轮逻辑统一分配，才能做到“先滚页面再吸顶”。
 const brandHeight = ref(56) // 动态测量品牌栏高度
 const browseHeight = ref(0) // 店铺区可视高度：视口扣掉顶栏、吸顶搜索框和底栏
 const searchBox = ref(null)

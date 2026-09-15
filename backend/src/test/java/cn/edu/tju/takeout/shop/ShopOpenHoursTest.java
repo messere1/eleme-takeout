@@ -5,10 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link Shop#isOpenAt} 的边界。下单链路和推荐都在用它判定「此刻能不能营业」，
- * 而 ShopManagementServiceTest 只覆盖了写入侧的校验，没覆盖判定本身。
- */
 class ShopOpenHoursTest {
     @Test
     void missingBusinessHoursMeansNoRestriction() {

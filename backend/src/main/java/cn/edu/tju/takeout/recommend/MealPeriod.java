@@ -4,10 +4,6 @@ import java.time.LocalTime;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * 餐段。同一个顾客在早上和半夜打开首页，该看到的店完全不一样：
- * 早上推烧烤店、凌晨推轻食店都是错的。
- */
 enum MealPeriod {
     BREAKFAST,
     LUNCH,
@@ -25,11 +21,6 @@ enum MealPeriod {
         return LATE_NIGHT;
     }
 
-    /**
-     * 经营品类名 → 适合的餐段。覆盖库里实际存在的十二个品类：内置的八个，
-     * 加上演示数据里的中式快餐 / 西式简餐 / 奶茶甜品 / 地方菜系。
-     * 顾客自建的品类不在表里，一律按中性处理（不加分也不减分）。
-     */
     private static final Map<String, Set<MealPeriod>> BY_CATEGORY = Map.ofEntries(
             Map.entry("快餐便当", Set.of(BREAKFAST, LUNCH, DINNER)),
             Map.entry("奶茶饮品", Set.of(BREAKFAST, AFTERNOON_TEA, LATE_NIGHT)),

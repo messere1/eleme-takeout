@@ -14,10 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/**
- * 推荐 SQL 全写在注解里，Service 的单元测试把它们整个桩掉了，拼错列名或 {@code <foreach>}
- * 写坏都发现不了，这里连真实库跑一遍。
- */
 @SpringBootTest
 class RecommendationMapperIntegrationTest {
     private static final long USER_ID = 930001L;

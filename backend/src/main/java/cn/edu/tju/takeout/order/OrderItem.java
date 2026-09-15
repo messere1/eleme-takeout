@@ -11,10 +11,6 @@ public class OrderItem {
     private BigDecimal unitPrice;
     private Integer quantity;
     private BigDecimal subtotal;
-    /**
-     * 商品图。order_items 快照本身不存图，读取时 LEFT JOIN products 取当前图片；
-     * 写入路径（from/restore）不设置它。
-     */
     private String imageUrl;
 
     public static OrderItem from(Long orderId, CartCheckoutLine line) {

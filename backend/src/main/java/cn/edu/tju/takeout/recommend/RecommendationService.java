@@ -15,13 +15,6 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
-/**
- * 店铺推荐编排：召回 → 打分 → 重排。本类只管流水线顺序和数据装载，
- * 三段规则分别在 {@link ShopRecallService}、{@link RecommendationScoring}、{@link RecommendationRerank}。
- *
- * <p>不使用模型或离线任务：把顾客的下单历史与搜索历史折算成偏好权重，
- * 对候选店铺加权排序。没有任何历史时退回全站热度。
- */
 @Service
 public class RecommendationService {
     private static final int DEFAULT_LIMIT = 6;
@@ -70,10 +63,6 @@ public class RecommendationService {
                 .toList();
     }
 
-    /**
-     * 按偏好重排一页店铺：用户偏好命中的排前面，其余保持原有相对顺序跟在后面。
-     * 没有偏好（游客、或没有下单也没有搜索历史）时不动顺序。
-     */
     public ShopPage reorderByPreference(Long userId, ShopPage page) {
         if (userId == null || page.items() == null || page.items().size() < 2) return page;
 

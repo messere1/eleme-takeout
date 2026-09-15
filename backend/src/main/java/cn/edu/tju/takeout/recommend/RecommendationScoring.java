@@ -11,16 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 
-/**
- * 打分：对召回出的候选店铺加权求和并降序排列。
- *
- * <pre>
- * score = 3.0 · 复购次数 + 1.5 · 命中品类 + 1.0 · 命中关键词 + 0.3 · 热度 - 2.0 · 取消次数
- * </pre>
- *
- * <p>各项次数都按 14 天半衰期衰减；热度归一到 0~1 且只在冷启动时参与。
- * 权重保持「复购 > 品类 > 意图 > 热度」的次序。
- */
 @Component
 class RecommendationScoring {
     static final double SHOP_WEIGHT = 3.0;
@@ -85,12 +75,6 @@ class RecommendationScoring {
         return texts;
     }
 
-    /**
-     * 每个关键词对一家店最多贡献一次。若按命中条数累加，40 个「炸鸡X」光靠货架长度
-     * 就能拿 40 分，压过一次满分复购的 3 分。
-     *
-     * <p>统一转小写比对，与搜索接口的 ILIKE 一致；用 Locale.ROOT 避免土耳其语环境下 I 的差异。
-     */
     private static double keywordScore(List<String> texts, Map<String, Double> keywords) {
         if (texts.isEmpty() || keywords.isEmpty()) return 0.0;
 

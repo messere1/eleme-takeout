@@ -13,10 +13,6 @@ public class SearchHistoryService {
         this.searchHistoryMapper = searchHistoryMapper;
     }
 
-    /**
-     * 记录一次搜索。游客（userId 为 null）不记；与上一条完全相同的关键词也不记，
-     * 否则搜索页从店铺返回时会重新搜一次，把同一个词灌满历史。
-     */
     public void record(Long userId, String keyword) {
         if (userId == null) return;
         String word = keyword == null ? "" : keyword.trim();
