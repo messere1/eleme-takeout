@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { listShops } from '@/api/shop'
+import { listRecommendedShops, listShops } from '@/api/shop'
 import { listBusinessCategories } from '@/api/merchant'
 
 const router = useRouter()
@@ -38,6 +38,19 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 const feedLoading = ref(false)
 let latestLoadId = 0
+
+// 推荐位。加载失败不能影响首页主流程，静默隐藏整块即可。
+const recommended = ref([])
+
+// 取 10 条：外壳宽度 48rem，4 条只有 490px 根本填不满，横向滚动就没意义了
+async function loadRecommended() {
+  try {
+    const items = await listRecommendedShops(10)
+    recommended.value = (items || []).map(decorate)
+  } catch {
+    recommended.value = []
+  }
+}
 
 async function load(page, append = false, categoryId = activeCategoryId.value) {
   if (feedLoading.value && append) return
@@ -151,6 +164,7 @@ function onChannelWheel(event) {
 onMounted(() => {
   measureShell()
   load(1)
+  loadRecommended()
   listBusinessCategories().then(items=>{categories.value=(items||[]).map(c=>{const meta=CATEGORY_META[c.name]||['🍽️',c.name.slice(0,4)];return {...c,emoji:meta[0],displayName:meta[1]}})}).catch(()=>{categories.value=[]})
   window.addEventListener('wheel', onWindowWheel, { passive: false })
   window.addEventListener('resize', measureShell)
@@ -195,6 +209,23 @@ onUnmounted(() => {
           <span class="chip-emoji">{{ item.emoji }}</span>
           <span>{{ item.displayName }}</span>
         </button>
+      </section>
+
+      <section v-if="recommended.length" class="recommend" data-testid="home-recommend">
+        <h2 class="recommend-title">猜你喜欢</h2>
+        <div class="recommend-row" @wheel="onChannelWheel">
+          <RouterLink
+            v-for="shop in recommended"
+            :key="shop.id"
+            :to="`/shops/${shop.id}`"
+            :data-testid="`home-recommend-${shop.id}`"
+            class="recommend-card"
+          >
+            <div class="recommend-thumb" :style="{ background: shop.bg }">{{ shop.emoji }}</div>
+            <strong class="recommend-name">{{ shop.shopName }}</strong>
+            <span class="recommend-status" :class="{ open: shop.status === 'OPEN' }">{{ statusText(shop.status) }}</span>
+          </RouterLink>
+        </div>
       </section>
 
       <section class="shop-feed">
@@ -380,6 +411,67 @@ onUnmounted(() => {
 .feed-count {
   color: #aaa;
   font-size: 0.8rem;
+}
+
+/* 推荐位：横向一条，不占纵向空间 */
+.recommend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  /* 同 .channel：browse-block 是固定高的纵向 flex 容器，不给 flex 会被压矮 */
+  flex: 0 0 auto;
+}
+.recommend-title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+.recommend-row {
+  display: flex;
+  gap: 0.6rem;
+  /* 同 .channel：overflow-x 会把 overflow-y 隐式变成 auto，必须显式关掉 */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+}
+.recommend-card {
+  flex: 0 0 auto;
+  width: 7.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  text-decoration: none;
+  color: inherit;
+}
+.recommend-thumb {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+.recommend-name {
+  font-size: 0.78rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recommend-status {
+  font-size: 0.68rem;
+  color: #b0b0b0;
+}
+.recommend-status.open {
+  color: #21b36b;
 }
 
 /* 店铺流 */

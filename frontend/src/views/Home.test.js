@@ -4,14 +4,17 @@
 import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/api/shop', () => ({ listShops: vi.fn() }))
+vi.mock('@/api/shop', () => ({
+  listShops: vi.fn(),
+  listRecommendedShops: vi.fn().mockResolvedValue([]),
+}))
 vi.mock('@/api/merchant', () => ({
   listBusinessCategories: vi.fn().mockResolvedValue([
     { id: 2, name: '奶茶饮品', enabled: true },
   ]),
 }))
 
-import { listShops } from '@/api/shop'
+import { listRecommendedShops, listShops } from '@/api/shop'
 import { listBusinessCategories } from '@/api/merchant'
 import { mountView } from '@/test/mountView'
 import Home from './Home.vue'
@@ -37,6 +40,47 @@ describe('首页店铺流（分页）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     listBusinessCategories.mockResolvedValue([{ id: 2, name: '奶茶饮品', enabled: true }])
+    listShops.mockResolvedValue(PAGE1)
+    listRecommendedShops.mockResolvedValue([])
+  })
+
+  it('有推荐结果时展示猜你喜欢，请求条数固定为 10', async () => {
+    listRecommendedShops.mockResolvedValue([SHOP_B])
+
+    const ctx = await mountHome()
+
+    expect(ctx.wrapper.find('[data-testid="home-recommend"]').exists()).toBe(true)
+    expect(ctx.wrapper.find('[data-testid="home-recommend-2"]').exists()).toBe(true)
+    expect(listRecommendedShops).toHaveBeenCalledWith(10)
+  })
+
+  it('推荐位复用频道的横向滚轮逻辑，滚到自己两端就把滚动交回页面', async () => {
+    listRecommendedShops.mockResolvedValue([SHOP_A, SHOP_B])
+
+    const ctx = await mountHome()
+    const row = ctx.wrapper.find('.recommend-row')
+
+    // 容器没溢出（jsdom 里 scrollWidth === clientWidth）时不该拦截滚轮
+    const event = new Event('wheel', { cancelable: true })
+    event.deltaY = 100
+    row.element.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(false)
+  })
+
+  it('推荐为空时不展示猜你喜欢整块', async () => {
+    const ctx = await mountHome()
+
+    expect(ctx.wrapper.find('[data-testid="home-recommend"]').exists()).toBe(false)
+  })
+
+  it('推荐接口失败不影响首页店铺流', async () => {
+    listRecommendedShops.mockRejectedValue(new Error('offline'))
+
+    const ctx = await mountHome()
+
+    expect(ctx.wrapper.find('[data-testid="home-recommend"]').exists()).toBe(false)
+    expect(ctx.wrapper.find('[data-testid="home-shop-1"]').exists()).toBe(true)
   })
 
   it('商家传过店铺照片时卡片显示图片', async () => {

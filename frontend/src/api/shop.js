@@ -17,6 +17,11 @@ export function getShop(shopId) {
   return http.get(`/shops/${shopId}`)
 }
 
+// 推荐位：按本人下单历史 + 搜索历史排序。公开接口，游客退回全站热度。
+export function listRecommendedShops(limit = 6) {
+  return http.get('/recommendations/shops', { params: { limit } })
+}
+
 export function listCategories(shopId) {
   return http.get(`/shops/${shopId}/categories`)
 }

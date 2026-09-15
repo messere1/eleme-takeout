@@ -2,6 +2,8 @@ package cn.edu.tju.takeout.shop;
 
 import cn.edu.tju.takeout.auth.UserPrincipal;
 import cn.edu.tju.takeout.common.ApiResponse;
+import cn.edu.tju.takeout.recommend.RecommendationService;
+import cn.edu.tju.takeout.recommend.SearchHistoryService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -16,7 +18,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/shops")
 public class ShopController {
     private final ShopService shopService;
-    public ShopController(ShopService shopService) { this.shopService = shopService; }
+    private final SearchHistoryService searchHistoryService;
+    private final RecommendationService recommendationService;
+
+    public ShopController(
+            ShopService shopService,
+            SearchHistoryService searchHistoryService,
+            RecommendationService recommendationService) {
+        this.shopService = shopService;
+        this.searchHistoryService = searchHistoryService;
+        this.recommendationService = recommendationService;
+    }
 
     @PatchMapping("/{shopId}/status")
     public ApiResponse<ShopView> changeStatus(
@@ -28,10 +40,16 @@ public class ShopController {
 
     @GetMapping("/search")
     public ApiResponse<ShopPage> searchShops(
+            @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam String keyword) {
-        return ApiResponse.success(shopService.searchShops(page, size, keyword));
+        // 先搜再记：searchShops 会校验页码、每页条数和空关键词并抛 400，
+        // 记在它前面的话，非法请求也会把关键词写进历史（推荐算法的偏好信号）。
+        ShopPage result = shopService.searchShops(page, size, keyword);
+        // 该接口对游客开放，登录用户的关键词才记入历史
+        searchHistoryService.record(principal == null ? null : principal.userId(), keyword);
+        return ApiResponse.success(result);
     }
 
     @GetMapping("/{shopId}")
@@ -49,12 +67,16 @@ public class ShopController {
 
     @GetMapping
     public ApiResponse<ShopPage> listShops(
+            @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String businessScope,
             @RequestParam(required = false) Long businessCategoryId) {
 
-        return ApiResponse.success(shopService.listShops(page, size, businessScope, businessCategoryId));
+        ShopPage result = shopService.listShops(page, size, businessScope, businessCategoryId);
+        // 登录顾客看到的是按偏好重排过的顺序；游客和没有历史的顾客维持原顺序
+        return ApiResponse.success(recommendationService.reorderByPreference(
+                principal == null ? null : principal.userId(), result));
     }
 
     @PatchMapping("/{shopId}/business-hours")

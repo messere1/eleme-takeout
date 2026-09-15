@@ -81,6 +81,8 @@ Controller 不承载复杂业务逻辑；高频公共能力通过统一异常处
 - [项目总览](../README.md)
 - [前端说明](../frontend/README.md)
 - [API 接口文档 V1](../docs/api-contract-v1.md)
+- [API 接口文档 V2](../docs/api-contract-v2.md)
+- [店铺推荐算法说明](../docs/recommendation.md)
 
 ## 需求依据
 

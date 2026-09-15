@@ -15,6 +15,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final org.slf4j.Logger LOGGER =
+            org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception) {
@@ -66,6 +68,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception exception) {
+        // 兜底分支必须留下服务端痕迹，否则 500 只能靠客户端拿着 traceId 猜
+        LOGGER.error("未处理异常：{}", exception.toString(), exception);
         ApiResponse<Void> body =
                 ApiResponse.failure("INTERNAL_ERROR", "服务器内部错误，请稍后重试", null);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
