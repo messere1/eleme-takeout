@@ -168,6 +168,25 @@ public class AdminController {
         return ApiResponse.success(null);
     }
 
+    @PatchMapping("/administrators/{id}/status")
+    @Transactional
+    public ApiResponse<Void> administratorStatus(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody AdminStatusRequest request) {
+        boolean enabled = parseEnabled(request.status());
+        Admin target = admins.findById(id).orElseThrow(this::notFound);
+        if (!enabled && target.isEnabled() && admins.countEnabled() <= 1) {
+            throw new BusinessException(
+                    HttpStatus.CONFLICT, "BUSINESS_CONFLICT", "不能禁用最后一个管理员账号");
+        }
+        if (admins.setEnabled(id, enabled) == 0) {
+            throw notFound();
+        }
+        admins.audit(principal.userId(), "SET_STATUS", "ADMINISTRATOR", id);
+        return ApiResponse.success(null);
+    }
+
     private Map<String, Object> userView(User user) {
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("id", user.getId());
