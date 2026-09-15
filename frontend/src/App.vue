@@ -43,7 +43,6 @@ onBeforeUnmount(() => window.removeEventListener('auth-change', refresh))
     <RouterView />
   </main>
 
-  <!-- 手机端底部 Tab：按角色显示（商家只见商家后台页，可随时回主界面） -->
   <nav v-if="role === 'MERCHANT'" class="tabbar merchant">
     <RouterLink to="/merchant" class="tab"><span class="ico">🏪</span><span>店铺</span></RouterLink>
     <RouterLink to="/merchant/products" class="tab"><span class="ico">🍽️</span><span>商品管理</span></RouterLink>

@@ -13,7 +13,6 @@ export function getOrder(orderId) {
   return http.get(`/orders/${orderId}`)
 }
 
-// 商家订单：分页、状态、时间查询。
 export function listMerchantOrders(query) {
   return http.get('/merchant/orders', { params: query })
 }

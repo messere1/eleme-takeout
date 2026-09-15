@@ -1,4 +1,3 @@
-// 路由表：网址 → 页面。首页为店铺浏览入口
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/views/Home.vue'
 import Login from '@/views/Login.vue'

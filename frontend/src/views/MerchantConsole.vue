@@ -27,7 +27,6 @@ const shopId = ref(stored?.shopId ?? null)
 const missingShop = ref(!shopId.value)
 
 const shop = ref(null)
-// 封面预览：进页面由 load() 回填 shop.coverImageUrl，上传成功后由 ImageUploader 回写
 const cover = ref('')
 
 const editName = ref('')

@@ -212,7 +212,6 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <!-- 搜索框（吸顶）：点击进入搜索页 -->
     <div
       ref="searchBox"
       class="search-box"
@@ -226,7 +225,6 @@ onUnmounted(() => {
       <span class="search-placeholder">搜索想吃的美食</span>
     </div>
 
-    <!-- 频道分类 + 附近店铺：搜索框触顶后作为一个整体滚动 -->
     <div ref="browseBlock" class="browse-block">
       <section class="channel" data-testid="home-channel" @wheel="onChannelWheel">
         <button v-for="item in categories" :key="item.id" class="channel-chip" :class="{ active: activeCategoryId === item.id }" :data-testid="`home-category-${item.id}`" @click="selectCategory(item.id)">
@@ -355,7 +353,6 @@ onUnmounted(() => {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* 分类 + 店铺：搜索框触顶后作为整体滚动 */
 .browse-block {
   /* 高度由 measureShell() 测量后通过 --browse-h 注入：正好等于吸顶搜索框
      与底部 Tab 之间的空间，避免列表底部被 Tab 挡住 */

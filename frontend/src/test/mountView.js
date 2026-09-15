@@ -1,5 +1,3 @@
-// 页面测试通用挂载助手：给组件安装 Element Plus 与一个内存路由，
-// 使页面里 useRouter().push(...) 的跳转可被断言（router.currentRoute.value.path）。
 import { mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import ElementPlus from 'element-plus'

@@ -16,7 +16,6 @@ const refundEvidence = ref('')
 const refundMessage = ref('')
 const refundSubmitting = ref(false)
 
-// 提交前的退款校验：金额格式、原因非空、证据不超过 3 个。
 const EVIDENCE_MAX = 3
 const refundEvidenceUrls = computed(() =>
   refundEvidence.value.split('\n').map((url) => url.trim()).filter(Boolean),

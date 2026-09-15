@@ -35,7 +35,6 @@ async function search(text) {
   searching.value = true
   localOnly.value = false
   try {
-    // 优先走后端搜索：可按 店铺名 / 经营类别 / 菜品名 匹配
     const data = await searchShops(q)
     if (searchId !== latestSearchId) return
     results.value = data?.items ?? []

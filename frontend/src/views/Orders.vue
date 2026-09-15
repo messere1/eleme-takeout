@@ -98,7 +98,7 @@ function pad(n) {
   return String(n).padStart(2, '0')
 }
 
-// 倒计时以服务器给的 paymentDeadline 为准；只有未支付订单会被自动取消。
+
 function countdownText(order) {
   if (order.status !== 'CREATED' || order.paymentStatus === 'PAID') return ''
   if (!order.paymentDeadline) return ''
@@ -109,7 +109,7 @@ function countdownText(order) {
   return `距自动取消 ${pad(Math.floor(s / 60))}:${pad(s % 60)}`
 }
 
-// 只有未支付的 CREATED 订单可以取消。
+
 function canCancel(order) {
   return order.status === 'CREATED' && order.paymentStatus !== 'PAID'
 }
@@ -183,7 +183,6 @@ onMounted(() => load(1))
             :data-testid="`order-paid-hint-${order.id}`"
             class="confirm-hint"
           >已支付，不可取消</span>
-          <!-- 确认收货只认 DELIVERED → COMPLETED：已接单但骑手还没送达时，按钮保留但不可点 -->
           <div v-else-if="order.status === 'ACCEPTED' || order.status === 'DELIVERED'" class="order-confirm">
             <button
               class="confirm-btn"

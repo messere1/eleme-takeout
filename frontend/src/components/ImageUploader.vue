@@ -1,6 +1,4 @@
 <script setup>
-// 图片上传控件：预览图 + 隐藏的原生 input + 样式化按钮。
-// 图片走 POST /images，服务端落盘并回写目标资源，这里只把返回的 url 回填预览。
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { uploadImage } from '@/api/upload'
 
@@ -8,7 +6,6 @@ const props = defineProps({
   modelValue: { type: String, default: '' },
   targetType: { type: String, required: true },
   targetId: { type: [Number, String], default: null },
-  /** square：方形缩略图；wide：横向缩略图；round：圆形（头像） */
   shape: { type: String, default: 'square' },
   title: { type: String, default: '' },
   tip: { type: String, default: '' },
@@ -27,7 +24,6 @@ const emit = defineEmits(['update:modelValue', 'message'])
 const uploading = ref(false)
 const viewing = ref(false)
 
-// 缩略图是裁切过的（object-fit: cover），双击看完整原图
 function openViewer() {
   if (props.modelValue) viewing.value = true
 }
@@ -185,7 +181,6 @@ async function pick(event) {
   .upload-btn { flex-basis: 100%; text-align: right; }
 }
 
-/* 双击缩略图后的完整大图：contain 保证是整张图，不裁切 */
 .img-viewer {
   position: fixed;
   inset: 0;

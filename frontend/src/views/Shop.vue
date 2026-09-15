@@ -66,7 +66,6 @@ function foodBg(name) {
 const productPage = ref(1)
 const productTotalPages = ref(1)
 
-// 点单页底部购物车：底部常驻条 + 上滑卷轴
 const isCustomer = session.load()?.role === 'CUSTOMER'
 // GET /cart 返回全站购物车（每条带 shopId），这里只取当前店铺的条目。
 const cartItems = ref([])

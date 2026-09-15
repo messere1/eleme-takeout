@@ -1,5 +1,3 @@
-// 登录态持久化：登录成功保存 token/role；登出或 401 时清除。
-// 商家侧额外缓存“我的店铺”（注册响应带回 shopId，登录接口不返回）。
 export const SESSION_KEY = 'takeout-auth'
 export const SHOP_KEY = 'takeout-shop'
 
