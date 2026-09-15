@@ -302,6 +302,25 @@ class RecommendationServiceTest {
         assertThat(result.items()).extracting(ShopView::id).containsExactly(1L, 2L);
     }
 
+    /** 搜索接口能按经营品类名搜到店，推荐的关键词打分也得认这个词 */
+    @Test
+    void searchingABusinessCategoryNameBoostsShopsInIt() {
+        when(searchHistoryMapper.findTopKeywords(7L, KEYWORD_LIMIT)).thenReturn(List.of(
+                new SearchHistoryMapper.KeywordStat("汉堡披萨", 1, LocalDateTime.now())));
+        when(recommendationMapper.findOpenShopIdsByKeyword(anyCollection())).thenReturn(List.of(1L));
+        when(recommendationMapper.findShopCategories(anyCollection())).thenReturn(List.of(
+                new RecommendationMapper.ShopTarget(1L, 10L)));
+        when(recommendationMapper.findAllBusinessCategories()).thenReturn(List.of(
+                new RecommendationMapper.BusinessCategory(10L, "汉堡披萨")));
+        // 店名和商品名都不含这个词，只有品类名命中
+        when(recommendationMapper.findOpenShopsByIds(anyCollection()))
+                .thenReturn(List.of(namedShop(1L, "甲乙丙")));
+
+        ShopPage result = service.reorderByPreference(7L, page(view(2L), view(1L)));
+
+        assertThat(result.items()).extracting(ShopView::id).containsExactly(1L, 2L);
+    }
+
     private static ShopPage page(ShopView... items) {
         return new ShopPage(List.of(items), 1, 20, items.length, 1);
     }

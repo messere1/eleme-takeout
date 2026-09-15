@@ -107,8 +107,9 @@ public interface RecommendationMapper {
         """)
     List<Long> findOpenShopIdsByBusinessCategories(@Param("categoryIds") Collection<Long> categoryIds);
 
-    // 关键词命中的营业中店铺。匹配范围和搜索接口一致：店铺名 / 经营范围 / 在售商品名。
-    // 关键词含 % 或 _ 时 LIKE 只会多匹配，不会漏召；多召回一家 0 分店无副作用。
+    // 关键词命中的营业中店铺。匹配范围必须和 ShopMapper.searchPage 一致：
+    // 店铺名 / 经营范围 / 经营品类名 / 在售商品名。少一项就会出现「搜索能搜到、
+    // 推荐却不认识这个词」的漂移。关键词含 % 或 _ 时 LIKE 只会多匹配，不会漏召。
     @Select("""
         <script>
         SELECT DISTINCT s.id FROM shops s
@@ -119,7 +120,11 @@ public interface RecommendationMapper {
           <foreach item="keyword" collection="keywords" open="(" separator=" OR " close=")">
             (lower(s.shop_name) LIKE '%' || lower(#{keyword}) || '%'
              OR lower(m.business_scope) LIKE '%' || lower(#{keyword}) || '%'
-             OR lower(p.name) LIKE '%' || lower(#{keyword}) || '%')
+             OR lower(p.name) LIKE '%' || lower(#{keyword}) || '%'
+             OR EXISTS (SELECT 1 FROM shop_business_categories sbc
+                        JOIN business_categories bc ON bc.id = sbc.business_category_id
+                        WHERE sbc.shop_id = s.id AND bc.enabled = TRUE
+                          AND lower(bc.name) LIKE '%' || lower(#{keyword}) || '%'))
           </foreach>
         </script>
         """)

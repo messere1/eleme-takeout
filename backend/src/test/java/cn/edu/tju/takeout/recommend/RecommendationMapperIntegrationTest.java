@@ -158,12 +158,15 @@ class RecommendationMapperIntegrationTest {
                 .isEmpty();
     }
 
-    /** 匹配范围和搜索接口一致：店名和经营范围命中也要召回，且受营业状态过滤 */
+    /** 匹配范围必须和 ShopMapper.searchPage 一致：店名 / 经营范围 / 经营品类名 / 在售商品名 */
     @Test
-    void keywordRecallAlsoMatchesShopNameAndBusinessScope() {
+    void keywordRecallMatchesEverythingSearchDoes() {
         assertThat(recommendationMapper.findOpenShopIdsByKeyword(List.of("营业中")))
                 .containsExactly(SHOP_OPEN);
         assertThat(recommendationMapper.findOpenShopIdsByKeyword(List.of("推荐测试")))
+                .containsExactly(SHOP_OPEN);
+        // 品类名：搜索接口能靠它搜到店，召回少这一路就会漂移
+        assertThat(recommendationMapper.findOpenShopIdsByKeyword(List.of("推荐测试品类A")))
                 .containsExactly(SHOP_OPEN);
     }
 

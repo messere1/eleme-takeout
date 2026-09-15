@@ -115,11 +115,11 @@ public class RecommendationService {
                 signals.preferences(), signals.negative(), signals.popularity().keySet(),
                 restrictTo, fallbackWanted);
 
-        // 营业时间之外的店按打烊处理，和 status 一样属于硬过滤
+        // 营业时间之外的店按打烊处理，和 status 一样属于硬过滤。
+        // 判定复用 Shop.isOpenAt，与下单链路的校验同一口径，否则会出现「推了却下不了单」。
         LocalTime timeOfDay = signals.now().toLocalTime();
         List<Shop> candidates = recommendationMapper.findOpenShopsByIds(candidateIds).stream()
-                .filter(shop -> ServingTime.isOpenAt(
-                        shop.getOpeningTime(), shop.getClosingTime(), timeOfDay))
+                .filter(shop -> shop.isOpenAt(timeOfDay))
                 .toList();
         if (candidates.isEmpty()) return List.of();
 

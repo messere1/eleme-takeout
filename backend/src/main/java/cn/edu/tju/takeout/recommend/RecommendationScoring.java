@@ -68,12 +68,19 @@ class RecommendationScoring {
         return scored;
     }
 
-    /** 关键词的匹配范围：店铺名、经营范围、在售商品名，与搜索接口一致 */
+    /** 关键词的匹配范围：店铺名、经营范围、经营品类名、在售商品名，与搜索接口一致 */
     private static List<String> matchTexts(Shop shop, ShopFacts facts) {
         List<String> texts = new ArrayList<>();
         if (shop.getShopName() != null) texts.add(shop.getShopName());
+
         String scope = facts.businessScopeByShop().get(shop.getId());
         if (scope != null) texts.add(scope);
+
+        for (Long categoryId : facts.categoriesByShop().getOrDefault(shop.getId(), Set.of())) {
+            String categoryName = facts.categoryNames().get(categoryId);
+            if (categoryName != null) texts.add(categoryName);
+        }
+
         texts.addAll(facts.productNamesByShop().getOrDefault(shop.getId(), List.of()));
         return texts;
     }
